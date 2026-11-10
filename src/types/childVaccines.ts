@@ -1,5 +1,21 @@
 export type VaccineObligationType = 'obowiazkowe' | 'zalecane';
 
+/**
+ * Zakres populacyjny procedury:
+ * - 'pediatric': procedura ściśle pediatryczna (noworodki, dzieci, młodzież)
+ * - 'adult': procedura dedykowana wyłącznie osobom dorosłym
+ * - 'cross_age': procedura wielowiekowa obejmująca wskazania urzędowe u dzieci i dorosłych
+ */
+export type PopulationScope = 'pediatric' | 'adult' | 'cross_age';
+
+/**
+ * Granularne statusy weryfikacji danych (Punkt 5 audytu)
+ */
+export type PsoVerificationStatus = 'verified_pso' | 'pending_verification';
+export type ChplVerificationStatus = 'verified_chpl' | 'pending_chpl_verification' | 'no_trade_product_linked';
+export type FundingVerificationStatus = 'verified_public_free' | 'verified_reimbursement' | 'verified_self_funded' | 'pending_clarification';
+export type ProductLinkageStatus = 'linked_catalog' | 'pending_catalog_entry' | 'not_applicable';
+
 export type ChildAgeBracketId =
   | 'doba-0'
   | '2-miesiac'
@@ -57,10 +73,12 @@ export interface ChildVaccineItem {
   // ZADANIE 5: Nowa numeracja i atrybucja źródeł PSO 2027
   sourcePart: string;                           // Część PSO (np. "Część I.A", "Część I.B", "Część I.D", "Część II.A", "Część III.C", "Część III.E", "Część III.H")
   sourceOfficialPoint: string | null;           // Oficjalny numer punktu, jeżeli istnieje (np. "2", "3", "4", "6.3", "pkt 6"); w tabelach bez numeracji: null
+  sourceCriteriaNumbers?: string | null;        // Numery kryteriów klinicznych (np. "kryteria 1–4") dla wierszy tabeli bez oficjalnej numeracji punktów
   sourceTableRow: string | null;                // Nazwa szczepienia lub wiersza tabeli (np. "GRUŹLICY", "BŁONICY, TĘŻCOWI, KRZTUŚCOWI")
   sourceAgeBand: string | null;                 // Wiek z tabeli (np. "Od 1. doby życia do wypisu ze szpitala")
   sourcePrintedPage: number;                    // Drukowana numeracja strony Dziennika Urzędowego MZ (strony 4–44)
   sourcePdfPage: number;                        // Fizyczny numer strony w pliku akt.pdf
+  populationScope: PopulationScope;             // Zakres populacyjny: 'pediatric' | 'adult' | 'cross_age'
 
   // Pola wstecznie kompatybilne
   psoPart: string;                              // Numer części PSO (np. "Część I.A", "Część I.B", "Część II")
@@ -84,8 +102,14 @@ export interface ChildVaccineItem {
   linkedVaccineIds: string[];                   // Identyfikatory w katalogu preparatów (np. ['vac-infanrix-hexa'])
   chplReference: string | null;                 // Numer punktu z ChPL produktu (np. "ChPL Infanrix hexa pkt 4.2")
   alternativeCombinedOptions: string | null;    // Opcja zastąpienia szczepionkami skojarzonymi (5w1 / 6w1)
-  verificationStatus: ChildVaccineVerificationStatus; // Status weryfikacji z oficjalnym komunikatem
+  verificationStatus: ChildVaccineVerificationStatus; // Status weryfikacji z oficjalnym komunikatem (wstecznie kompatybilny)
   lastVerifiedDate: string;                     // Data weryfikacji rekordu
+
+  // Granularne statusy weryfikacji (Punkt 5 audytu)
+  psoVerificationStatus: PsoVerificationStatus;
+  chplVerificationStatus: ChplVerificationStatus;
+  fundingVerificationStatus: FundingVerificationStatus;
+  productLinkageStatus: ProductLinkageStatus;
 }
 
 /**

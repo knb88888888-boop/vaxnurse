@@ -64,10 +64,35 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
             )}
           </span>
 
+          {/* Oznaczenie procedury wielowiekowej (Punkt 3 audytu) */}
+          {item.populationScope === 'cross_age' && (
+            <span
+              className="cross-age-badge"
+              title="Procedura wielowiekowa – wytyczne urzędowe w PSO obejmują dzieci, młodzież lub dorosłych"
+            >
+              Procedura wielowiekowa
+            </span>
+          )}
+
           <span className="short-code-chip">{item.shortCode}</span>
 
-          <span className="pso-part-chip" title={`Część dokumentu PSO 2027: ${item.sourcePart || item.psoPart}, ${item.sourceOfficialPoint ? `pkt ${item.sourceOfficialPoint}` : item.sourceTableRow || item.psoPointOrSubpoint}`}>
-            {item.sourcePart || item.psoPart} • {item.sourceOfficialPoint ? `pkt ${item.sourceOfficialPoint}` : item.sourceTableRow || item.psoPointOrSubpoint}
+          <span
+            className="pso-part-chip"
+            title={`Część dokumentu PSO 2027: ${item.sourcePart || item.psoPart}, ${
+              item.sourceOfficialPoint
+                ? `pkt ${item.sourceOfficialPoint}`
+                : item.sourceCriteriaNumbers
+                  ? `${item.sourceTableRow || item.psoPointOrSubpoint} (${item.sourceCriteriaNumbers})`
+                  : item.sourceTableRow || item.psoPointOrSubpoint
+            }`}
+          >
+            {item.sourcePart || item.psoPart} • {
+              item.sourceOfficialPoint
+                ? `pkt ${item.sourceOfficialPoint}`
+                : item.sourceCriteriaNumbers
+                  ? `${item.sourceTableRow || item.psoPointOrSubpoint} (${item.sourceCriteriaNumbers})`
+                  : item.sourceTableRow || item.psoPointOrSubpoint
+            }
           </span>
 
           <span className="pso-page-chip" title="Numer strony w oficjalnym PDF Dziennika Urzędowego MZ">
@@ -76,6 +101,17 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
         </div>
 
         <div className="top-badges-right">
+          {item.chplVerificationStatus === 'pending_chpl_verification' ? (
+            <span className="verification-chpl-pending-chip" title="Oczekuje na weryfikację rejestracji ChPL">
+              <span className="dot-pulse-amber"></span>
+              <span>ChPL: do weryfikacji</span>
+            </span>
+          ) : (
+            <span className="verification-chpl-chip" title={`ChPL zweryfikowana: ${item.chplReference || 'Zgodne'}`}>
+              <span className="dot-pulse-green"></span>
+              <span>ChPL zweryfikowana</span>
+            </span>
+          )}
           <span className="verification-pso-chip" title={`Weryfikacja z PSO 2027: Komunikat GIS z ${item.psoGisAnnouncementDate || '28.10.2026'}, Dz. Urz. MZ z ${item.psoJournalPublicationDate || '30.10.2026'}`}>
             <span className="dot-pulse"></span>
             <span>Zweryfikowano PSO</span>
@@ -236,15 +272,58 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
               <div className="source-meta-item">
                 <FileText size={15} className="source-icon" />
                 <div className="source-meta-text">
-                  <strong>Pozycja w dokumencie:</strong> {item.sourcePart || item.psoPart} {item.sourceOfficialPoint ? `(pkt ${item.sourceOfficialPoint})` : (item.sourceTableRow ? `(wiersz: ${item.sourceTableRow})` : '')} – strona {item.sourcePrintedPage || item.psoPdfPage} Dziennika
+                  <strong>Pozycja w dokumencie:</strong> {item.sourcePart || item.psoPart} {
+                    item.sourceOfficialPoint
+                      ? `(pkt ${item.sourceOfficialPoint})`
+                      : item.sourceCriteriaNumbers
+                        ? `(wiersz: ${item.sourceTableRow}, ${item.sourceCriteriaNumbers})`
+                        : item.sourceTableRow
+                          ? `(wiersz: ${item.sourceTableRow})`
+                          : ''
+                  } – strona {item.sourcePrintedPage || item.psoPdfPage} Dziennika
                 </div>
               </div>
 
               <div className="source-meta-item">
                 <Layers size={15} className="source-icon" />
                 <div className="source-meta-text">
-                  <strong>Część i punkt źródłowy:</strong> {item.sourcePart || item.psoPart}{item.sourceOfficialPoint ? `, punkt ${item.sourceOfficialPoint}` : ' (tabela bez oficjalnych podpunktów)'}
+                  <strong>Część i punkt źródłowy:</strong> {item.sourcePart || item.psoPart}{
+                    item.sourceOfficialPoint
+                      ? `, punkt ${item.sourceOfficialPoint}`
+                      : item.sourceCriteriaNumbers
+                        ? `, ${item.sourceCriteriaNumbers}`
+                        : ' (tabela bez oficjalnych podpunktów)'
+                  }
                 </div>
+              </div>
+            </div>
+
+            {/* Odrębne statusy weryfikacji (Punkt 5 audytu) */}
+            <div className="verification-status-breakdown">
+              <div className="verification-item">
+                <span className="v-label">Weryfikacja źródła PSO:</span>
+                <span className="v-val status-ok">Zweryfikowano z PSO 2027 (Dz. Urz. MZ 2026 poz. 77)</span>
+              </div>
+              <div className="verification-item">
+                <span className="v-label">Weryfikacja ChPL:</span>
+                <span className={`v-val ${item.chplVerificationStatus === 'verified_chpl' ? 'status-ok' : 'status-pending'}`}>
+                  {item.chplVerificationStatus === 'verified_chpl' ? 'Zweryfikowano (zgodne z ChPL)' : 'Oczekuje na weryfikację ChPL'}
+                </span>
+              </div>
+              <div className="verification-item">
+                <span className="v-label">Weryfikacja finansowania:</span>
+                <span className="v-val status-ok">
+                  {item.fundingVerificationStatus === 'verified_public_free' && 'Potwierdzone: bezpłatne (budżet MZ)'}
+                  {item.fundingVerificationStatus === 'verified_reimbursement' && 'Potwierdzone: refundacja wg odrębnych przepisów'}
+                  {item.fundingVerificationStatus === 'verified_self_funded' && 'Potwierdzone: odpłatne (środki pacjenta/rodziców)'}
+                  {item.fundingVerificationStatus === 'pending_clarification' && 'Wymaga doprecyzowania'}
+                </span>
+              </div>
+              <div className="verification-item">
+                <span className="v-label">Katalog handlowy:</span>
+                <span className={`v-val ${item.productLinkageStatus === 'linked_catalog' ? 'status-ok' : 'status-muted'}`}>
+                  {item.productLinkageStatus === 'linked_catalog' ? `Powiązany preparat w bazie (${item.linkedVaccineIds.join(', ')})` : 'Oczekuje na wprowadzenie do katalogu handlowego'}
+                </span>
               </div>
             </div>
 

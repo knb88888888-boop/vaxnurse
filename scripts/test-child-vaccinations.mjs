@@ -286,6 +286,10 @@ for (const item of CHILD_VACCINES_CATALOG) {
       `Wpis ${item.id} w ${item.sourcePart} nie może mieć sztucznego numeru punktu urzędowego (musi być null)`
     );
     assert.ok(item.sourceTableRow !== null && item.sourceTableRow.length > 0, `Wpis ${item.id} musi mieć opis wiersza tabeli (sourceTableRow)`);
+  } else if (item.id === 'pso-risk-vzv-special') {
+    assert.equal(item.sourceOfficialPoint, null, 'Ospa ryzyka (tabela Części I.B) nie może mieć sztucznego punktu urzędowego (eliminacja pkt pkt)');
+    assert.equal(item.sourceTableRow, 'OSPIE WIETRZNEJ', 'Ospa ryzyka zachowuje nazwę wiersza tabeli');
+    assert.equal(item.sourceCriteriaNumbers, 'kryteria 1–4', 'Ospa ryzyka oddziela kryteria 1–4 od nazwy wiersza');
   } else if (item.sourcePart.startsWith('Część I.B') || item.sourcePart.startsWith('Część III')) {
     assert.ok(
       item.sourceOfficialPoint !== null && item.sourceOfficialPoint.length > 0,
@@ -294,7 +298,7 @@ for (const item of CHILD_VACCINES_CATALOG) {
   }
 }
 
-console.log('   ✓ SCENARIUSZ 8 ZALICZONY: Uniknięto sztucznej numeracji tabel PSO – tabele I.A, II.A, I.D mają sourceOfficialPoint = null i zdefiniowany wiersz tabeli.\n');
+console.log('   ✓ SCENARIUSZ 8 ZALICZONY: Uniknięto sztucznej numeracji tabel PSO i podwójnego „pkt pkt” dla ospy wietrznej.\n');
 
 // -------------------------------------------------------------
 // Test 9: Warunki finansowania i kryteria wiekowe (HPV, RV 3. dawka, MenB/MenACWY, 4. m.ż.)
@@ -350,6 +354,67 @@ assert.equal(infanrix.sourceDiscrepancies[0].status, 'requires_clarification');
 
 console.log('   ✓ SCENARIUSZ 10 ZALICZONY: Blokada weryfikacji i niezgodność fenyloalaniny Infanrix hexa pozostają w 100% nienaruszone.\n');
 
+// -------------------------------------------------------------
+// Test 11: Weryfikacja rekordu BCG oraz procedur wielowiekowych (cross_age)
+// -------------------------------------------------------------
+console.log('Test 11: Weryfikacja rekordu BCG oraz procedur wielowiekowych (cross_age)');
+
+// 1. BCG: chplReference: null i status oczekiwania na weryfikację ChPL
+const bcg = findChildVaccine('pso-bcg-0');
+assert.ok(bcg, 'Rekord BCG musi istnieć');
+assert.equal(bcg.chplReference, null, 'BCG zachowuje chplReference: null dopóki produkt nie zostanie w pełni zweryfikowany z dostawą');
+assert.equal(bcg.chplVerificationStatus, 'pending_chpl_verification', 'BCG ma status chplVerificationStatus: pending_chpl_verification');
+assert.equal(bcg.psoVerificationStatus, 'verified_pso', 'BCG ma zweryfikowane źródło PSO');
+
+// 2. Procedury wielowiekowe (dokładnie 4 rekordy cross_age)
+const crossAgeExpected = [
+  'pso-rabies-postexposure',
+  'pso-hepb-dialysis-primary',
+  'pso-hepb-dialysis-booster',
+  'pso-rec-hpv-catchup'
+];
+
+for (const id of crossAgeExpected) {
+  const item = findChildVaccine(id);
+  assert.ok(item, `Procedura ${id} musi istnieć`);
+  assert.equal(item.populationScope, 'cross_age', `Procedura ${id} musi mieć populationScope: 'cross_age'`);
+}
+
+const allCrossAge = CHILD_VACCINES_CATALOG.filter(it => it.populationScope === 'cross_age');
+assert.equal(allCrossAge.length, 4, 'W bazie muszą być dokładnie 4 procedury z oznaczeniem cross_age');
+
+const allPediatric = CHILD_VACCINES_CATALOG.filter(it => it.populationScope === 'pediatric');
+assert.equal(allPediatric.length, 39, 'W bazie musi być dokładnie 39 procedur z oznaczeniem pediatric');
+
+console.log('   ✓ SCENARIUSZ 11 ZALICZONY: BCG poprawnie oczekuje na weryfikację ChPL, a dokładnie 4 procedury są oznaczone jako cross_age.\n');
+
+// -------------------------------------------------------------
+// Test 12: Granularne statusy weryfikacji i rozróżnienie PSO / ChPL / Katalog
+// -------------------------------------------------------------
+console.log('Test 12: Granularne statusy weryfikacji (PSO / ChPL / Finansowanie / Katalog)');
+
+for (const it of CHILD_VACCINES_CATALOG) {
+  assert.ok(['verified_pso', 'pending_verification'].includes(it.psoVerificationStatus), `Wpis ${it.id} musi mieć poprawny psoVerificationStatus`);
+  assert.ok(['verified_chpl', 'pending_chpl_verification', 'no_trade_product_linked'].includes(it.chplVerificationStatus), `Wpis ${it.id} musi mieć poprawny chplVerificationStatus`);
+  assert.ok(['verified_public_free', 'verified_reimbursement', 'verified_self_funded', 'pending_clarification'].includes(it.fundingVerificationStatus), `Wpis ${it.id} musi mieć poprawny fundingVerificationStatus`);
+  assert.ok(['linked_catalog', 'pending_catalog_entry', 'not_applicable'].includes(it.productLinkageStatus), `Wpis ${it.id} musi mieć poprawny productLinkageStatus`);
+
+  // Brak linkedVaccineIds nie jest błędem PSO
+  if (it.linkedVaccineIds.length === 0) {
+    assert.equal(it.productLinkageStatus, 'pending_catalog_entry', `Wpis ${it.id} bez preparatu handlowego ma productLinkageStatus pending_catalog_entry`);
+    assert.equal(it.psoVerificationStatus, 'verified_pso', `Brak preparatu handlowego NIE WPŁYWA na status verified_pso`);
+  } else {
+    assert.equal(it.productLinkageStatus, 'linked_catalog', `Wpis ${it.id} z powiązanym preparatem ma productLinkageStatus linked_catalog`);
+  }
+}
+
+const linkedCount = CHILD_VACCINES_CATALOG.filter(it => it.productLinkageStatus === 'linked_catalog').length;
+const pendingCatalogCount = CHILD_VACCINES_CATALOG.filter(it => it.productLinkageStatus === 'pending_catalog_entry').length;
+assert.equal(linkedCount, 13, 'Dokładnie 13 procedur ma powiązany preparat handlowy w bazie');
+assert.equal(pendingCatalogCount, 30, 'Dokładnie 30 procedur oczekuje na wprowadzenie do katalogu handlowego');
+
+console.log('   ✓ SCENARIUSZ 12 ZALICZONY: Odrębne statusy weryfikacji PSO, ChPL, Finansowania i Katalogu wdrożone bez zrównywania braku preparatu z błędem PSO.\n');
+
 console.log('================================================================');
-console.log(' WYNIK KOŃCOWY: 10/10 SCENARIUSZY AUDYTU ZALICZONYCH (100%)    ');
+console.log(' WYNIK KOŃCOWY: 12/12 SCENARIUSZY AUDYTU ZALICZONYCH (100%)    ');
 console.log('================================================================\n');

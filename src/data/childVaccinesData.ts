@@ -148,9 +148,6 @@ const JOURNAL_PUBLICATION_DATE = '30.10.2026';
 const JOURNAL_ENTRY = 'Dz. Urz. MZ 2026 poz. 77';
 
 export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
-  // ==========================================
-  // 1. DOBA (0-24 H) - OKRES NOWORODKOWY
-  // ==========================================
   {
     id: 'pso-bcg-0',
     aliasId: 'child-bcg-birth',
@@ -158,6 +155,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'BCG',
     pathogenCategory: 'bakterie',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: 'doba-0',
     targetAgeDisplay: 'W ciągu pierwszych 24 godzin po urodzeniu',
     targetGroupDescription: 'Wszystkie noworodki urodzone o czasie przed wypisem z oddziału położniczo-noworodkowego',
@@ -169,6 +167,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Brak (dawka noworodkowa)',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'GRUŹLICY',
     sourceAgeBand: 'Od 1. doby życia do wypisu ze szpitala',
     sourcePrintedPage: 4,
@@ -192,7 +191,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: null,
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'pending_chpl_verification',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-hbv-1',
@@ -201,6 +204,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'HBV',
     pathogenCategory: 'wirusy',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: 'doba-0',
     targetAgeDisplay: 'W ciągu pierwszych 24 godzin po urodzeniu',
     targetGroupDescription: 'Wszystkie noworodki w pierwszej dobie życia (najlepiej w ciągu 12 h po urodzeniu)',
@@ -212,6 +216,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Brak (dawka noworodkowa)',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'WIRUSOWEMU ZAPALENIU WĄTROBY typu B (WZW typu B)',
     sourceAgeBand: 'Od 1. doby życia do wypisu ze szpitala',
     sourcePrintedPage: 4,
@@ -235,12 +240,12 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Euvax B / Engerix B pkt 4.2',
     alternativeCombinedOptions: 'W 1. dobie życia ZAWSZE szczepionka monowalentna. Szczepionki wysoce skojarzone (6w1) można stosować dopiero od 2. miesiąca życia.',
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
-
-  // ==========================================
-  // 2. MIESIĄC ŻYCIA (OD 6. TYGODNIA)
-  // ==========================================
   {
     id: 'pso-rv-1',
     aliasId: 'child-rota-1',
@@ -248,6 +253,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'RV',
     pathogenCategory: 'wirusy',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '2-miesiac',
     targetAgeDisplay: 'Po ukończeniu 6. tygodnia życia (zazwyczaj 7.–8. tydzień życia)',
     targetGroupDescription: 'Wszystkie niemowlęta od ukończenia 6. tygodnia życia do ukończenia 12. tygodnia życia',
@@ -259,6 +265,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Od ukończenia 6. tygodnia życia',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'Zakażeniom wywołanym przez ROTAWIRUSY',
     sourceAgeBand: 'W 2. miesiącu życia (od ukończenia 6. tygodnia życia)',
     sourcePrintedPage: 4,
@@ -282,7 +289,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Rotarix / RotaTeq pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-pcv-1',
@@ -291,6 +302,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'PCV',
     pathogenCategory: 'bakterie',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '2-miesiac',
     targetAgeDisplay: 'W 2. miesiącu życia (od ukończenia 6. tygodnia życia)',
     targetGroupDescription: 'Wszystkie niemowlęta w populacji ogólnej',
@@ -302,6 +314,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Brak (dawka pierwsza)',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'Inwazyjnym zakażeniom STREPTOCOCCUS PNEUMONIAE',
     sourceAgeBand: 'W 2. miesiącu życia (od ukończenia 6. tygodnia życia)',
     sourcePrintedPage: 5,
@@ -325,7 +338,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Prevenar 13 / Synflorix pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-dtp-1',
@@ -334,6 +351,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'DTP',
     pathogenCategory: 'bakterie',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '2-miesiac',
     targetAgeDisplay: 'W 2. miesiącu życia (od ukończenia 6. tygodnia życia)',
     targetGroupDescription: 'Wszystkie niemowlęta w populacji ogólnej',
@@ -345,6 +363,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Brak (dawka pierwsza)',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'BŁONICY, TĘŻCOWI, KRZTUŚCOWI',
     sourceAgeBand: 'W 2. miesiącu życia (od ukończenia 6. tygodnia życia)',
     sourcePrintedPage: 4,
@@ -368,7 +387,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Infanrix hexa pkt 4.2 / ChPL DTP',
     alternativeCombinedOptions: 'Zastąpienie bezpłatnego DTwP szczepionką wysoce skojarzoną 5w1 (DTPa-IPV-Hib) lub 6w1 (DTPa-HBV-IPV-Hib) zakupioną przez rodziców.',
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'linked_catalog'
   },
   {
     id: 'pso-hbv-2',
@@ -377,6 +400,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'HBV',
     pathogenCategory: 'wirusy',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '2-miesiac',
     targetAgeDisplay: 'W 2. miesiącu życia (od ukończenia 6. tygodnia życia)',
     targetGroupDescription: 'Wszystkie niemowlęta szczepione w schemacie tradycyjnym lub 5w1',
@@ -388,6 +412,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 4 tygodnie od 1. dawki (w 1. dobie)',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'WIRUSOWEMU ZAPALENIU WĄTROBY typu B',
     sourceAgeBand: 'W 2. miesiącu życia (od ukończenia 6. tygodnia życia)',
     sourcePrintedPage: 4,
@@ -411,7 +436,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Infanrix hexa pkt 4.2 / ChPL Engerix B',
     alternativeCombinedOptions: 'Podanie w składzie szczepionki 6w1 (np. Infanrix hexa) eliminuje osobną iniekcję monowalentnego WZW B.',
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'linked_catalog'
   },
   {
     id: 'pso-hib-1',
@@ -420,6 +449,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'Hib',
     pathogenCategory: 'bakterie',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '2-miesiac',
     targetAgeDisplay: 'W 2. miesiącu życia (od ukończenia 6. tygodnia życia)',
     targetGroupDescription: 'Wszystkie niemowlęta w populacji ogólnej',
@@ -431,6 +461,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Brak (dawka pierwsza)',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'Inwazyjnym zakażeniom HAEMOPHILUS INFLUENZAE typu b',
     sourceAgeBand: 'W 2. miesiącu życia (od ukończenia 6. tygodnia życia)',
     sourcePrintedPage: 5,
@@ -454,12 +485,12 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Infanrix hexa pkt 4.2 / ChPL Hiberix',
     alternativeCombinedOptions: 'Podanie w składzie preparatów 5w1 (Pentaxim) lub 6w1 (Infanrix hexa).',
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'linked_catalog'
   },
-
-  // ==========================================
-  // 4. MIESIĄC ŻYCIA (OD 12. TYGODNIA)
-  // ==========================================
   {
     id: 'pso-rv-2',
     aliasId: 'child-rota-2',
@@ -467,6 +498,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'RV',
     pathogenCategory: 'wirusy',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '4-miesiac',
     targetAgeDisplay: 'W 4. miesiącu życia (po 4 tygodniach od pierwszej dawki)',
     targetGroupDescription: 'Niemowlęta po ukończeniu 1. dawki (w schemacie 6w1 dopuszczalne w 3. m.ż.)',
@@ -478,6 +510,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 4 tygodnie od 1. dawki',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'Zakażeniom wywołanym przez ROTAWIRUSY',
     sourceAgeBand: 'W 4. miesiącu życia (po 4 tygodniach od pierwszej dawki)',
     sourcePrintedPage: 5,
@@ -501,7 +534,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Rotarix / RotaTeq pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-dtp-2',
@@ -510,6 +547,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'DTP',
     pathogenCategory: 'bakterie',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '4-miesiac',
     targetAgeDisplay: 'W 4. miesiącu życia (od ukończenia 12. tygodnia życia – po 8 tygodniach od pierwszej dawki)',
     targetGroupDescription: 'Wszystkie niemowlęta po ukończeniu 1. dawki DTP',
@@ -521,6 +559,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 8 tygodni (56 dni) od 1. dawki',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'BŁONICY, TĘŻCOWI, KRZTUŚCOWI',
     sourceAgeBand: 'W 4. miesiącu życia (od ukończenia 12. tygodnia życia – po 8 tygodniach od pierwszej dawki)',
     sourcePrintedPage: 6,
@@ -544,7 +583,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Infanrix hexa pkt 4.2',
     alternativeCombinedOptions: 'Podanie w postaci szczepionki 5w1 lub 6w1.',
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'linked_catalog'
   },
   {
     id: 'pso-ipv-1',
@@ -553,6 +596,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'IPV',
     pathogenCategory: 'wirusy',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '4-miesiac',
     targetAgeDisplay: 'W 4. miesiącu życia (od ukończenia 12. tygodnia życia)',
     targetGroupDescription: 'Wszystkie niemowlęta od ukończenia 12. tygodnia życia',
@@ -564,6 +608,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Od ukończenia 12. tygodnia życia',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'OSTREMU NAGMINNEMU PORAŻENIU DZIECIĘCEMU (POLIOMYELITIS)',
     sourceAgeBand: 'W 4. miesiącu życia (od ukończenia 12. tygodnia życia)',
     sourcePrintedPage: 5,
@@ -587,7 +632,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Imovax Polio / Infanrix hexa pkt 4.2',
     alternativeCombinedOptions: 'Podanie w składzie preparatów 5w1 lub 6w1.',
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'linked_catalog'
   },
   {
     id: 'pso-hib-2',
@@ -596,6 +645,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'Hib',
     pathogenCategory: 'bakterie',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '4-miesiac',
     targetAgeDisplay: 'W 4. miesiącu życia (po 8 tygodniach od pierwszej dawki)',
     targetGroupDescription: 'Wszystkie niemowlęta po ukończeniu 1. dawki Hib',
@@ -607,6 +657,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 8 tygodni od 1. dawki',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'Inwazyjnym zakażeniom HAEMOPHILUS INFLUENZAE typu b',
     sourceAgeBand: 'W 4. miesiącu życia',
     sourcePrintedPage: 6,
@@ -630,7 +681,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Infanrix hexa pkt 4.2',
     alternativeCombinedOptions: 'Podanie w składzie preparatów 5w1 lub 6w1.',
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'linked_catalog'
   },
   {
     id: 'pso-pcv-2',
@@ -639,6 +694,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'PCV',
     pathogenCategory: 'bakterie',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '4-miesiac',
     targetAgeDisplay: 'W 4. miesiącu życia (od ukończenia 12. tygodnia życia – po 8 tygodniach od pierwszej dawki)',
     targetGroupDescription: 'Wszystkie niemowlęta po ukończeniu 1. dawki PCV',
@@ -650,6 +706,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 8 tygodni (56 dni) od 1. dawki',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'Inwazyjnym zakażeniom STREPTOCOCCUS PNEUMONIAE',
     sourceAgeBand: 'W 4. miesiącu życia (od ukończenia 12. tygodnia życia – po 8 tygodniach od pierwszej dawki)',
     sourcePrintedPage: 6,
@@ -673,12 +730,12 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Prevenar 13 / Synflorix pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
-
-  // ==========================================
-  // 5.–6. MIESIĄC ŻYCIA
-  // ==========================================
   {
     id: 'pso-rv-3',
     aliasId: 'child-rota-3',
@@ -686,6 +743,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'RV',
     pathogenCategory: 'wirusy',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '5-6-miesiac',
     targetAgeDisplay: 'W 5.–6. miesiącu życia (po 4 tygodniach od drugiej dawki)',
     targetGroupDescription: 'Niemowlęta szczepione preparatem 3-dawkowym (np. RotaTeq)',
@@ -697,6 +755,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 4 tygodnie od 2. dawki',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'Zakażeniom wywołanym przez ROTAWIRUSY',
     sourceAgeBand: 'W 5.–6. miesiącu życia (po 4 tygodniach od drugiej dawki)',
     sourcePrintedPage: 6,
@@ -720,7 +779,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL RotaTeq pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-dtp-3',
@@ -729,6 +792,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'DTP',
     pathogenCategory: 'bakterie',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '5-6-miesiac',
     targetAgeDisplay: 'W 5.–6. miesiącu życia (w 6. m.ż. po 8 tygodniach od drugiej dawki)',
     targetGroupDescription: 'Wszystkie niemowlęta po ukończeniu 2. dawki DTP',
@@ -740,6 +804,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 8 tygodni od 2. dawki',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'BŁONICY, TĘŻCOWI, KRZTUŚCOWI',
     sourceAgeBand: 'W 6. miesiącu życia (po 8 tygodniach od drugiej dawki)',
     sourcePrintedPage: 6,
@@ -763,7 +828,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Infanrix hexa pkt 4.2',
     alternativeCombinedOptions: 'Podanie w składzie preparatu 5w1 lub 6w1.',
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'linked_catalog'
   },
   {
     id: 'pso-ipv-2',
@@ -772,6 +841,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'IPV',
     pathogenCategory: 'wirusy',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '5-6-miesiac',
     targetAgeDisplay: 'W 5.–6. miesiącu życia (w 6. m.ż. po 8 tygodniach od pierwszej dawki)',
     targetGroupDescription: 'Wszystkie niemowlęta po ukończeniu 1. dawki IPV',
@@ -783,6 +853,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 8 tygodni od 1. dawki',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'POLIOMYELITIS',
     sourceAgeBand: 'W 6. miesiącu życia (po 8 tygodniach od pierwszej dawki)',
     sourcePrintedPage: 6,
@@ -806,7 +877,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Imovax Polio / Infanrix hexa pkt 4.2',
     alternativeCombinedOptions: 'Podanie w składzie preparatów 5w1 lub 6w1.',
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'linked_catalog'
   },
   {
     id: 'pso-hib-3',
@@ -815,6 +890,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'Hib',
     pathogenCategory: 'bakterie',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '5-6-miesiac',
     targetAgeDisplay: 'W 5.–6. miesiącu życia (po 8 tygodniach od drugiej dawki)',
     targetGroupDescription: 'Wszystkie niemowlęta po ukończeniu 2. dawki Hib',
@@ -826,6 +902,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 8 tygodni od 2. dawki',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'Inwazyjnym zakażeniom HAEMOPHILUS INFLUENZAE typu b',
     sourceAgeBand: 'W 5.–6. miesiącu życia',
     sourcePrintedPage: 6,
@@ -849,12 +926,12 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Infanrix hexa pkt 4.2',
     alternativeCombinedOptions: 'Podanie w składzie preparatów 5w1 lub 6w1.',
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'linked_catalog'
   },
-
-  // ==========================================
-  // 7. MIESIĄC ŻYCIA
-  // ==========================================
   {
     id: 'pso-hbv-3',
     aliasId: 'child-hepb-3',
@@ -862,6 +939,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'HBV',
     pathogenCategory: 'wirusy',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '7-miesiac',
     targetAgeDisplay: 'W 7. miesiącu życia (po 5 miesiącach od podania drugiej dawki)',
     targetGroupDescription: 'Wszystkie niemowlęta szczepione w schemacie podstawowym 0, 1, 6 miesięcy',
@@ -873,6 +951,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 6 miesięcy od 1. dawki (5 miesięcy od 2. dawki)',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'WIRUSOWEMU ZAPALENIU WĄTROBY typu B',
     sourceAgeBand: 'W 7. miesiącu życia (po 5 miesiącach od podania drugiej dawki)',
     sourcePrintedPage: 6,
@@ -896,12 +975,12 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Engerix B / Euvax B pkt 4.2',
     alternativeCombinedOptions: 'Przy schemacie 6w1 (3+1) trzecia dawka komponentu HBV wchodzi w skład 6w1 w 5.–6. m.ż., a czwarta w 16.–18. m.ż.',
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
-
-  // ==========================================
-  // 13.–15. MIESIĄC ŻYCIA (2. ROK ŻYCIA)
-  // ==========================================
   {
     id: 'pso-mmr-1',
     aliasId: 'child-mmr-1',
@@ -909,6 +988,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'MMR',
     pathogenCategory: 'wirusy',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '13-15-miesiac',
     targetAgeDisplay: 'W 13.–15. miesiącu życia',
     targetGroupDescription: 'Wszystkie dzieci po ukończeniu 1. roku życia (13.–15. m.ż.)',
@@ -920,6 +1000,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Od ukończenia 12. miesiąca życia',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'ODRZE, ŚWINCE, RÓŻYCZCE',
     sourceAgeBand: 'W 13.–15. miesiącu życia',
     sourcePrintedPage: 7,
@@ -943,7 +1024,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Priorix / M-M-RVAXPRO pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-pcv-3',
@@ -952,6 +1037,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'PCV',
     pathogenCategory: 'bakterie',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '13-15-miesiac',
     targetAgeDisplay: 'W 13.–15. miesiącu życia (od ukończenia 12. m.ż., co najmniej 6 miesięcy od 2. dawki)',
     targetGroupDescription: 'Wszystkie dzieci w schemacie 2+1 populacji ogólnej',
@@ -963,6 +1049,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 6 miesięcy od 2. dawki',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'Inwazyjnym zakażeniom STREPTOCOCCUS PNEUMONIAE',
     sourceAgeBand: 'W 13.–15. miesiącu życia (od ukończenia 12. miesiąca życia, co najmniej 6 miesięcy od drugiej dawki)',
     sourcePrintedPage: 7,
@@ -986,12 +1073,12 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Prevenar 13 / Synflorix pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
-
-  // ==========================================
-  // 16.–18. MIESIĄC ŻYCIA
-  // ==========================================
   {
     id: 'pso-dtp-4',
     aliasId: 'child-dtpa-booster',
@@ -999,6 +1086,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'DTP',
     pathogenCategory: 'bakterie',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '16-18-miesiac',
     targetAgeDisplay: 'W 16.–18. miesiącu życia',
     targetGroupDescription: 'Wszystkie dzieci po zakończeniu 3-dawkowego cyklu pierwotnego DTP',
@@ -1010,6 +1098,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 6 miesięcy od 3. dawki',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'BŁONICY, TĘŻCOWI, KRZTUŚCOWI',
     sourceAgeBand: 'W 16.–18. miesiącu życia',
     sourcePrintedPage: 7,
@@ -1033,7 +1122,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Infanrix hexa pkt 4.2',
     alternativeCombinedOptions: 'Podanie w składzie preparatu 5w1 lub 6w1 (np. Infanrix hexa d.4 w schemacie 3+1).',
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'linked_catalog'
   },
   {
     id: 'pso-ipv-3',
@@ -1042,6 +1135,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'IPV',
     pathogenCategory: 'wirusy',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '16-18-miesiac',
     targetAgeDisplay: 'W 16.–18. miesiącu życia',
     targetGroupDescription: 'Wszystkie dzieci po ukończeniu 2 dawek IPV w 1. roku życia',
@@ -1053,6 +1147,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 6 miesięcy od 2. dawki IPV',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'POLIOMYELITIS',
     sourceAgeBand: 'W 16.–18. miesiącu życia',
     sourcePrintedPage: 7,
@@ -1076,7 +1171,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Imovax Polio / Infanrix hexa pkt 4.2',
     alternativeCombinedOptions: 'Podanie w składzie preparatów 5w1 lub 6w1.',
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'linked_catalog'
   },
   {
     id: 'pso-hib-4',
@@ -1085,6 +1184,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'Hib',
     pathogenCategory: 'bakterie',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '16-18-miesiac',
     targetAgeDisplay: 'W 16.–18. miesiącu życia',
     targetGroupDescription: 'Wszystkie dzieci po zakończeniu 3 dawek Hib w 1. roku życia',
@@ -1096,6 +1196,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 6 miesięcy od 3. dawki Hib',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'Inwazyjnym zakażeniom HAEMOPHILUS INFLUENZAE typu b',
     sourceAgeBand: 'W 16.–18. miesiącu życia',
     sourcePrintedPage: 7,
@@ -1119,12 +1220,12 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Infanrix hexa pkt 4.2 / ChPL Hiberix',
     alternativeCombinedOptions: 'Podanie w składzie preparatów 5w1 lub 6w1.',
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'linked_catalog'
   },
-
-  // ==========================================
-  // WIEK PRZEDSZKOLNY I SZKOLNY (6, 14, 19 LAT)
-  // ==========================================
   {
     id: 'pso-dtap-boost-6',
     aliasId: 'child-dtpa-6y',
@@ -1132,6 +1233,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'DTaP',
     pathogenCategory: 'bakterie',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '6-rok',
     targetAgeDisplay: 'W 6. roku życia',
     targetGroupDescription: 'Wszystkie dzieci w 6. roku życia (po ukończeniu 5 lat do ukończenia 6 lat)',
@@ -1143,6 +1245,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 3 lata od dawki uzupełniającej w 2. r.ż.',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'BŁONICY, TĘŻCOWI, KRZTUŚCOWI',
     sourceAgeBand: 'W 6. roku życia',
     sourcePrintedPage: 7,
@@ -1166,7 +1269,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Infanrix DTPa / Tripacel pkt 4.2',
     alternativeCombinedOptions: 'Możliwość zastosowania szczepionki 4w1 (DTaP-IPV).',
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-ipv-boost-6',
@@ -1175,6 +1282,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'IPV',
     pathogenCategory: 'wirusy',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '6-rok',
     targetAgeDisplay: 'W 6. roku życia',
     targetGroupDescription: 'Wszystkie dzieci w 6. roku życia',
@@ -1186,6 +1294,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 3 lata od dawki uzupełniającej w 2. r.ż.',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'POLIOMYELITIS',
     sourceAgeBand: 'W 6. roku życia',
     sourcePrintedPage: 7,
@@ -1209,7 +1318,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Imovax Polio pkt 4.2',
     alternativeCombinedOptions: 'Podanie w postaci szczepionki skojarzonej 4w1 (DTaP-IPV).',
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-mmr-boost-9',
@@ -1218,6 +1331,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'MMR',
     pathogenCategory: 'wirusy',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '6-rok',
     targetAgeDisplay: 'W 6. roku życia',
     targetGroupDescription: 'Wszystkie dzieci w 6. roku życia',
@@ -1229,6 +1343,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 4 tygodnie od 1. dawki (zazwyczaj po kilku latach)',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'ODRZE, ŚWINCE, RÓŻYCZCE',
     sourceAgeBand: 'W 6. roku życia',
     sourcePrintedPage: 7,
@@ -1252,7 +1367,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Priorix / M-M-RVAXPRO pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-dtap-boost-14',
@@ -1261,6 +1380,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'dTap',
     pathogenCategory: 'bakterie',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '14-rok',
     targetAgeDisplay: 'W 14. roku życia',
     targetGroupDescription: 'Wszyscy uczniowie w 14. roku życia (po ukończeniu 13 lat do ukończenia 14 lat)',
@@ -1272,6 +1392,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 5 lat od dawki przypominającej w 6. r.ż.',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'BŁONICY, TĘŻCOWI, KRZTUŚCOWI',
     sourceAgeBand: 'W 14. roku życia',
     sourcePrintedPage: 8,
@@ -1295,7 +1416,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Boostrix / Adacel pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-dt-boost-19',
@@ -1304,6 +1429,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'dT',
     pathogenCategory: 'bakterie',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: '19-rok',
     targetAgeDisplay: 'W 19. roku życia',
     targetGroupDescription: 'Młodzież w 19. roku życia (w ostatnim roku nauki w szkole ponadpodstawowej)',
@@ -1315,6 +1441,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Co najmniej 5 lat od dawki przypominającej w 14. r.ż.',
     sourcePart: 'Część I.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'BŁONICY, TĘŻCOWI',
     sourceAgeBand: 'W 19. roku życia',
     sourcePrintedPage: 8,
@@ -1338,12 +1465,12 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Clodit / Td-Pur pkt 4.2',
     alternativeCombinedOptions: 'Zalecane zastąpienie preparatem trójwalentnym dTap (Boostrix / Adacel) w celu odnowienia ochrony przed krztuścem.',
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
-
-  // =========================================================================
-  // WSKAZANIA KLINICZNE, POEKSPOZYCYJNE I SZCZEPIENIA WYRÓWNAWCZE (CZĘŚĆ I.B, I.D, III)
-  // =========================================================================
   {
     id: 'pso-risk-preterm-dtap',
     aliasId: 'child-dtpa-preterm-primary',
@@ -1351,6 +1478,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'DTaP-preterm',
     pathogenCategory: 'bakterie',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: 'grupy-ryzyka',
     targetAgeDisplay: 'W 1. i 2. roku życia (według schematu 3+1)',
     targetGroupDescription: 'Dzieci urodzone przed ukończeniem 37. tygodnia ciąży lub z masą urodzeniową poniżej 2500 g oraz dzieci z przeciwwskazaniami do DTwP',
@@ -1362,6 +1490,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Odstępy 6–8 tygodni w 1. r.ż. oraz dawka w 2. r.ż.',
     sourcePart: 'Część III.E',
     sourceOfficialPoint: '2',
+    sourceCriteriaNumbers: null,
     sourceTableRow: null,
     sourceAgeBand: 'Dzieci urodzone przed ukończeniem 37. tygodnia ciąży lub z masą urodzeniową poniżej 2500 g',
     sourcePrintedPage: 39,
@@ -1385,7 +1514,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Infanrix DTPa pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'linked_catalog'
   },
   {
     id: 'pso-risk-preterm-pcv',
@@ -1394,6 +1527,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'PCV-preterm',
     pathogenCategory: 'bakterie',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: 'grupy-ryzyka',
     targetAgeDisplay: 'W 1. roku życia (3 dawki pierwotne) + 4. dawka w 2. roku życia',
     targetGroupDescription: 'Wcześniaki urodzone przed ukończeniem 37. tygodnia ciąży oraz dzieci z grup wysokiego ryzyka z Części III.H.2',
@@ -1405,6 +1539,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Odstęp co najmniej 4 tygodni w 1. r.ż.; 4. dawka co najmniej 6 miesięcy po 3. dawce',
     sourcePart: 'Część III.H',
     sourceOfficialPoint: '3',
+    sourceCriteriaNumbers: null,
     sourceTableRow: null,
     sourceAgeBand: 'Wcześniaki urodzone przed ukończeniem 37. tygodnia ciąży i grupy ryzyka',
     sourcePrintedPage: 40,
@@ -1428,7 +1563,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Prevenar 13 pkt 4.2 (schemat 3+1 dla wcześniaków)',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-risk-vzv-special',
@@ -1437,6 +1576,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'VZV-risk',
     pathogenCategory: 'wirusy',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: 'grupy-ryzyka',
     targetAgeDisplay: 'Do ukończenia 19. roku życia u osób z grup ryzyka',
     targetGroupDescription: 'Dzieci i młodzież do ukończenia 19. roku życia, które nie chorowały na ospę wietrzną: 1) z upośledzeniem odporności o wysokim ryzyku ciężkiego przebiegu; 2) przed leczeniem immunosupresyjnym/chemioterapią; 3) z otoczenia osób z pkt 1; 4) w określonych placówkach opiekuńczych i wychowawczych',
@@ -1447,13 +1587,14 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     injectionSite: 'Mięsień naramienny lub przednioboczna część uda',
     minIntervalFromPrevious: 'Brak (dawka pierwsza)',
     sourcePart: 'Część I.B',
-    sourceOfficialPoint: 'pkt 1–3',
+    sourceOfficialPoint: null,
+    sourceCriteriaNumbers: 'kryteria 1–4',
     sourceTableRow: 'OSPIE WIETRZNEJ',
     sourceAgeBand: 'Dzieci i młodzież do ukończenia 19. roku życia z grup ryzyka',
     sourcePrintedPage: 14,
     sourcePdfPage: 14,
     psoPart: 'Część I.B',
-    psoPointOrSubpoint: 'Wykaz grup Części I.B pkt 1–3',
+    psoPointOrSubpoint: 'Tabela Część I.B (kryteria 1–4)',
     psoPdfPage: 14,
     psoSection: 'Część I.B PSO 2027 – Szczepienia obowiązkowe ze wskazań klinicznych: OSPA WIETRZNA (str. 14)',
     psoOfficialUrl: OFFICIAL_PDF_URL,
@@ -1471,7 +1612,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Varilrix / Varivax pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-rabies-postexposure',
@@ -1480,6 +1625,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'RABV-post',
     pathogenCategory: 'wirusy',
     obligationType: 'obowiazkowe',
+    populationScope: 'cross_age',
     ageBracketId: 'grupy-ryzyka',
     targetAgeDisplay: 'Poekspozycyjnie (niezwłocznie po kontakcie z chorym lub podejrzanym zwierzęciem)',
     targetGroupDescription: 'Osoby po kontakcie ze zwierzęciem chorym na wściekliznę lub podejrzanym o zakażenie',
@@ -1491,6 +1637,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Dni podania: 0, 3, 7, 14, 28 (schemat Essen)',
     sourcePart: 'Część I.D',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'PROFILAKTYKA POEKSPOZYCYJNA PRZECIW WŚCIEKLIŹNIE',
     sourceAgeBand: 'Poekspozycyjnie',
     sourcePrintedPage: 16,
@@ -1514,7 +1661,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Verorab / Rabipur pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-hepb-unvaccinated-primary',
@@ -1523,6 +1674,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'HBV-catchup',
     pathogenCategory: 'wirusy',
     obligationType: 'obowiazkowe',
+    populationScope: 'pediatric',
     ageBracketId: 'grupy-ryzyka',
     targetAgeDisplay: 'W najwcześniejszym możliwym terminie (do ukończenia 19. roku życia)',
     targetGroupDescription: 'Osoby niezaszczepione przeciw WZW B w pierwszym roku życia – do ukończenia 19. r.ż.',
@@ -1534,6 +1686,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Brak (dawka pierwsza)',
     sourcePart: 'Część III.C',
     sourceOfficialPoint: '4',
+    sourceCriteriaNumbers: null,
     sourceTableRow: null,
     sourceAgeBand: 'Osoby niezaszczepione w 1. roku życia do ukończenia 19. roku życia',
     sourcePrintedPage: 37,
@@ -1557,7 +1710,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Engerix B / Euvax B pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-hepb-dialysis-primary',
@@ -1566,6 +1723,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'HBV-dialysis-prim',
     pathogenCategory: 'wirusy',
     obligationType: 'obowiazkowe',
+    populationScope: 'cross_age',
     ageBracketId: 'grupy-ryzyka',
     targetAgeDisplay: 'Przed rozpoczęciem lub w trakcie dializoterapii / GFR < 30 ml/min',
     targetGroupDescription: 'Osoby w fazie zaawansowanej choroby nerek z filtracją kłębuszkową poniżej 30 ml/min oraz osoby dializowane, które nie były szczepione przeciw WZW typu B',
@@ -1577,6 +1735,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Brak (dawka pierwsza)',
     sourcePart: 'Część I.B',
     sourceOfficialPoint: '6',
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'WIRUSOWEMU ZAPALENIU WĄTROBY typu B',
     sourceAgeBand: 'Osoby z GFR < 30 ml/min oraz osoby dializowane, które nie były szczepione',
     sourcePrintedPage: 14,
@@ -1600,7 +1759,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Fendrix / Engerix B pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-hepb-dialysis-booster',
@@ -1609,6 +1772,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'HBV-dialysis-boost',
     pathogenCategory: 'wirusy',
     obligationType: 'obowiazkowe',
+    populationScope: 'cross_age',
     ageBracketId: 'grupy-ryzyka',
     targetAgeDisplay: 'Przy stężeniu anty-HBs < 10 j.m./l (kontrola co 6–12 miesięcy)',
     targetGroupDescription: 'Osoby z GFR < 30 ml/min oraz osoby dializowane po szczepieniu podstawowym, u których poziom przeciwciał anty-HBs spadł poniżej 10 j.m./l',
@@ -1620,6 +1784,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Według wskazań miana przeciwciał anty-HBs',
     sourcePart: 'Część III.C',
     sourceOfficialPoint: '6.3',
+    sourceCriteriaNumbers: null,
     sourceTableRow: null,
     sourceAgeBand: 'Osoby z GFR < 30 ml/min oraz osoby dializowane z anty-HBs < 10 j.m./l',
     sourcePrintedPage: 37,
@@ -1643,12 +1808,12 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Fendrix / Engerix B pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
-
-  // ==========================================
-  // SZCZEPIENIA ZALECANE DLA DZIECI I MŁODZIEŻY (CZĘŚĆ II.A)
-  // ==========================================
   {
     id: 'pso-rec-menb-1',
     aliasId: 'child-menb-infant',
@@ -1656,6 +1821,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'MenB',
     pathogenCategory: 'bakterie',
     obligationType: 'zalecane',
+    populationScope: 'pediatric',
     ageBracketId: '2-miesiac',
     targetAgeDisplay: 'Od ukończenia 6. lub 8. tygodnia życia w zależności od rodzaju szczepionki',
     targetGroupDescription: 'Niemowlęta od ukończenia 6. lub 8. tygodnia życia (wg ChPL preparatu), dzieci w zbiorowiskach i grupy ryzyka',
@@ -1667,6 +1833,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Od ukończenia 6. lub 8. tygodnia życia',
     sourcePart: 'Część II.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'Inwazyjnym zakażeniom NEISSERIA MENINGITIDIS',
     sourceAgeBand: 'Niemowlętom od ukończenia 6. tygodnia życia lub 8. tygodnia życia w zależności od rodzaju szczepionki',
     sourcePrintedPage: 20,
@@ -1690,7 +1857,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Bexsero / Trumenba pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_self_funded',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-rec-menacwy-1',
@@ -1699,6 +1870,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'MenACWY',
     pathogenCategory: 'bakterie',
     obligationType: 'zalecane',
+    populationScope: 'pediatric',
     ageBracketId: '2-miesiac',
     targetAgeDisplay: 'Od ukończenia 6. lub 8. tygodnia życia w zależności od rodzaju szczepionki',
     targetGroupDescription: 'Niemowlęta od 6. lub 8. tygodnia życia (wg ChPL preparatu), dzieci w zbiorowiskach, młodzież i podróżujący',
@@ -1710,6 +1882,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Od ukończenia 6. lub 8. tygodnia życia',
     sourcePart: 'Część II.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'Inwazyjnym zakażeniom NEISSERIA MENINGITIDIS',
     sourceAgeBand: 'Niemowlętom od ukończenia 6. tygodnia życia lub 8. tygodnia życia w zależności od rodzaju szczepionki',
     sourcePrintedPage: 20,
@@ -1733,7 +1906,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Nimenrix / MenQuadfi pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_self_funded',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-rec-influenza-1',
@@ -1742,6 +1919,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'FLU',
     pathogenCategory: 'wirusy',
     obligationType: 'zalecane',
+    populationScope: 'pediatric',
     ageBracketId: 'grupy-ryzyka',
     targetAgeDisplay: 'Corocznie od ukończenia 6. miesiąca życia do 18. roku życia',
     targetGroupDescription: 'Wszystkie dzieci od ukończenia 6. m.ż. do 18. r.ż., szczególnie chorujące na choroby przewlekłe',
@@ -1753,6 +1931,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Corocznie przed sezonem grypowym (od września/października)',
     sourcePart: 'Część II.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'GRYPIE',
     sourceAgeBand: 'Dzieciom od ukończenia 6. miesiąca życia do ukończenia 18. roku życia',
     sourcePrintedPage: 19,
@@ -1776,7 +1955,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Vaxigrip Tetra / Fluenz Tetra pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_reimbursement',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-rec-vzv-1',
@@ -1785,6 +1968,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'VZV',
     pathogenCategory: 'wirusy',
     obligationType: 'zalecane',
+    populationScope: 'pediatric',
     ageBracketId: '13-15-miesiac',
     targetAgeDisplay: 'Od ukończenia 9. lub 12. miesiąca życia',
     targetGroupDescription: 'Zdrowe dzieci i młodzież, które nie chorowały na ospę wietrzną i nie podlegają obowiązkowi z Części I.B',
@@ -1796,6 +1980,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Od ukończenia 9. lub 12. miesiąca życia',
     sourcePart: 'Część II.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'OSPIE WIETRZNEJ',
     sourceAgeBand: 'Osobom, które nie chorowały na ospę wietrzną i nie zostały wcześniej zaszczepione',
     sourcePrintedPage: 21,
@@ -1819,7 +2004,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Varilrix / Varivax pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_self_funded',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-rec-hpv-9',
@@ -1828,6 +2017,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'HPV',
     pathogenCategory: 'wirusy',
     obligationType: 'zalecane',
+    populationScope: 'pediatric',
     ageBracketId: '9-rok',
     targetAgeDisplay: 'Od ukończenia 9. roku życia do ukończenia 14. roku życia',
     targetGroupDescription: 'Powszechny bezpłatny program szczepień dla dziewcząt i chłopców w wieku 9–14 lat',
@@ -1839,6 +2029,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Od ukończenia 9. roku życia',
     sourcePart: 'Część II.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'Zakażeniom LUDZKIMI WIRUSAMI BRODAWCZAKA (HPV)',
     sourceAgeBand: 'Dzieciom od ukończenia 9. roku życia do ukończenia 14. roku życia',
     sourcePrintedPage: 20,
@@ -1862,7 +2053,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Gardasil 9 / Cervarix pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-rec-hpv-catchup',
@@ -1871,6 +2066,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'HPV-catchup',
     pathogenCategory: 'wirusy',
     obligationType: 'zalecane',
+    populationScope: 'cross_age',
     ageBracketId: '14-rok',
     targetAgeDisplay: 'W 15.–18. roku życia (schemat 3-dawkowy)',
     targetGroupDescription: 'Młodzież w wieku 15–18 lat oraz dorośli',
@@ -1882,6 +2078,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Brak (dawka pierwsza)',
     sourcePart: 'Część II.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'Zakażeniom LUDZKIMI WIRUSAMI BRODAWCZAKA (HPV)',
     sourceAgeBand: 'Osoby w 15.–18. roku życia oraz dorośli',
     sourcePrintedPage: 21,
@@ -1905,7 +2102,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Gardasil 9 / Cervarix pkt 4.2 (schemat 3-dawkowy)',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_reimbursement',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-rec-kzm-1',
@@ -1914,6 +2115,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'KZM',
     pathogenCategory: 'wirusy',
     obligationType: 'zalecane',
+    populationScope: 'pediatric',
     ageBracketId: '13-15-miesiac',
     targetAgeDisplay: 'Od ukończenia 1. roku życia',
     targetGroupDescription: 'Dzieci od ukończenia 1. roku życia przebywające lub podróżujące na tereny leśne i endemiczne KZM',
@@ -1925,6 +2127,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Od ukończenia 1. roku życia',
     sourcePart: 'Część II.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'KLESZCZOWEMU ZAPALENIU MÓZGU (KZM)',
     sourceAgeBand: 'Osobom szczególnie często podejmującym aktywność fizyczną poza pomieszczeniami',
     sourcePrintedPage: 20,
@@ -1948,7 +2151,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL FSME-Immun Junior / Encepur Junior pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_self_funded',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-rec-hava-1',
@@ -1957,6 +2164,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'HAV',
     pathogenCategory: 'wirusy',
     obligationType: 'zalecane',
+    populationScope: 'pediatric',
     ageBracketId: '13-15-miesiac',
     targetAgeDisplay: 'Od ukończenia 1. roku życia',
     targetGroupDescription: 'Dzieci od ukończenia 1. roku życia (przed pójściem do żłobka/przedszkola, podróżujący)',
@@ -1968,6 +2176,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Od ukończenia 1. roku życia',
     sourcePart: 'Część II.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'WIRUSOWEMU ZAPALENIU WĄTROBY TYPU A (WZW typu A)',
     sourceAgeBand: 'Dzieciom od ukończenia 1. roku życia',
     sourcePrintedPage: 21,
@@ -1991,7 +2200,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Havrix Junior / Avaxim 80U pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_self_funded',
+    productLinkageStatus: 'pending_catalog_entry'
   },
   {
     id: 'pso-rec-covid-pediatric',
@@ -2000,6 +2213,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     shortCode: 'COVID-19',
     pathogenCategory: 'wirusy',
     obligationType: 'zalecane',
+    populationScope: 'pediatric',
     ageBracketId: 'grupy-ryzyka',
     targetAgeDisplay: 'Od ukończenia 6. miesiąca życia do 18. roku życia',
     targetGroupDescription: 'Dzieci i młodzież od 6. m.ż. do 18. r.ż., w szczególności z grup podwyższonego ryzyka ciężkiego przebiegu',
@@ -2011,6 +2225,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     minIntervalFromPrevious: 'Zgodnie z aktualnymi komunikatami Ministra Zdrowia',
     sourcePart: 'Część II.A',
     sourceOfficialPoint: null,
+    sourceCriteriaNumbers: null,
     sourceTableRow: 'COVID-19',
     sourceAgeBand: 'Od ukończenia 6. miesiąca życia do 18. roku życia',
     sourcePrintedPage: 19,
@@ -2034,7 +2249,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReference: 'ChPL Comirnaty / Nuvaxovid pkt 4.2',
     alternativeCombinedOptions: null,
     verificationStatus: 'verified_pso',
-    lastVerifiedDate: '10.11.2026'
+    lastVerifiedDate: '10.11.2026',
+    psoVerificationStatus: 'verified_pso',
+    chplVerificationStatus: 'verified_chpl',
+    fundingVerificationStatus: 'verified_public_free',
+    productLinkageStatus: 'pending_catalog_entry'
   }
 ];
 
