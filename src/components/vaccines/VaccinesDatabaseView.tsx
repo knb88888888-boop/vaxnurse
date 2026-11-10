@@ -52,6 +52,7 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
   const [selectedType, setSelectedType] = useState<VaccineType | 'all'>('all');
   const [selectedTargetGroup, setSelectedTargetGroup] = useState<VaccineTargetGroup | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<VaccineVerificationStatus | 'all'>('all');
+  const [storageError, setStorageError] = useState<string | null>(null);
 
   const [activeVaccineDetail, setActiveVaccineDetail] = useState<VaccineProduct | null>(() => {
     try {
@@ -72,8 +73,10 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
       const next = prev.map(v => v.id === updatedVaccine.id ? updatedVaccine : v);
       try {
         localStorage.setItem(VAX_STORAGE_KEY, JSON.stringify(next));
+        setStorageError(null);
       } catch (e) {
         console.warn('Błąd zapisu bazy do localStorage:', e);
+        setStorageError('Błąd zapisu w pamięci podręcznej przeglądarki (localStorage): Nie udało się utrwalić wprowadzonych zmian. Sprawdź ilość wolnego miejsca lub uprawnienia pamięci w przeglądarce.');
       }
       return next;
     });
@@ -163,6 +166,8 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
         vaccine={activeVaccineDetail}
         onBackToList={handleBackToList}
         onUpdateVaccine={handleUpdateVaccine}
+        storageError={storageError}
+        onDismissStorageError={() => setStorageError(null)}
       />
     );
   }

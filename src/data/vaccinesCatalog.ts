@@ -60,11 +60,17 @@ export const DISCREPANCY_STATUS_META: Record<
     isResolved: false,
     description: 'Niezgodność wewnętrzna w oficjalnym druku ChPL oczekuje na sprostowanie przez wytwórcę lub URPL/EMA.'
   },
+  clarification_submitted: {
+    label: 'Zgłoszono wyjaśnienie',
+    badgeClass: 'disc-clarif-submitted',
+    isResolved: false,
+    description: 'Wprowadzono dane dokumentu urzędowego. Oczekuje na ręczną kontrolę dokumentu przez personel (potwierdzenie sprawdzenia).'
+  },
   resolved_with_official_document: {
     label: 'Wyjaśniona dokumentem urzędowym',
     badgeClass: 'disc-resolved-official',
     isResolved: true,
-    description: 'Niezgodność została formalnie wyjaśniona zarejestrowanym dokumentem urzędowym podmiotu odpowiedzialnego lub organu rejestracyjnego.'
+    description: 'Niezgodność została formalnie wyjaśniona zarejestrowanym i ręcznie sprawdzonym dokumentem urzędowym podmiotu odpowiedzialnego lub organu rejestracyjnego.'
   }
 };
 

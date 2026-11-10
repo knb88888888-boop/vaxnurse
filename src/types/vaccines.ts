@@ -8,7 +8,22 @@ export type VaccineVerificationStatus =
 
 export type DiscrepancyStatus =
   | 'requires_clarification'            // Wymaga wyjaśnienia
-  | 'resolved_with_official_document';  // Wyjaśniona dokumentem urzędowym
+  | 'clarification_submitted'           // Zgłoszono wyjaśnienie (dane zapisane, oczekuje na ręczną kontrolę)
+  | 'resolved_with_official_document';  // Wyjaśniona dokumentem urzędowym (po ręcznej kontroli)
+
+/**
+ * Etap 2 – Ręczna kontrola dokumentu źródłowego przez personel punktu szczepień.
+ * Wymaga: otwarcia/wskazania dokumentu, daty sprawdzenia, wskazania osoby i uzasadnienia.
+ */
+export interface DocumentVerificationCheck {
+  sourceDocumentOpenedOrIndicated: boolean; // Oświadczenie o otwarciu lub wskazaniu dokumentu źródłowego
+  sourceDocumentLocation: string;            // Wskazany adres URL lub lokalizacja archiwalna
+  checkDate: string;                         // Data sprawdzenia dokumentu
+  checkerNameAndRole: string;                // Osoba dokonująca sprawdzenia (imię, nazwisko, tytuł zawodowy)
+  checkerJustification: string;              // Merytoryczne uzasadnienie, dlaczego dokument rozwiązuje daną niezgodność
+  isConfirmed: boolean;                      // Czy czynność została świadomie potwierdzona
+  confirmedAt?: string;                      // Dokładny czas potwierdzenia w przeglądarce
+}
 
 /**
  * Warunki formalnego wyjaśnienia rozbieżności w dokumentacji (walidacja 6 wymaganych pól).
@@ -23,6 +38,7 @@ export interface DiscrepancyResolution {
   registeredAt?: string;                // Data i czas zarejestrowania w systemie
   registeredBy?: string;                // Nazwisko / rola osoby rejestrującej
   isResolved: boolean;                  // Czy rozbieżność została formalnie uznana za wyjaśnioną dokumentem urzędowym
+  documentCheck?: DocumentVerificationCheck; // Etap 2: Ręczna kontrola dokumentu
   // Kompatybilność wsteczna
   clarificationDocument?: string | null;
   source?: string | null;
