@@ -1,12 +1,25 @@
 export type VaccineVerificationStatus =
-  | 'uncompleted'              // Nieuzupełniony
-  | 'pending_verification'     // Oczekuje na weryfikację
-  | 'verified_chpl'            // Zweryfikowany na podstawie ChPL
-  | 'requires_reverification'; // Wymaga ponownej weryfikacji
+  | 'pending_verification'          // Oczekuje na weryfikację
+  | 'requires_source_clarification' // Wymaga wyjaśnienia źródłowego
+  | 'ready_for_manual_verification' // Gotowy do ręcznej weryfikacji
+  | 'verified_chpl'                 // Zweryfikowany na podstawie dokumentacji
+  | 'uncompleted'                   // Nieuzupełniony (zgodność wsteczna)
+  | 'requires_reverification';      // Wymaga ponownej weryfikacji (zgodność wsteczna)
 
 export type DiscrepancyStatus =
   | 'requires_clarification'   // Oczekuje na wyjaśnienie urzędowe
   | 'resolved';                // Wyjaśnione / sprostowane
+
+/**
+ * Warunki formalnego wyjaśnienia rozbieżności w dokumentacji (warunki przyszłej weryfikacji).
+ */
+export interface DiscrepancyResolution {
+  clarificationDocument: string | null;  // Dokument wyjaśniający rozbieżność (np. pismo GSK, decyzja URPL, aneks EMA)
+  receivedDate: string | null;           // Data otrzymania wyjaśnienia
+  source: string | null;                 // Źródło wyjaśnienia (np. GSK Commercial Sp. z o.o., URPL, EMA)
+  verifierNotes: string | null;          // Notatka osoby weryfikującej
+  isResolved?: boolean;                  // Czy rozbieżność została formalnie uznana za wyjaśnioną
+}
 
 /**
  * Informacja o rozbieżnościach / niezgodnościach w oficjalnych dokumentach źródłowych (np. wewnętrzne sprzeczności w tekście ChPL).
@@ -19,8 +32,9 @@ export interface SourceDiscrepancy {
   secondValue: string;                          // Druga wartość (np. "0,0298 mikrograma na dawkę")
   secondSection: string;                        // Numer sekcji źródłowej (np. "4.4")
   documentUrl: string;                          // Link do dokumentu źródłowego
-  status: DiscrepancyStatus;                    // Status (np. 'requires_clarification')
+  status: DiscrepancyStatus;                    // Status (np. 'requires_clarification' | 'resolved')
   description: string;                          // Opis niezgodności
+  resolution?: DiscrepancyResolution;           // Warunki przyszłej weryfikacji
 }
 
 export type VaccineType =
@@ -132,6 +146,9 @@ export interface VaccineProduct {
   verificationStatus: VaccineVerificationStatus;// Status weryfikacji całego rekordu (początkowo 'pending_verification')
   atcCode: string | null;                       // Kod ATC (Pkt 5.1 ChPL)
   sourceDiscrepancies?: SourceDiscrepancy[];    // Niezgodności / rozbieżności wykryte w źródłach urzędowych
+  clarificationDocument?: string | null;        // Dokument wyjaśniający rozbieżność (warunki przyszłej weryfikacji)
+  clarificationDate?: string | null;            // Data otrzymania wyjaśnienia
+  clarificationSource?: string | null;          // Źródło wyjaśnienia (np. GSK Polska / URPL / EMA)
 
   // Oficjalna struktura ChPL (punkty 1–10 EMA QRD v10.4)
   chpl: ChPLStructure;

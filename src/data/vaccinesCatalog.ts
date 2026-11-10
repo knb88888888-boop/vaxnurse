@@ -11,27 +11,39 @@ export const VERIFICATION_STATUS_META: Record<
   VaccineVerificationStatus,
   { label: string; description: string; badgeClass: string; isVerified: boolean }
 > = {
+  pending_verification: {
+    label: 'Oczekuje na weryfikację',
+    description: 'Karta preparatu oczekuje na weryfikację z oficjalną dokumentacją ChPL.',
+    badgeClass: 'status-pending',
+    isVerified: false
+  },
+  requires_source_clarification: {
+    label: 'Wymaga wyjaśnienia źródłowego',
+    description: 'Wykryto niezgodność w oficjalnej dokumentacji ChPL (np. różnica wartości pomiędzy sekcjami) wymagającą wyjaśnienia przez wytwórcę lub URPL/EMA.',
+    badgeClass: 'status-reverify',
+    isVerified: false
+  },
+  ready_for_manual_verification: {
+    label: 'Gotowy do ręcznej weryfikacji',
+    description: 'Wszystkie niezgodności dokumentacji zostały formalnie rozwiązane. Karta oczekuje na autoryzację personelu medycznego.',
+    badgeClass: 'status-ready',
+    isVerified: false
+  },
+  verified_chpl: {
+    label: 'Zweryfikowany na podstawie dokumentacji',
+    description: 'Karta została zweryfikowana i zatwierdzona na podstawie oficjalnej dokumentacji ChPL przez uprawniony personel.',
+    badgeClass: 'status-verified',
+    isVerified: true
+  },
   uncompleted: {
     label: 'Nieuzupełniony',
     description: 'Karta preparatu w fazie tworzenia szkieletu struktury. Brak danych ChPL.',
     badgeClass: 'status-uncompleted',
     isVerified: false
   },
-  pending_verification: {
-    label: 'Oczekuje na weryfikację',
-    description: 'Struktura punktów 1–10 gotowa do wprowadzenia i porównania z aktualnym drukiem ChPL w RPL.',
-    badgeClass: 'status-pending',
-    isVerified: false
-  },
-  verified_chpl: {
-    label: 'Zweryfikowany na podstawie ChPL',
-    description: 'Wszystkie punkty zostały zweryfikowane z oficjalnym drukiem ChPL z Rejestru Produktów Leczniczych.',
-    badgeClass: 'status-verified',
-    isVerified: true
-  },
   requires_reverification: {
     label: 'Wymaga ponownej weryfikacji',
-    description: 'Pojawiła się nowa wersja komunikatu ChPL lub zmiana w rejestrze RPL wymagająca sprawdzenia.',
+    description: 'Pojawiła się nowa wersja komunikatu ChPL lub zmiana w rejestrze RPL wymagająca ponownego sprawdzenia.',
     badgeClass: 'status-reverify',
     isVerified: false
   }
@@ -597,9 +609,19 @@ export const VACCINES_CATALOG: VaccineProduct[] = [
         secondSection: '4.4',
         documentUrl: 'https://pl.gsk.com/media/b2ip1snt/infanrix-hexa-druki-pl-h-0296-ia-vr-323859-12_02_2026.pdf',
         status: 'requires_clarification',
-        description: 'Niezgodność wewnętrzna oficjalnej ChPL: punkt 2 podaje 0,0289 mikrograma fenyloalaniny na dawkę, podczas gdy punkt 4.4 podaje 0,0298 mikrograma na dawkę. Aplikacja VaxNurse nie ujednolica wartości automatycznie i blokuje status zweryfikowania do czasu urzędowego wyjaśnienia przez podmiot odpowiedzialny / URPL / EMA.'
+        description: 'Niezgodność wewnętrzna oficjalnej ChPL: punkt 2 podaje 0,0289 mikrograma fenyloalaniny na dawkę, podczas gdy punkt 4.4 podaje 0,0298 mikrograma na dawkę. Aplikacja VaxNurse nie ujednolica wartości automatycznie i blokuje status zweryfikowania do czasu urzędowego wyjaśnienia przez podmiot odpowiedzialny / URPL / EMA.',
+        resolution: {
+          clarificationDocument: null,
+          receivedDate: null,
+          source: null,
+          verifierNotes: null,
+          isResolved: false
+        }
       }
     ],
+    clarificationDocument: null,
+    clarificationDate: null,
+    clarificationSource: null,
     chpl: INFANRIX_HEXA_CHPL
   },
   {
