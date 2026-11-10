@@ -4,7 +4,9 @@ import {
   Search,
   Activity,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  CalendarDays,
+  ExternalLink
 } from 'lucide-react';
 import type { ModuleDefinition, ModuleId, QuickAccessItem } from '../../types/navigation';
 import { QuickAccess } from './QuickAccess';
@@ -51,7 +53,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="hero-content">
           <div className="hero-pill">
             <Shield size={14} className="hero-pill-icon" />
-            <span>Narzędzie wsparcia pielęgniarki • Bezpieczna praca gabinetowa</span>
+            <span>Narzędzie wsparcia pielęgniarki • Wersja demonstracyjna</span>
           </div>
 
           <h1 className="hero-title">
@@ -60,26 +62,48 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <p className="hero-description">
             Nowoczesne środowisko wspomagające codzienną pracę w punkcie szczepień dzieci i dorosłych.
-            Szybki dostęp do referencyjnych procedur, oficjalnego Programu Szczepień Ochronnych i nadzoru łańcucha chłodniczego.
+            Szybki dostęp do referencyjnych procedur, oficjalnego Programu Szczepień Ochronnych (PSO 2027) i nadzoru łańcucha chłodniczego.
           </p>
 
-          {/* Quick status bar */}
+          {/* Honest status bar */}
           <div className="hero-indicators">
             <div className="indicator-chip chip-success">
               <CheckCircle size={15} />
-              <span>Zgodność z procedurami sanitarnymi</span>
+              <span>Wersja demonstracyjna – procedury do weryfikacji</span>
             </div>
             <div className="indicator-chip chip-info">
               <Activity size={15} />
-              <span>Nadzór chłodniczy: +2°C .. +8°C</span>
+              <span>Zakres referencyjny: +2°C .. +8°C (brak połączenia z rejestratorem)</span>
             </div>
             <div className="indicator-chip chip-privacy">
               <Shield size={15} />
-              <span>100% prywatności: brak danych pacjentów</span>
+              <span>W tej wersji nie przechowujemy danych pacjentów</span>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Official GIS PSO 2027 Notice Card */}
+      <div className="pso-reference-alert">
+        <div className="pso-alert-content">
+          <div className="pso-alert-badge">
+            <CalendarDays size={14} />
+            <span>PSO 2027</span>
+          </div>
+          <p className="pso-alert-text">
+            Aktualny <strong>Program Szczepień Ochronnych na 2027 rok</strong> – sprawdź oficjalne wytyczne Głównego Inspektoratu Sanitarnego:
+          </p>
+        </div>
+        <a
+          href="https://www.gov.pl/web/gis/program-szczepien-ochronnych-na-2027-rok"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pso-gis-link"
+        >
+          <span>Oficjalny komunikat GIS</span>
+          <ExternalLink size={14} />
+        </a>
+      </div>
 
       {/* Embedded Search on Dashboard if user focuses here */}
       <div className="dashboard-search-wrapper">
@@ -152,7 +176,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {searchQuery.trim() ? 'Pasujące moduły aplikacji' : 'Główne moduły punktu szczepień'}
             </h2>
             <p className="section-subtitle">
-              Zintegrowany zestaw narzędzi do obsługi procesu szczepień ochronnych
+              Zintegrowany zestaw narzędzi do obsługi procesu szczepień ochronnych (wersja demonstracyjna)
             </p>
           </div>
           <span className="modules-count-badge">

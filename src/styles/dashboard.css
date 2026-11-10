@@ -120,6 +120,67 @@
   border-color: var(--violet-100);
 }
 
+/* Official GIS PSO 2027 Alert Banner */
+.pso-reference-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid var(--blue-100);
+  border-radius: var(--radius-lg);
+  padding: 14px 20px;
+  box-shadow: var(--shadow-xs);
+}
+
+.pso-alert-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pso-alert-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--blue-600);
+  color: #ffffff;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.pso-alert-text {
+  font-size: 0.875rem;
+  color: var(--navy-900);
+}
+
+.pso-gis-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background-color: #ffffff;
+  color: var(--blue-700);
+  border: 1px solid var(--blue-100);
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-xs);
+  flex-shrink: 0;
+}
+
+.pso-gis-link:hover {
+  background-color: var(--blue-50);
+  border-color: var(--blue-500);
+  color: var(--blue-800);
+  transform: translateY(-1px);
+}
+
 /* Dashboard Embedded Search Bar */
 .dashboard-search-wrapper {
   margin-top: -6px;

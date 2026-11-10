@@ -137,8 +137,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <ShieldCheck className="privacy-badge-icon" size={17} />
             {!isCollapsed && (
               <div className="privacy-badge-text">
-                <strong>Tryb bezpieczny</strong>
-                <span>Prywatna praca lokalna</span>
+                <strong>Tryb lokalny</strong>
+                <span>Wersja demonstracyjna</span>
               </div>
             )}
           </div>

@@ -3,7 +3,11 @@ import {
   ArrowLeft,
   CheckCircle2,
   ShieldCheck,
-  BookOpen
+  BookOpen,
+  CalendarDays,
+  ExternalLink,
+  AlertTriangle,
+  ThermometerSnowflake
 } from 'lucide-react';
 import type { ModuleDefinition, ModuleId } from '../../types/navigation';
 
@@ -50,13 +54,60 @@ export const ModulePlaceholder: React.FC<ModulePlaceholderProps> = ({
                 {module.category === 'main' && 'Widok główny'}
               </span>
               {module.badge && <span className="module-custom-badge">{module.badge}</span>}
-              <span className="status-badge-ready">Architektura zintegrowana</span>
+              <span className="status-badge-ready">Wersja demonstracyjna</span>
             </div>
             <h1 className="module-view-title">{module.label}</h1>
             <p className="module-view-lead">{module.description}</p>
           </div>
         </div>
       </div>
+
+      {/* Special Notice for Vaccination Calendar (PSO 2027 GIS Link) */}
+      {module.id === 'vaccination-calendar' && (
+        <div className="module-special-banner pso-gis-banner">
+          <div className="special-banner-icon-box">
+            <CalendarDays size={24} className="banner-icon-blue" />
+          </div>
+          <div className="special-banner-content">
+            <div className="special-banner-badge">Źródło oficjalne</div>
+            <h3 className="special-banner-title">Program Szczepień Ochronnych na 2027 rok</h3>
+            <p className="special-banner-desc">
+              Pełny, oficjalny tekst komunikatu Głównego Inspektora Sanitarnego dotyczący schematów szczepień obowiązkowych i zalecanych na 2027 rok jest dostępny na portalu rządowym.
+            </p>
+            <a
+              href="https://www.gov.pl/web/gis/program-szczepien-ochronnych-na-2027-rok"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="gis-official-link-btn"
+            >
+              <span>Przejdź do oficjalnego komunikatu GIS (gov.pl)</span>
+              <ExternalLink size={16} />
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Special Notice for Cold Chain */}
+      {module.id === 'cold-chain' && (
+        <div className="module-special-banner cold-chain-banner">
+          <div className="special-banner-icon-box">
+            <ThermometerSnowflake size={24} className="banner-icon-amber" />
+          </div>
+          <div className="special-banner-content">
+            <div className="special-banner-badge amber">Ważna uwaga techniczna</div>
+            <h3 className="special-banner-title">Kontrola łańcucha chłodniczego – zakres referencyjny</h3>
+            <p className="special-banner-desc">
+              Zakres <strong>+2°C do +8°C</strong> stanowi <strong>zakres referencyjny</strong> dla standardowego przechowywania produktów leczniczych i szczepionek.
+            </p>
+            <div className="cold-chain-warning-box">
+              <AlertTriangle size={18} className="warning-box-icon" />
+              <span>
+                <strong>Brak automatycznego połączenia:</strong> Aplikacja w obecnej wersji <strong>nie posiada automatycznego połączenia z rejestratorem temperatury</strong> ani czujnikami telemetrycznymi. Odczyty temperatury wymagają bezpośredniej weryfikacji manualnej na certyfikowanych urządzeniach pomiarowych chłodziarek.
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Information Grid */}
       <div className="module-view-content-grid">
@@ -89,7 +140,7 @@ export const ModulePlaceholder: React.FC<ModulePlaceholderProps> = ({
           <div className="safety-body">
             <div className="safety-rule">
               <span className="rule-bullet">•</span>
-              <p><strong>Brak danych osobowych:</strong> Aplikacja nie zbiera, nie przetwarza i nie przekazuje danych pacjentów.</p>
+              <p><strong>W tej wersji nie przechowujemy danych pacjentów:</strong> Aplikacja nie zbiera, nie przetwarza i nie przekazuje danych osobowych ani numerów PESEL.</p>
             </div>
             <div className="safety-rule">
               <span className="rule-bullet">•</span>
@@ -97,7 +148,7 @@ export const ModulePlaceholder: React.FC<ModulePlaceholderProps> = ({
             </div>
             <div className="safety-rule">
               <span className="rule-bullet">•</span>
-              <p><strong>Źródła oficjalne:</strong> Opracowywane treści bazują na oficjalnych komunikatach GIS, Ministerstwa Zdrowia oraz ChPL.</p>
+              <p><strong>Wersja demonstracyjna:</strong> Procedury i narzędzia wymagają każdorazowej weryfikacji z aktualnym komunikatem GIS oraz Charakterystyką Produktu Leczniczego (ChPL).</p>
             </div>
           </div>
 
@@ -117,7 +168,7 @@ export const ModulePlaceholder: React.FC<ModulePlaceholderProps> = ({
       {/* Action footer */}
       <div className="module-view-footer">
         <p className="footer-status-note">
-          Fundament interfejsu modułu został wdrożony zgodnie z architekturą VaxNurse.
+          Fundament interfejsu modułu został wdrożony zgodnie z architekturą VaxNurse (wersja demonstracyjna).
         </p>
         <button
           type="button"

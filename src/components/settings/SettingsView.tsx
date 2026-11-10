@@ -43,7 +43,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div>
             <div className="module-view-badges">
               <span className="module-category-pill">Narzędzie systemowe</span>
-              <span className="status-badge-ready">Stanowisko aktywne</span>
+              <span className="status-badge-ready">Wersja demonstracyjna</span>
             </div>
             <h1 className="module-view-title">{module.label}</h1>
             <p className="module-view-lead">{module.description}</p>
@@ -124,7 +124,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="privacy-feature-item">
               <CheckCircle2 size={18} className="feature-check-icon" />
               <div>
-                <strong>Zero danych osobowych:</strong> Brak formularzy pacjentów, brak numerów PESEL, brak gromadzenia historii medycznej.
+                <strong>W tej wersji nie przechowujemy danych pacjentów:</strong> Brak formularzy pacjentów, brak numerów PESEL, brak gromadzenia historii medycznej.
               </div>
             </div>
 

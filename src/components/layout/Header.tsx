@@ -78,9 +78,9 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="header-right">
-        <div className="header-status-badge" title="Aplikacja działa w trybie bezpiecznym, lokalnym">
+        <div className="header-status-badge" title="Aplikacja w wersji demonstracyjnej">
           <span className="status-indicator-dot"></span>
-          <span className="status-text">Punkt aktywny</span>
+          <span className="status-text">Wersja demonstracyjna</span>
         </div>
 
         <div className="header-date">

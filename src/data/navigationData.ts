@@ -75,16 +75,16 @@ export const APP_MODULES: ModuleDefinition[] = [
   {
     id: 'vaccination-calendar',
     label: 'Kalendarz szczepień',
-    description: 'Aktualny Program Szczepień Ochronnych (PSO) z podziałem na grupy wiekowe.',
+    description: 'Aktualny Program Szczepień Ochronnych (PSO 2027) z podziałem na grupy wiekowe.',
     category: 'clinical',
     icon: CalendarDays,
     isCore: true,
-    badge: 'PSO 2026',
+    badge: 'PSO 2027',
     purposeNote: 'Oficjalna struktura Programu Szczepień Ochronnych i terminy referencyjne.',
     keyFeatures: [
-      'Przegląd szczepień obowiązkowych i zalecanych',
+      'Oficjalny Program Szczepień Ochronnych (PSO 2027) – komunikat GIS',
       'Odstępy minimalne i maksymalne między dawkami',
-      'Zestawienie zmian w bieżącym komunikacie GIS'
+      'Zestawienie zmian w komunikacie GIS na 2027 rok'
     ]
   },
   {
@@ -116,16 +116,16 @@ export const APP_MODULES: ModuleDefinition[] = [
   {
     id: 'cold-chain',
     label: 'Łańcuch chłodniczy',
-    description: 'Protokoły kontroli temperatury chłodziarek (+2°C do +8°C) i postępowania awaryjnego.',
+    description: 'Protokoły kontroli chłodziarek (zakres referencyjny: +2°C do +8°C, odczyt manualny) i postępowania awaryjnego.',
     category: 'logistics',
     icon: ThermometerSnowflake,
     isCore: true,
-    badge: '2°C - 8°C',
-    purposeNote: 'Rejestr procedur nadzoru nad stabilnością termiczną i sprzętem chłodniczym.',
+    badge: '2–8°C (ref.)',
+    purposeNote: 'Rejestr procedur nadzoru nad stabilnością termiczną i sprzętem chłodniczym (odczyt manualny).',
     keyFeatures: [
-      'Szablony kart codziennego pomiaru temperatury',
-      'Procedura awarii zasilania lub przekroczenia zakresu',
-      'Wytyczne pakowania transportowego (chłodziarki pasywne)'
+      'Karty pomiaru temperatury w zakresie referencyjnym (+2°C do +8°C)',
+      'Brak automatycznego połączenia z rejestratorem – odczyt manualny',
+      'Procedura awarii zasilania lub przekroczenia zakresu'
     ]
   },
   {
@@ -174,7 +174,7 @@ export const QUICK_ACCESS_ITEMS: QuickAccessItem[] = [
   {
     id: 'qa-cold-chain',
     title: 'Kontrola chłodnicza',
-    subtitle: 'Zakres +2°C do +8°C',
+    subtitle: 'Zakres ref. +2°C do +8°C',
     targetModule: 'cold-chain',
     icon: ThermometerSnowflake,
     badgeColor: 'blue'
@@ -182,7 +182,7 @@ export const QUICK_ACCESS_ITEMS: QuickAccessItem[] = [
   {
     id: 'qa-calendar',
     title: 'Kalendarz PSO',
-    subtitle: 'Schematy i terminy',
+    subtitle: 'Program na 2027 rok',
     targetModule: 'vaccination-calendar',
     icon: CalendarDays,
     badgeColor: 'indigo'

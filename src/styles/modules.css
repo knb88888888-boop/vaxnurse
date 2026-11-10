@@ -126,6 +126,134 @@
   line-height: 1.5;
 }
 
+/* Special Informational Banners (PSO GIS Link & Cold Chain Warning) */
+.module-special-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 22px 26px;
+  box-shadow: var(--shadow-sm);
+}
+
+.pso-gis-banner {
+  background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+  border-color: var(--blue-100);
+}
+
+.cold-chain-banner {
+  background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%);
+  border-color: var(--amber-100);
+}
+
+.special-banner-icon-box {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pso-gis-banner .special-banner-icon-box {
+  background-color: var(--blue-50);
+  border: 1px solid var(--blue-100);
+}
+
+.cold-chain-banner .special-banner-icon-box {
+  background-color: var(--amber-50);
+  border: 1px solid var(--amber-100);
+}
+
+.banner-icon-blue {
+  color: var(--blue-600);
+}
+
+.banner-icon-amber {
+  color: var(--amber-600);
+}
+
+.special-banner-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.special-banner-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background-color: var(--blue-100);
+  color: var(--blue-700);
+}
+
+.special-banner-badge.amber {
+  background-color: var(--amber-100);
+  color: var(--amber-700);
+}
+
+.special-banner-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--navy-900);
+}
+
+.special-banner-desc {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.gis-official-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  align-self: flex-start;
+  padding: 8px 16px;
+  background-color: var(--blue-600);
+  color: #ffffff;
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-xs);
+}
+
+.gis-official-link-btn:hover {
+  background-color: var(--blue-700);
+  transform: translateY(-1px);
+}
+
+.cold-chain-warning-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 12px 14px;
+  background-color: #ffffff;
+  border: 1px solid var(--amber-100);
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  color: var(--navy-800);
+  line-height: 1.5;
+}
+
+.warning-box-icon {
+  color: var(--amber-600);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
 /* Content Grid */
 .module-view-content-grid {
   display: grid;
