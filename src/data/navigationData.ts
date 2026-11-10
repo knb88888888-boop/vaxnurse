@@ -145,14 +145,15 @@ export const APP_MODULES: ModuleDefinition[] = [
   {
     id: 'knowledge-base',
     label: 'Baza wiedzy',
-    description: 'Komunikaty GIS, stanowiska towarzystw naukowych (PTP, PTW) i oficjalne wytyczne.',
+    description: 'Centralna biblioteka oficjalnych źródeł: Program Szczepień Ochronnych, wytyczne GIS i GIF oraz rejestry ChPL.',
     category: 'system',
     icon: BookOpen,
-    purposeNote: 'Baza rzetelnych, źródłowych materiałów edukacyjnych dla personelu medycznego.',
+    badge: 'Biblioteka',
+    purposeNote: 'Referencyjny zbiór oficjalnych publikatorów państwowych (GIS, GIF, URPL, eZdrowie).',
     keyFeatures: [
-      'Odpowiedzi na najczęstsze obawy rodziców/pacjentów',
-      'Archiwum komunikatów Głównego Inspektora Sanitarnego',
-      'Materiały szkoleniowe i wytyczne epidemiologiczne'
+      'Wyszukiwarka oficjalnych dokumentów i komunikatów',
+      'Filtrowanie według kategorii i instytucji publikującej',
+      'Bezpośrednie odnośniki do portali państwowych i rejestru RPL'
     ]
   },
   {

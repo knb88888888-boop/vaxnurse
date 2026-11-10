@@ -3,6 +3,7 @@ import { Layout } from './components/layout/Layout';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { ModulePlaceholder } from './components/modules/ModulePlaceholder';
 import { SettingsView } from './components/settings/SettingsView';
+import { KnowledgeBaseView } from './components/knowledge/KnowledgeBaseView';
 import { APP_MODULES, QUICK_ACCESS_ITEMS } from './data/navigationData';
 import type { ModuleId } from './types/navigation';
 import type { RecentVisit } from './components/dashboard/RecentModules';
@@ -61,6 +62,11 @@ export const App: React.FC = () => {
         />
       ) : activeModuleId === 'settings' ? (
         <SettingsView
+          module={currentModule}
+          onBackToDashboard={() => handleSelectModule('dashboard')}
+        />
+      ) : activeModuleId === 'knowledge-base' ? (
+        <KnowledgeBaseView
           module={currentModule}
           onBackToDashboard={() => handleSelectModule('dashboard')}
         />
