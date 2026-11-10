@@ -60,16 +60,16 @@ export const APP_MODULES: ModuleDefinition[] = [
   {
     id: 'vaccines-database',
     label: 'Baza preparatów',
-    description: 'Katalog produktów leczniczych, charakterystyki produktów leczniczych (ChPL) i ulotki.',
+    description: 'Katalog produktów leczniczych dla dzieci i dorosłych: struktura 13 sekcji ChPL oraz integracja z RPL.',
     category: 'clinical',
     icon: Syringe,
     isCore: true,
-    badge: 'Katalog',
-    purposeNote: 'Referencyjny zbiór informacji o dostępnych na rynku preparatach szczepionkowych.',
+    badge: 'ChPL (13 sekcji)',
+    purposeNote: 'Referencyjny katalog preparatów ze strukturą 13 punktów ChPL i powiązaniem z rejestrem RPL.',
     keyFeatures: [
-      'Wyszukiwanie preparatów według nazwy i antygenu',
-      'Dostęp do oficjalnych druków ChPL i ulotek',
-      'Wymogi dotyczące rozpuszczalników i igieł'
+      'Strukturalny podział na 13 oficjalnych sekcji ChPL',
+      'Filtrowanie według rodzaju, grupy wiekowej i statusu weryfikacji',
+      'Bezpośrednie odsyłacze do oficjalnych rekordów RPL i URPL'
     ]
   },
   {

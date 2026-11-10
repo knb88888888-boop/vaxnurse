@@ -4,6 +4,7 @@ import { DashboardView } from './components/dashboard/DashboardView';
 import { ModulePlaceholder } from './components/modules/ModulePlaceholder';
 import { SettingsView } from './components/settings/SettingsView';
 import { KnowledgeBaseView } from './components/knowledge/KnowledgeBaseView';
+import { VaccinesDatabaseView } from './components/vaccines/VaccinesDatabaseView';
 import { APP_MODULES, QUICK_ACCESS_ITEMS } from './data/navigationData';
 import type { ModuleId } from './types/navigation';
 import type { RecentVisit } from './components/dashboard/RecentModules';
@@ -67,6 +68,11 @@ export const App: React.FC = () => {
         />
       ) : activeModuleId === 'knowledge-base' ? (
         <KnowledgeBaseView
+          module={currentModule}
+          onBackToDashboard={() => handleSelectModule('dashboard')}
+        />
+      ) : activeModuleId === 'vaccines-database' ? (
+        <VaccinesDatabaseView
           module={currentModule}
           onBackToDashboard={() => handleSelectModule('dashboard')}
         />
