@@ -279,8 +279,8 @@ const buildChPLStructure = (params: {
   };
 };
 
-const INFANRIX_HEXA_DOC_SOURCE = 'Charakterystyka Produktu Leczniczego (GSK / EMA, procedura VR 323859)';
-const INFANRIX_HEXA_PDF_URL = 'https://pl.gsk.com/media/b2ip1snt/infanrix-hexa-druki-pl-h-0296-ia-vr-323859-12_02_2026.pdf';
+const INFANRIX_HEXA_DOC_SOURCE = 'Oficjalna dokumentacja EMA (EPAR SmPC) oraz druki GSK Polska (procedura VR 323859)';
+const INFANRIX_HEXA_PDF_URL = 'https://www.ema.europa.eu/en/documents/product-information/infanrix-hexa-epar-product-information_en.pdf';
 const INFANRIX_HEXA_CHPL_DATE = '12.02.2026';
 
 export const INFANRIX_HEXA_CHPL: ChPLStructure = {
@@ -289,7 +289,7 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
     'Nazwa produktu leczniczego',
     'Infanrix hexa proszek i zawiesina do sporządzania zawiesiny do wstrzykiwań.\nSzczepionka przeciwko błonicy (D), tężcowi (T), krztuścowi (komponenta acelularna) (Pa), wirusowemu zapaleniu wątroby typu B (rDNA) (HBV), poliomyelitis (inaktywowana) (IPV) i przeciwko Haemophilus influenzae typ b (Hib) skoniugowana (adsorbowana).',
     'pending_verification',
-    'Odwzorowano z oficjalnego druku ChPL GSK (procedura VR 323859 z 12.02.2026). Oczekuje na ręczną weryfikację personelu medycznego.',
+    'Nazwa produktu zgodna z oficjalną Charakterystyką Produktu Leczniczego zatwierdzoną przez EMA.',
     INFANRIX_HEXA_DOC_SOURCE,
     1,
     INFANRIX_HEXA_PDF_URL,
@@ -298,9 +298,9 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
   composition: createChPLSection(
     '2',
     'Skład jakościowy i ilościowy',
-    'Po rekonstytucji 1 dawka (0,5 ml) zawiera:\n• Toksoid błoniczy (Diphtheria toxoid): nie mniej niż 30 j.m. (adsorbowany na wodorotlenku glinu Al(OH)3 0,95 mg Al3+)\n• Toksoid tężcowy (Tetanus toxoid): nie mniej niż 40 j.m. (adsorbowany na wodorotlenku glinu Al(OH)3)\n• Antygeny Bordetella pertussis:\n   - Toksoid krztuścowy (PT): 25 mikrogramów\n   - Hemaglutynina włókienkowa (FHA): 25 mikrogramów\n   - Pertaktyna (PRN): 8 mikrogramów\n   (adsorbowane na wodorotlenku glinu Al(OH)3)\n• Antygen powierzchniowy Hepatitis B (r-HBsAg): 10 mikrogramów (otrzymywany z hodowli komórek drożdży Saccharomyces cerevisiae technologią rekombinacji DNA, adsorbowany na fosforanie glinu AlPO4 1,45 mg Al3+)\n• Poliowirus (inaktywowany) (IPV) namnażany w komórkach Vero:\n   - typ 1 (szczep Mahoney): 40 jednostek antygenu D\n   - typ 2 (szczep MEF-1): 8 jednostek antygenu D\n   - typ 3 (szczep Saukett): 32 jednostki antygenu D\n• Polisacharyd Haemophilus influenzae typ b (fosforan polirybozylorybitolu, PRP): 10 mikrogramów (skoniugowany z toksoidem tężcowym jako nośnikiem białkowym ok. 20–40 mikrogramów, adsorbowany na fosforanie glinu AlPO4).\n\nSubstancje pomocnicze o znanym działaniu: laktoza bezwodna, sodu chlorek. Szczepionka zawiera śladowe ilości formaldehydu, neomycyny i polimyksyny.',
+    'Po rekonstytucji 1 dawka (0,5 ml) zawiera:\n• Toksoid błoniczy (Diphtheria toxoid): nie mniej niż 30 j.m. (adsorbowany na wodorotlenku glinu Al(OH)3)\n• Toksoid tężcowy (Tetanus toxoid): nie mniej niż 40 j.m. (adsorbowany na wodorotlenku glinu Al(OH)3)\n• Antygeny Bordetella pertussis:\n   - Toksoid krztuścowy (PT): 25 mikrogramów\n   - Hemaglutynina włókienkowa (FHA): 25 mikrogramów\n   - Pertaktyna (PRN): 8 mikrogramów\n   (adsorbowane na wodorotlenku glinu Al(OH)3)\n• Antygen powierzchniowy Hepatitis B (r-HBsAg): 10 mikrogramów (otrzymywany z hodowli komórek drożdży Saccharomyces cerevisiae technologią rekombinacji DNA, adsorbowany na fosforanie glinu AlPO4)\n• Poliowirus (inaktywowany) (IPV) namnażany w komórkach Vero:\n   - typ 1 (szczep Mahoney): 40 jednostek antygenu D\n   - typ 2 (szczep MEF-1): 8 jednostek antygenu D\n   - typ 3 (szczep Saukett): 32 jednostki antygenu D\n• Polisacharyd Haemophilus influenzae typ b (fosforan polirybozylorybitolu, PRP): 10 mikrogramów, skoniugowany z toksoidem tężcowym jako nośnikiem białkowym około 25 mikrogramów (adsorbowany na fosforanie glinu AlPO4).\n\nAdiuwanty mineralne (zawartość glinu Al3+):\n- wodorotlenek glinu, uwodniony Al(OH)3: 0,5 mg Al3+\n- fosforan glinu AlPO4: 0,32 mg Al3+\nŁączna zawartość glinu w 1 dawce (0,5 ml): 0,82 mg Al3+.\n\nSubstancje pomocnicze o znanym działaniu: laktoza bezwodna, sodu chlorek.\nPozostałości z procesu wytwarzania w ilościach śladowych: formaldehyd, neomycyna, polimyksyna.',
     'pending_verification',
-    'Zgodne z oficjalnym składem ChPL. Zwrócić uwagę na obecność soli glinu oraz śladowe antybiotyki.',
+    'Zweryfikowano z EMA EPAR SmPC: glin Al3+ łącznie 0,82 mg (wodorotlenek 0,5 mg, fosforan 0,32 mg); nośnik tężcowy PRP ok. 25 µg. Usunięto zdezaktualizowane masy soli.',
     INFANRIX_HEXA_DOC_SOURCE,
     1,
     INFANRIX_HEXA_PDF_URL,
@@ -309,7 +309,7 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
   pharmaceuticalForm: createChPLSection(
     '3',
     'Postać farmaceutyczna',
-    'Proszek i zawiesina do sporządzania zawiesiny do wstrzykiwań.\n• Proszek: biały proszek w fiolce ze szkła typu I (składnik Hib).\n• Zawiesina: mętna, biała zawiesina w ampułko-strzykawce ze szkła typu I (składnik DTPa-HBV-IPV).\n• Po rekonstytucji: jednorodna, mętna biaława zawiesina.',
+    'Proszek i zawiesina do sporządzania zawiesiny do wstrzykiwań.\n• Proszek: biały proszek w szklanej fiolce (składnik Hib).\n• Zawiesina: mętna, biała zawiesina w ampułko-strzykawce (składnik DTPa-HBV-IPV).\n• Po rekonstytucji: jednorodna, mętna biaława zawiesina.',
     'pending_verification',
     'Ocenić wygląd przed podaniem. Prawidłowy preparat po zmieszaniu ma postać mętnej białej zawiesiny.',
     INFANRIX_HEXA_DOC_SOURCE,
@@ -321,9 +321,9 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
     indications: createChPLSection(
       '4.1',
       'Wskazania do stosowania',
-      'Szczepionka Infanrix hexa jest wskazana do szczepienia pierwotnego i uzupełniającego niemowląt i dzieci przeciwko błonicy, tężcowi, krztuścowi, wirusowemu zapaleniu wątroby typu B, poliomyelitis i zakażeniom wywoływanym przez Haemophilus influenzae typ b.\n\nOgraniczenie wiekowe: Infanrix hexa nie jest przeznaczony do stosowania u dzieci w wieku powyżej 36. miesiąca życia.\nStosowanie: Szczepionkę należy stosować zgodnie z oficjalnymi wytycznymi krajowego Programu Szczepień Ochronnych (PSO).',
+      'Szczepionka Infanrix hexa jest wskazana do szczepienia pierwotnego i uzupełniającego niemowląt i małych dzieci przeciwko błonicy, tężcowi, krztuścowi, wirusowemu zapaleniu wątroby typu B, poliomyelitis i zakażeniom wywoływanym przez Haemophilus influenzae typ b.\n\nStosowanie w populacji pediatrycznej (informacja kliniczna):\nBezpieczeństwo i skuteczność stosowania szczepionki Infanrix hexa u dzieci w wieku powyżej 36 miesięcy nie zostały ustalone (brak dostępnych danych klinicznych). Zapis ten wynika z braku badań klinicznych w tej grupie wiekowej i nie stanowi automatycznego, bezwzględnego ograniczenia samego wskazania klinicznego.\n\nStosowanie szczepionki powinno być zgodne z oficjalnymi zaleceniami (Program Szczepień Ochronnych).',
       'pending_verification',
-      'Oficjalne wskazanie pediatryczne do 36. miesiąca życia.',
+      'Wskazanie do szczepienia pierwotnego i uzupełniającego. Informacja o braku danych >36 m.ż. oddzielona od samego wskazania.',
       INFANRIX_HEXA_DOC_SOURCE,
       2,
       INFANRIX_HEXA_PDF_URL,
@@ -332,9 +332,9 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
     dosageAndAdministration: createChPLSection(
       '4.2',
       'Dawkowanie i sposób podawania',
-      'Dawkowanie:\n• Szczepienie pierwotne:\n  Składa się z dwóch lub trzech dawek (po 0,5 ml), podawanych zgodnie z oficjalnymi wytycznymi:\n  - Schemat 3-dawkowy: np. w 2., 3., 4. miesiącu; 3., 4., 5. miesiącu lub 2., 4., 6. miesiącu życia;\n  - Schemat 2-dawkowy: np. w 3. i 5. miesiącu życia.\n  Należy zachować odstęp co najmniej 1 miesiąca pomiędzy dawkami szczepienia pierwotnego.\n  Jeśli noworodek otrzymał dawkę szczepionki przeciwko WZW B tuż po urodzeniu, Infanrix hexa może być zastosowany od ukończenia 6. tygodnia życia jako kolejna dawka.\n\n• Szczepienie uzupełniające (przypominające):\n  - Po 2 dawkach szczepienia pierwotnego: dawka uzupełniająca musi być podana w odstępie co najmniej 6 miesięcy od ostatniej dawki szczepienia pierwotnego, najlepiej pomiędzy 11. a 13. miesiącem życia.\n  - Po 3 dawkach szczepienia pierwotnego: dawka uzupełniająca musi być podana w odstępie co najmniej 6 miesięcy od ostatniej dawki szczepienia pierwotnego, najlepiej przed ukończeniem 18. miesiąca życia.\n\nSposób podawania:\nInfanrix hexa podaje się w głębokim wstrzyknięciu domięśniowym (i.m.), najlepiej w przednioboczną część uda u niemowląt i małych dzieci. Przy kolejnych dawkach zaleca się zmianę miejsca iniekcji.\nPod żadnym pozorem nie wolno podawać dożylnie ani śródskórnie.',
+      'Dawkowanie:\n\n1. Szczepienie pierwotne:\n• Schemat 3-dawkowy (np. w 2., 3., 4. miesiącu; 3., 4., 5. miesiącu lub 2., 4., 6. miesiącu życia):\n  - Składa się z 3 dawek po 0,5 ml.\n  - Odstęp pomiędzy kolejnymi dawkami pierwotnymi musi wynosić co najmniej 1 miesiąc.\n\n• Schemat 2-dawkowy (np. w 3. i 5. miesiącu życia):\n  - Składa się z 2 dawek po 0,5 ml.\n  - Odstęp pomiędzy kolejnymi dawkami pierwotnymi musi wynosić co najmniej 2 miesiące.\n\n• Rozszerzony Program Szczepień (EPI – w 6., 10., 14. tygodniu życia):\n  - Może być zastosowany jedynie wtedy, gdy noworodek otrzymał dawkę szczepionki przeciw WZW B tuż po urodzeniu.\n\n2. Szczepienie uzupełniające (przypominające):\n• Dawka uzupełniająca musi być podana w odstępie co najmniej 6 miesięcy od ostatniej dawki szczepienia pierwotnego.\n• Preferowany termin podania dawki uzupełniającej:\n  - po schemacie 2-dawkowym szczepienia pierwotnego: najlepiej pomiędzy 11. a 13. miesiącem życia;\n  - po schemacie 3-dawkowym szczepienia pierwotnego: najlepiej przed ukończeniem 18. miesiąca życia.\nJako minimum należy podać jedną dawkę szczepionki skoniugowanej przeciw Hib. Szczepionka Infanrix hexa może być zastosowana jako dawka uzupełniająca, jeśli jej podanie jest zgodne z oficjalnymi wytycznymi.\n\n3. Populacja dzieci w wieku powyżej 36 miesięcy:\nBezpieczeństwo i skuteczność u dzieci powyżej 36 miesięcy nie zostały ustalone (brak danych klinicznych).\n\nSposób podawania:\nInfanrix hexa przeznaczony jest do głębokiego wstrzyknięcia domięśniowego (i.m.), najlepiej w przednioboczną część uda u niemowląt i małych dzieci. Przy kolejnych dawkach zaleca się zmianę miejsca iniekcji (kolejne udo).\nPod żadnym pozorem nie wolno podawać dożylnie ani śródskórnie.',
       'pending_verification',
-      'Wstrzyknięcie wyłącznie domięśniowe (przednio-boczna część uda). Przestrzegać min. 1 mies. odstępu w cyklu pierwotnym i min. 6 mies. przed dawką przypominającą.',
+      'Rozdzielono schematy pierwotne (3 dawki: min. 1 mies.; 2 dawki: min. 2 mies.) oraz uzupełniające (min. 6 mies.; preferowane 11–13 m.ż. vs <18 m.ż.).',
       INFANRIX_HEXA_DOC_SOURCE,
       2,
       INFANRIX_HEXA_PDF_URL,
@@ -343,9 +343,9 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
     contraindications: createChPLSection(
       '4.3',
       'Przeciwwskazania',
-      '• Nadwrażliwość na substancje czynne lub na którąkolwiek substancję pomocniczą (wymienioną w punkcie 6.1) bądź na substancje pozostałościowe (formaldehyd, neomycynę, polimyksynę).\n• Reakcje anafilaktyczne lub objawy nadwrażliwości po wcześniejszym podaniu szczepionek przeciw błonicy, tężcowi, krztuścowi, WZW B, polio lub Hib.\n• Encefalopatia o nieznanej etiologii, która wystąpiła w ciągu 7 dni po wcześniejszym podaniu szczepionki zawierającej komponentę krztuścową. W takim przypadku należy przerwać podawanie komponenty krztuścowej i kontynuować szczepienie preparatami bezkrztuścowymi (DT, HBV, IPV, Hib).\n• Ostre, ciężkie choroby przebiegające z wysoką gorączką (łagodna infekcja kataralna bez gorączki nie stanowi przeciwwskazania do szczepienia).',
+      'Szczepionka Infanrix hexa jest przeciwwskazana w następujących przypadkach:\n• Nadwrażliwość na substancje czynne lub na którąkolwiek substancję pomocniczą wymienioną w punkcie 6.1, bądź na substancje pozostałościowe z procesu wytwarzania (formaldehyd, neomycynę, polimyksynę).\n• Reakcje nadwrażliwości po wcześniejszym podaniu szczepionek przeciw błonicy, tężcowi, krztuścowi, wirusowemu zapaleniu wątroby typu B, poliomyelitis lub Hib.\n• Encefalopatia o nieznanej etiologii, która wystąpiła w ciągu 7 dni po wcześniejszym podaniu szczepionki zawierającej antygeny krztuśca. W takim przypadku należy bezwzględnie przerwać podawanie komponenty krztuścowej i kontynuować cykl szczepienia preparatami bezkrztuścowymi (DT, HBV, IPV, Hib).\n• Ostre, ciężkie choroby gorączkowe. Zgodnie z ogólnymi zasadami szczepień podanie szczepionki należy przełożyć do czasu ustąpienia ostrej fazy choroby. Łagodna infekcja (np. katar, przeziębienie bez wysokiej gorączki) nie stanowi przeciwwskazania do szczepienia.',
       'pending_verification',
-      'Kluczowe bezwzględne przeciwwskazania kliniczne do kwalifikacji lekarskiej.',
+      'Ściśle rzeczywiste przeciwwskazania z punktu 4.3 ChPL EMA (brak mieszania z ostrzeżeniami).',
       INFANRIX_HEXA_DOC_SOURCE,
       3,
       INFANRIX_HEXA_PDF_URL,
@@ -354,9 +354,9 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
     warningsAndPrecautions: createChPLSection(
       '4.4',
       'Specjalne ostrzeżenia i środki ostrożności dotyczące stosowania',
-      '• Badanie kwalifikacyjne: Każde szczepienie powinno być poprzedzone badaniem lekarskim oraz dokładnym wywiadem medycznym (z uwzględnieniem wcześniejszych szczepień i ewentualnych NOP).\n• Reakcje po składniku krztuścowym: Należy starannie rozważyć podanie kolejnych dawek szczepionki z krztuścem, jeśli w ciągu 48 h wystąpiły:\n  - gorączka ≥ 40,0°C niewywołana innym zidentyfikowanym czynnikiem;\n  - zapaść lub stan podobny do wstrząsu (zespół hipotoniczno-hiporeaktywny, HHE);\n  - nieutulony, ciągły płacz trwający ≥ 3 godziny;\n  - drgawki z gorączką lub bez gorączki występujące w ciągu 3 dni po szczepieniu.\n• Skazy krwotoczne: Zachować ostrożność u dzieci z trombocytopenią lub zaburzeniami krzepnięcia (ryzyko krwawienia po iniekcji i.m.).\n• Zabezpieczenie przeciwwstrząsowe: Zawsze zapewnić natychmiastowy dostęp do zestawu anafilaktycznego (adrenalina 1:1000) oraz nadzór medyczny przez minimum 30 minut po szczepieniu.\n• Skrajne wcześniaki (urodzone ≤ 28. tygodnia ciąży): Rozważyć ryzyko wystąpienia bezdechu i monitorować czynność oddechową przez 48–72 h po szczepieniu pierwotnym.',
+      '• Badanie kwalifikacyjne: Przed każdym szczepieniem należy zebrać dokładny wywiad medyczny (ze szczególnym uwzględnieniem wcześniejszych szczepień i ewentualnych NOP) oraz przeprowadzić badanie lekarskie.\n\n• Zdarzenia w powiązaniu czasowym ze składnikiem krztuścowym (do starannego rozważenia przez lekarza):\nJeśli po podaniu szczepionki zawierającej antygeny krztuśca wystąpiło którekolwiek z poniższych zdarzeń, decyzję o podaniu kolejnych dawek szczepionki zawierającej krztusiec należy starannie rozważyć:\n  - temperatura ciała ≥ 40,0°C w ciągu 48 godzin od szczepienia, niewywołana innym zidentyfikowanym czynnikiem;\n  - zapaść lub stan podobny do wstrząsu (zespół hipotoniczno-hiporeaktywny, HHE) w ciągu 48 godzin od szczepienia;\n  - uporczywy, nieutulony płacz trwający ≥ 3 godziny, występujący w ciągu 48 godzin od szczepienia;\n  - drgawki z gorączką lub bez gorączki, występujące w ciągu 3 dni (72 godzin) od szczepienia.\nWAŻNE: Zdarzenia te NIE STANOWIĄ automatycznych, bezwzględnych przeciwwskazań do szczepienia. W sytuacjach szczególnych (np. wysokie ryzyko zakażenia krztuścem w otoczeniu) potencjalne korzyści ze szczepienia mogą przewyższać ryzyko.\n\n• Drgawki i zaburzenia neurologiczne: Występowanie w wywiadzie drgawek gorączkowych lub drgawek w rodzinie nie stanowi przeciwwskazania, wymaga jednak wzmożonej uwagi personelu.\n\n• Zaburzenia krzepnięcia: U niemowląt z małopłytkowością lub zaburzeniami krzepnięcia krwi szczepionkę należy podawać ostrożnie ze względu na ryzyko krwawienia po iniekcji domięśniowej.\n\n• Gotowość przeciwwstrząsowa: Zawsze należy zapewnić możliwość natychmiastowego podjęcia leczenia anafilaksji (dostęp do roztworu adrenaliny 1:1000 i sprzętu reanimacyjnego) oraz obserwować pacjenta po szczepieniu.\n\n• Bardzo niedojrzałe wcześniaki (urodzone ≤ 28. tygodnia ciąży):\nPodczas podawania dawek szczepienia pierwotnego u bardzo niedojrzałych wcześniaków (urodzonych w 28. tygodniu ciąży lub wcześniej), a szczególnie u dzieci z niewydolnością oddechową w wywiadzie, należy wziąć pod uwagę potencjalne ryzyko bezdechu i konieczność monitorowania czynności oddechowych przez 48–72 godziny po szczepieniu.\nZgodnie z ChPL: Ponieważ korzyści ze szczepienia w tej grupie niemowląt są wysokie, szczepienia NIE NALEŻY WSTRZYMYWAĆ ANI OPÓŹNIAĆ wyłącznie z tego powodu.',
       'pending_verification',
-      'Ostrzeżenia dotyczące zespołu HHE, wysokiej gorączki, skrajnych wcześniaków oraz konieczności gotowości przeciwwstrząsowej.',
+      'Uwzględniono precyzyjne ramy czasowe NOP (48 h / 3 dni) bez traktowania jako bezwzględne przeciwwskazania. Zapis o niewstrzymywaniu szczepienia u wcześniaków ≤28 tc.',
       INFANRIX_HEXA_DOC_SOURCE,
       3,
       INFANRIX_HEXA_PDF_URL,
@@ -365,9 +365,9 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
     interactions: createChPLSection(
       '4.5',
       'Interakcje z innymi produktami leczniczymi i inne rodzaje interakcji',
-      '• Jednoczesne podawanie: Infanrix hexa może być podawany jednocześnie ze skoniugowaną szczepionką przeciw pneumokokom (np. Prevenar 13), skoniugowanymi szczepionkami przeciw meningokokom grupy C i ACWY oraz doustnymi szczepionkami przeciw rotawirusom.\n• Miejsca iniekcji: Różne szczepionki we wstrzyknięciach należy zawsze podawać w oddzielne miejsca ciała, przy użyciu osobnych strzykawek i igieł.\n• Reakcje gorączkowe: Jednoczesne podawanie ze skoniugowaną szczepionką przeciw pneumokokom wiąże się z częstszym występowaniem reakcji gorączkowych (zazwyczaj łagodnych do umiarkowanych ≤ 39°C) oraz drgawek gorączkowych i epizodów HHE.\n• Immunosupresja: U dzieci z wrodzonymi lub nabytymi niedoborami odporności oraz leczonych immunosupresyjnie odpowiedź immunologiczna na szczepienie może być osłabiona.',
+      'Współpodawanie z innymi szczepionkami:\nBadania kliniczne potwierdziły możliwość jednoczesnego podawania szczepionki Infanrix hexa z następującymi szczepionkami:\n• Skoniugowane szczepionki przeciw pneumokokom (PCV – np. 7-, 10-, 13-walentne);\n• Skoniugowane szczepionki przeciw meningokokom serogrupy C (MenC);\n• Skoniugowane szczepionki przeciw meningokokom serogrup A, C, W-135 i Y (MenACWY);\n• Szczepionki przeciw meningokokom serogrupy B (MenB);\n• Doustne szczepionki przeciw rotawirusom;\n• Szczepionki przeciw odrze, śwince, różyczce i ospie wietrznej (MMRV – badania współpodawania w 2. roku życia wykazały brak interferencji immunologicznej).\n\nProfile reaktogenności i ryzyko gorączki przy jednoczesnym podawaniu:\n• Jednoczesne podanie ze skoniugowanymi szczepionkami przeciw pneumokokom (PCV) lub ze szczepionką przeciw meningokokom grupy B (MenB) wiąże się z wyższym odsetkiem reakcji gorączkowych w porównaniu do podania samego preparatu Infanrix hexa.\n• W przypadku jednoczesnego podania z PCV zaobserwowano zwiększoną częstość zgłaszania drgawek (z gorączką lub bez gorączki) oraz epizodów hipotoniczno-hiporeaktywnych (HHE).\n• W przypadku jednoczesnego podania z MenB odnotowano wyższą częstość występowania gorączki (≥ 38,0°C). Zgodnie z ChPL profilaktyczne podanie leków przeciwgorączkowych przed szczepieniem lub bezpośrednio po nim może zmniejszyć częstość i nasilenie poszczepiennych odczynów gorączkowych.\n\nZasady techniczne:\nWstrzykiwane szczepionki należy zawsze podawać w różne miejsca anatomiczne ciała przy użyciu oddzielnych strzykawek i igieł.\n\nImmunosupresja:\nU pacjentów poddawanych leczeniu immunosupresyjnemu lub z niedoborami odporności odpowiedź immunologiczna na szczepienie może nie zostać w pełni osiągnięta.',
       'pending_verification',
-      'Jednoczesne podanie dozwolone w różne kończyny / miejsca anatomiczne.',
+      'Zweryfikowano pełną listę współpodawania: PCV, MenC, MenACWY, MenB, rotawirusy, MMRV oraz specyfikę ryzyka gorączki/HHE wg ChPL EMA.',
       INFANRIX_HEXA_DOC_SOURCE,
       5,
       INFANRIX_HEXA_PDF_URL,
@@ -387,7 +387,7 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
     driveAndMachines: createChPLSection(
       '4.7',
       'Wpływ na zdolność prowadzenia pojazdów i obsługiwania maszyn',
-      'Nie dotyczy. Produkt przeznaczony wyłącznie dla dzieci w wieku do ukończenia 36. miesiąca życia. W oficjalnym druku ChPL odnotowano: "Nieistotny".',
+      'Nie dotyczy (produkt przeznaczony wyłącznie dla niemowląt i małych dzieci). W oficjalnym druku ChPL odnotowano: "Nieistotny".',
       'pending_verification',
       'Zapis z ChPL: Nieistotny.',
       INFANRIX_HEXA_DOC_SOURCE,
@@ -398,7 +398,7 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
     undesirableEffects: createChPLSection(
       '4.8',
       'Działania niepożądane',
-      'Profil bezpieczeństwa oparty na badaniach klinicznych oraz monitorowaniu po wprowadzeniu produktu do obrotu:\n• Bardzo często (≥ 1/10): utrata apetytu, gorączka ≥ 38°C, ból, zaczerwienienie, miejscowy obrzęk w miejscu wstrzyknięcia (≤ 50 mm), zmęczenie, drażliwość, nietypowy płacz, senność.\n• Często (≥ 1/100 do < 1/10): nerwowość, wymioty, biegunka, świąd, gorączka > 39,5°C, stwardnienie w miejscu podania, obrzęk w miejscu wstrzyknięcia (> 50 mm).\n• Niezbyt często (≥ 1/1 000 do < 1/100): infekcja górnych dróg oddechowych, kaszel, apatia, rozlany obrzęk kończyny, w którą wykonano iniekcję (niekiedy obejmujący sąsiedni staw).\n• Rzadko (≥ 1/10 000 do < 1/1 000): wysypka, pokrzywka.\n• Bardzo rzadko i po wprowadzeniu do obrotu: reakcje anafilaktyczne, reakcje anafilaktoidalne, obrzęk naczynioruchowy, drgawki (z gorączką lub bez gorączki), epizody hipotoniczno-hiporeaktywne (HHE), bezdech u skrajnych wcześniaków (urodzonych ≤ 28. tc).',
+      'Profil bezpieczeństwa oparty na badaniach klinicznych z udziałem niemowląt i dzieci oraz nadzorze porejestracyjnym:\n• Bardzo często (≥ 1/10): utrata apetytu, gorączka ≥ 38°C, ból, zaczerwienienie, miejscowy obrzęk w miejscu wstrzyknięcia (≤ 50 mm), zmęczenie, drażliwość, nietypowy płacz, senność.\n• Często (≥ 1/100 do < 1/10): nerwowość, wymioty, biegunka, świąd, gorączka > 39,5°C, stwardnienie w miejscu podania, obrzęk w miejscu wstrzyknięcia (> 50 mm).\n• Niezbyt często (≥ 1/1 000 do < 1/100): infekcja górnych dróg oddechowych, kaszel, apatia, rozlany obrzęk kończyny, w którą wykonano iniekcję (niekiedy obejmujący sąsiedni staw).\n• Rzadko (≥ 1/10 000 do < 1/1 000): wysypka, pokrzywka.\n• Bardzo rzadko i zgłoszenia po wprowadzeniu do obrotu: reakcje anafilaktyczne, reakcje anafilaktoidalne (w tym obrzęk naczynioruchowy), drgawki (z gorączką lub bez gorączki), epizody hipotoniczno-hiporeaktywne (HHE), bezdech u bardzo niedojrzałych wcześniaków (urodzonych ≤ 28. tc).',
       'pending_verification',
       'Profil NOP według klasyfikacji MedDRA z oficjalnej tabeli ChPL.',
       INFANRIX_HEXA_DOC_SOURCE,
@@ -409,9 +409,9 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
     overdose: createChPLSection(
       '4.9',
       'Przedawkowanie',
-      'W oficjalnym druku Charakterystyki Produktu Leczniczego zapisano: "Nie odnotowano". W badaniach klinicznych oraz monitorowaniu bezpieczeństwa nie stwierdzono specyficznych objawów związanych z podaniem dawki większej niż zalecana.',
+      'W oficjalnym druku ChPL EMA odnotowano: "Nie odnotowano" (No case of overdose has been reported). W badaniach klinicznych oraz monitorowaniu bezpieczeństwa nie stwierdzono specyficznych objawów związanych z podaniem dawki większej niż zalecana.',
       'pending_verification',
-      'Oficjalna treść ChPL: Nie odnotowano.',
+      'Oficjalna treść ChPL EMA: Nie odnotowano.',
       INFANRIX_HEXA_DOC_SOURCE,
       7,
       INFANRIX_HEXA_PDF_URL,
@@ -457,9 +457,9 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
     excipients: createChPLSection(
       '6.1',
       'Wykaz substancji pomocniczych',
-      '• Proszek Hib: laktoza bezwodna.\n• Zawiesina DTPa-HBV-IPV: sodu chlorek (NaCl), podłoże 199 (zawierające głównie aminokwasy, sole mineralne, witaminy), woda do wstrzykiwań.\n• Adiuwanty: wodorotlenek glinu uwodniony Al(OH)3 (0,95 mg Al3+) oraz fosforan glinu AlPO4 (1,45 mg Al3+).\n• Pozostałości produkcyjne w ilościach śladowych: formaldehyd, neomycyna, polimyksyna.',
+      '• Proszek Hib: laktoza bezwodna.\n• Zawiesina DTPa-HBV-IPV: sodu chlorek (NaCl), podłoże 199 (zawierające głównie aminokwasy, sole mineralne, witaminy), woda do wstrzykiwań.\n• Adiuwanty mineralne glinowe:\n  - wodorotlenek glinu, uwodniony Al(OH)3 zawierający 0,5 mg Al3+\n  - fosforan glinu AlPO4 zawierający 0,32 mg Al3+\n  (łączna zawartość glinu w dawce: 0,82 mg Al3+).\n• Pozostałości z procesu wytwarzania (ilości śladowe): formaldehyd, neomycyna, polimyksyna.',
       'pending_verification',
-      'Adiuwanty mineralne glinowe oraz śladowe ilości antybiotyków i formaldehydu.',
+      'Skorygowano zawartość adiuwantu glinowego do właściwych wartości Al3+ (0,5 mg + 0,32 mg = 0,82 mg).',
       INFANRIX_HEXA_DOC_SOURCE,
       9,
       INFANRIX_HEXA_PDF_URL,
@@ -479,9 +479,9 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
     shelfLife: createChPLSection(
       '6.3',
       'Okres ważności',
-      'Okres ważności produktu: 3 lata.\nPo rekonstytucji: szczepionkę należy podać niezwłocznie po przygotowaniu. Wykazano jednak stabilność chemiczną i fizyczną przygotowanego produktu do 8 godzin w temperaturze 21°C.',
+      'Okres ważności produktu leczniczego: 4 lata (zgodnie z aktualną dokumentacją EMA EPAR; wcześniejsze serie: 3 lata).\n\nPo rekonstytucji:\nZaleca się natychmiastowe zużycie szczepionki po jej sporządzeniu.\nWykazano jednak stabilność chemiczną i fizyczną sporządzonego preparatu przez 8 godzin w temperaturze 21°C.',
       'pending_verification',
-      '3 lata w lodówce. Zalecane natychmiastowe podanie po zmieszaniu.',
+      'Okres ważności zaktualizowany do 4 lat zgodnie z EMA EPAR (wcześniej 3 lata). Stabilność po rekonstytucji: 8 h w 21°C.',
       INFANRIX_HEXA_DOC_SOURCE,
       10,
       INFANRIX_HEXA_PDF_URL,
@@ -490,9 +490,9 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
     storageSpecialPrecautions: createChPLSection(
       '6.4',
       'Specjalne środki ostrożności podczas przechowywania',
-      'Przechowywać w lodówce w temperaturze od 2°C do 8°C (bezwzględny wymóg utrzymania łańcucha chłodniczego).\nNie zamrażać. Zamrożenie nieodwracalnie niszczy strukturę adiuwantu mineralnego i bezwzględnie dyskwalifikuje szczepionkę z użycia.\nPrzechowywać w oryginalnym opakowaniu w celu ochrony przed światłem.',
+      '• Przechowywać w lodówce w temperaturze od 2°C do 8°C (bezwzględny wymóg utrzymania łańcucha chłodniczego).\n• Nie zamrażać. Zamrożenie nieodwracalnie niszczy strukturę adiuwantu mineralnego i bezwzględnie dyskwalifikuje szczepionkę z użycia.\n• Przechowywać w oryginalnym opakowaniu w celu ochrony przed światłem.\n\nCzasowe odchylenie temperatury (procedura awaryjna w punkcie szczepień):\nDane dotyczące stabilności wskazują, że składniki szczepionki zachowują stabilność w temperaturze do 25°C przez 72 godziny.\nUWAGA: Informacja ta służy personelowi medycznemu wyłącznie do oceny bezpieczeństwa i przydatności preparatu w przypadku przejściowego odchylenia temperatury (np. awaria lodówki, przerwa w dostawie prądu), a NIE jako zalecenie przechowywania leku poza lodówką.',
       'pending_verification',
-      'Temperatura 2°C – 8°C. Bezwzględny zakaz zamrażania (dyskwalifikacja preparatu).',
+      'Temperatura 2°C – 8°C. Informacja o 72 h w 25°C dotyczy wyłącznie czasowych odchyleń temperatury.',
       INFANRIX_HEXA_DOC_SOURCE,
       10,
       INFANRIX_HEXA_PDF_URL,
@@ -501,9 +501,9 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
     containerNatureAndContents: createChPLSection(
       '6.5',
       'Rodzaj i zawartość opakowania',
-      '• Proszek w fiolce ze szkła typu I z korkiem z gumy butylowej.\n• 0,5 ml zawiesiny w ampułko-strzykawce ze szkła typu I z zatyczką z gumy butylowej.\nOpakowania handlowe zawierają 1 lub 10 fiolek oraz ampułko-strzykawek, z 2 osobnymi igłami lub bez igieł. Nie wszystkie wielkości opakowań muszą znajdować się w obrocie na rynku polskim.',
+      '• Proszek w fiolce ze szkła typu I z korkiem z gumy butylowej (składnik Hib).\n• 0,5 ml zawiesiny w ampułko-strzykawce ze szkła typu I z zatyczką i tłoczkiem z gumy butylowej (składnik DTPa-HBV-IPV).\n• Wielkości opakowań potwierdzone w EMA:\n  - 1 fiolka + 1 ampułko-strzykawka bez igły (EU/1/00/152/001);\n  - 1 fiolka + 1 ampułko-strzykawka z 2 osobnymi igłami (EU/1/00/152/002);\n  - 10 fiolek + 10 ampułko-strzykawek bez igieł (EU/1/00/152/005);\n  - 10 fiolek + 10 ampułko-strzykawek z 20 osobnymi igłami (EU/1/00/152/006);\n  - 1 fiolka + 1 ampułko-strzykawka z igłą / igłami (EU/1/00/152/021).\nNie wszystkie wielkości opakowań muszą znajdować się w obrocie na rynku polskim.',
       'pending_verification',
-      'Fiolka ze szkła typu I + ampułko-strzykawka jednodawkowa.',
+      'Opis opakowań zgodny ze zweryfikowanymi numerami pozwoleń EMA.',
       INFANRIX_HEXA_DOC_SOURCE,
       10,
       INFANRIX_HEXA_PDF_URL,
@@ -535,9 +535,9 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
   marketingAuthorisationNumber: createChPLSection(
     '8',
     'Numer(-y) pozwolenia na dopuszczenie do obrotu',
-    'EU/1/00/152/001 do EU/1/00/152/020 (rejestracja w procedurze centralnej Europejskiej Agencji Leków - EMA). Podstawowe opakowanie z dwiema igłami posiada numer: EU/1/00/152/001.',
+    'Numery pozwolenia na dopuszczenie do obrotu w Unii Europejskiej potwierdzone w rejestrze EMA:\n• EU/1/00/152/001\n• EU/1/00/152/002\n• EU/1/00/152/005\n• EU/1/00/152/006\n• EU/1/00/152/021\n(Procedura centralna Europejskiej Agencji Leków – EMA).',
     'pending_verification',
-    'Numery dopuszczenia procedury centralnej UE/EMA.',
+    'Zapisano wyłącznie numery zweryfikowane w rejestrze EMA (usunięto niefortunny zapis zakresu 001–020).',
     INFANRIX_HEXA_DOC_SOURCE,
     11,
     INFANRIX_HEXA_PDF_URL,
@@ -546,9 +546,9 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
   firstAuthorisationAndRenewal: createChPLSection(
     '9',
     'Data wydania pierwszego pozwolenia na dopuszczenie do obrotu i data przedłużenia pozwolenia',
-    'Data wydania pierwszego pozwolenia: 23 października 2000 r.\nData ostatniego przedłużenia pozwolenia: 23 października 2005 r. (pozwolenie bezterminowe).',
+    '• Data wydania pierwszego pozwolenia na dopuszczenie do obrotu: 23 października 2000 r.\n• Data ostatniego przedłużenia pozwolenia: 31 sierpnia 2010 r. (pozwolenie wydane na czas nieokreślony / bezterminowe).',
     'pending_verification',
-    'Dopuszczenie na rynku europejskim od 2000 r.',
+    'Zweryfikowano z EMA SmPC: pierwsze pozwolenie 23.10.2000 r., odnowienie 31.08.2010 r.',
     INFANRIX_HEXA_DOC_SOURCE,
     11,
     INFANRIX_HEXA_PDF_URL,
@@ -557,9 +557,9 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
   revisionDate: createChPLSection(
     '10',
     'Data zatwierdzenia lub częściowej zmiany tekstu charakterystyki produktu leczniczego',
-    '12.02.2026 r. (Procedura zmiany druków informacyjnych EMA / GSK: druki pl-h-0296-ia-vr-323859-12_02_2026. Szczegółowe informacje o tym produkcie leczniczym są dostępne na stronie internetowej Europejskiej Agencji Leków http://www.ema.europa.eu).',
+    '• Data rewizji tekstu ChPL (zapis w oficjalnym druku unijnym EMA):\n  W unijnej Charakterystyce Produktu Leczniczego (Aneks I) punkt 10 zawiera urzędową formułę:\n  „Szczegółowe informacje o tym produkcie leczniczym są dostępne na stronie internetowej Europejskiej Agencji Leków http://www.ema.europa.eu”.\n  W procedurach centralnych dokładna data wejścia w życie decyzji publikowana jest w urzędowym rejestrze decyzji Komisji Europejskiej / EMA.\n\n• Rozróżnienie dat dokumentacji:\n  1. Data pierwszego dopuszczenia do obrotu: 23.10.2000 r.\n  2. Data ostatniego odnowienia pozwolenia: 31.08.2010 r.\n  3. Data publikacji druku informacyjnego GSK w Polsce (procedura VR 323859): 12.02.2026 r. (data proceduralna podmiotu odpowiedzialnego).\n  4. Data aktualizacji profilu EPAR w portalu internetowym EMA: data publikacji wersji elektronicznej na stronie agencji (nie jest tożsama z datą rewizji tekstu prawnego ChPL).',
     'pending_verification',
-    'Oficjalna data zmiany z punktu 10 ChPL: 12.02.2026.',
+    'Rozdzielono datę rewizji tekstu ChPL, datę odnowienia pozwolenia (31.08.2010) oraz daty publikacji w portalach EMA i GSK.',
     INFANRIX_HEXA_DOC_SOURCE,
     11,
     INFANRIX_HEXA_PDF_URL,
@@ -576,9 +576,9 @@ export const VACCINES_CATALOG: VaccineProduct[] = [
     pharmaceuticalForm: 'Proszek i zawiesina do sporządzania zawiesiny do wstrzykiwań (biały proszek w fiolce + mętna biała zawiesina w ampułko-strzykawce)',
     vaccineType: 'podjednostkowa',
     targetGroup: 'pediatryczna',
-    marketingAuthorizationNumber: 'EU/1/00/152/001 (oraz 002–020)',
+    marketingAuthorizationNumber: 'EU/1/00/152/001, EU/1/00/152/002, EU/1/00/152/005, EU/1/00/152/006, EU/1/00/152/021',
     rplRecordUrl: null, // Pozostawione jako null – publiczny rejestr RPL eZdrowie nie udostępnia statycznego permalinka do procedur centralnych EMA
-    currentChplUrl: 'https://pl.gsk.com/media/b2ip1snt/infanrix-hexa-druki-pl-h-0296-ia-vr-323859-12_02_2026.pdf',
+    currentChplUrl: 'https://www.ema.europa.eu/en/documents/product-information/infanrix-hexa-epar-product-information_en.pdf',
     chplRevisionDate: '12.02.2026',
     chplVersionDate: '12.02.2026',
     documentDownloadDate: '10.11.2026',

@@ -391,7 +391,7 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
               {currentVaccine.chplRevisionDate || 'Brak w dokumencie'}
             </span>
             <span className="v-date-desc">
-              Urzędowa data zatwierdzenia lub zmiany druków informacyjnych przez EMA/URPL (procedura VR 323859).
+              Data zmiany druków wg procedury wytwórcy / EMA (odrębna od daty publikacji portalu EMA oraz odnowienia pozwolenia).
             </span>
           </div>
 
