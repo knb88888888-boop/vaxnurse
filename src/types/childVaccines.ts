@@ -39,6 +39,7 @@ export type ChildVaccineVerificationStatus =
 
 export interface ChildVaccineItem {
   id: string;                                   // Unikalny identyfikator wpisu PSO (np. "pso-bcg-0")
+  aliasId?: string;                             // Alternatywny / kanoniczny identyfikator procedury (np. "child-dtpa-preterm-primary")
   disease: string;                              // Nazwa jednostki chorobowej / docelowego zakażenia
   shortCode: string;                            // Skrót kliniczny (np. "BCG", "HBV", "DTP", "PCV", "RV", "MMR")
   pathogenCategory: 'bakterie' | 'wirusy' | 'mieszane';
@@ -52,13 +53,29 @@ export interface ChildVaccineItem {
   administrationRoute: string;                  // Droga podania (i.m., s.c., i.d., p.o.)
   injectionSite: string;                        // Rekomendowane miejsce iniekcji (np. "Przednioboczna część uda")
   minIntervalFromPrevious: string | null;       // Minimalny odstęp od poprzedniej dawki
+
+  // ZADANIE 5: Nowa numeracja i atrybucja źródeł PSO 2027
+  sourcePart: string;                           // Część PSO (np. "Część I.A", "Część I.B", "Część I.D", "Część II.A", "Część III.C", "Część III.E", "Część III.H")
+  sourceOfficialPoint: string | null;           // Oficjalny numer punktu, jeżeli istnieje (np. "2", "3", "4", "6.3", "pkt 6"); w tabelach bez numeracji: null
+  sourceTableRow: string | null;                // Nazwa szczepienia lub wiersza tabeli (np. "GRUŹLICY", "BŁONICY, TĘŻCOWI, KRZTUŚCOWI")
+  sourceAgeBand: string | null;                 // Wiek z tabeli (np. "Od 1. doby życia do wypisu ze szpitala")
+  sourcePrintedPage: number;                    // Drukowana numeracja strony Dziennika Urzędowego MZ (strony 4–44)
+  sourcePdfPage: number;                        // Fizyczny numer strony w pliku akt.pdf
+
+  // Pola wstecznie kompatybilne
   psoPart: string;                              // Numer części PSO (np. "Część I.A", "Część I.B", "Część II")
-  psoPointOrSubpoint: string;                   // Punkt lub podpunkt PSO (np. "Punkt 1", "Punkt 2", "Punkt 1.1")
+  psoPointOrSubpoint: string;                   // Punkt lub podpunkt PSO
   psoPdfPage: number;                           // Strona w oficjalnym PDF Dz. Urz. Min. Zdrow. 2026 poz. 77
   psoSection: string;                           // Pełna etykieta sekcji PSO
   psoOfficialUrl: string;                       // Oficjalny link GIS / Dziennik Urzędowy MZ
   psoLegalAct: string;                          // Podstawa prawna aktu
-  psoPublicationDate: string;                   // Data publikacji aktu ("28.10.2026")
+
+  // ZADANIE 1: Daty publikacji i podstawa
+  psoGisAnnouncementDate: string;               // Data komunikatu GIS: "28.10.2026"
+  psoJournalPublicationDate: string;           // Data publikacji Dziennika Urzędowego MZ: "30.10.2026"
+  psoJournalEntry: string;                      // Publikacja: "Dz. Urz. MZ 2026 poz. 77"
+  psoPublicationDate: string;                   // Data publikacji Dziennika Urzędowego ("30.10.2026")
+
   clinicalNotes: string;                        // Wskazówki wykonawcze dla personelu
   contraindicationsOrWarnings: string | null;   // Ważne ostrzeżenia i uwagi specyficzne
   fundingStatus: string;                        // Informacja o refundacji / odpłatności
@@ -101,7 +118,20 @@ export interface PsoGeneralPrincipleItem {
 }
 
 /**
- * Zasady szczepień wyrównawczych (Część V PSO 2027).
+ * Model 12 oficjalnych punktów szczepień wyrównawczych (Część V PSO 2027, s. 44 akt.pdf).
+ */
+export interface CatchUpPrincipleItem {
+  pointNumber: number;          // 1 do 12
+  title: string;                // Zwięzły tytuł prawny
+  officialRuleText: string;     // Dosłowna lub wierna treść urzędowa punktu z Części V PSO
+  clinicalApplication: string;  // Zastosowanie kliniczne i wykonawcze dla personelu
+  psoSection: string;           // Oznaczenie sekcji dokumentu ("Część V, punkt X PSO 2027")
+  psoPrintedPage: number;       // Drukowana strona Dziennika Urzędowego (str. 44)
+  psoPdfPage: number;           // Fizyczna strona PDF (str. 44)
+}
+
+/**
+ * Zasady szczepień wyrównawczych – podsumowanie tematyczne (Część V PSO 2027).
  */
 export interface CatchUpImmunizationGuideline {
   id: string;

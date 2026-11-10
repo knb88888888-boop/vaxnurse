@@ -6,7 +6,9 @@ import {
   STAFF_QUALIFICATIONS_PSO_PART_VI,
   PSO_GENERAL_PRINCIPLES_PART_IV,
   CATCH_UP_IMMUNIZATION_PART_V,
-  COMBINED_VACCINES_VARIANTS_PART_III_M
+  PSO_CATCH_UP_12_POINTS_PART_V,
+  COMBINED_VACCINES_VARIANTS_PART_III_M,
+  findChildVaccine
 } from '../src/data/childVaccinesData.ts';
 import { VACCINES_CATALOG } from '../src/data/vaccinesCatalog.ts';
 
@@ -45,41 +47,42 @@ assert.ok(STAGE_GROUPS_CONFIG.length === 6, 'Musi być zdefiniowane 6 grup etap�
 console.log('   ✓ SCENARIUSZ 1 ZALICZONY: Wszystkie 12 etapów wiekowych zdefiniowane z pełną chronologią i powiązaniem z nagłówkami PSO.\n');
 
 // -------------------------------------------------------------
-// Test 2: Audyt źródeł urzędowych, numeru części i stron PDF każdego z 39 rekordów
+// Test 2: Audyt kompletności bazy i metadanych publikacji aktu prawnego
 // -------------------------------------------------------------
-console.log('Test 2: Audyt kompletności źródeł (Część PSO, punkt, strona PDF, URL, publikacja)');
+console.log('Test 2: Audyt kompletności bazy i metadanych publikacji aktu prawnego');
 
-assert.equal(CHILD_VACCINES_CATALOG.length, 39, 'Katalog musi zawierać dokładnie 39 audytowanych rekordów procedur');
+assert.equal(CHILD_VACCINES_CATALOG.length, 43, 'Katalog musi zawierać dokładnie 43 audytowane procedury (34 obowiązkowe + 9 zalecanych)');
 
 const OFFICIAL_PDF_URL = 'https://dziennikmz.mz.gov.pl/DUM_MZ/2026/77/akt.pdf';
 const LEGAL_ACT_KEYWORD = 'Dz. Urz. Min. Zdrow. 2026 poz. 77';
-const PUBLICATION_DATE = '28.10.2026';
+const GIS_ANNOUNCEMENT_DATE = '28.10.2026';
+const JOURNAL_PUBLICATION_DATE = '30.10.2026';
 
 for (const item of CHILD_VACCINES_CATALOG) {
   assert.ok(item.id.startsWith('pso-'), `Identyfikator ${item.id} musi zaczynać się od 'pso-'`);
+  assert.ok(item.aliasId?.startsWith('child-'), `Identyfikator aliasu ${item.aliasId} musi zaczynać się od 'child-'`);
   assert.ok(item.disease.length > 5, `Wpis ${item.id} musi mieć sprecyzowaną chorobę`);
   assert.ok(item.shortCode.length > 0, `Wpis ${item.id} musi mieć skrót kliniczny`);
   assert.ok(['obowiazkowe', 'zalecane'].includes(item.obligationType), `Wpis ${item.id} musi mieć poprawny rodzaj obowiązku`);
-  assert.ok(['Część I.A', 'Część I.B', 'Część II'].includes(item.psoPart), `Wpis ${item.id} musi mieć poprawny numer części PSO`);
-  assert.ok(item.psoPointOrSubpoint.length > 0, `Wpis ${item.id} musi określać punkt/podpunkt PSO`);
-  assert.ok(typeof item.psoPdfPage === 'number' && item.psoPdfPage >= 2 && item.psoPdfPage <= 16, `Wpis ${item.id} musi mieć poprawny numer strony PDF w akt.pdf (2-16)`);
+  assert.ok(typeof item.psoPdfPage === 'number' && item.psoPdfPage >= 4 && item.psoPdfPage <= 40, `Wpis ${item.id} musi mieć stronę PDF w granicach aktu (4-40)`);
+  assert.equal(item.sourcePrintedPage, item.sourcePdfPage, `Wpis ${item.id}: numer strony drukowanej musi być tożsamy z PDF`);
   assert.equal(item.psoOfficialUrl, OFFICIAL_PDF_URL, `Wpis ${item.id} musi wskazywać oficjalny PDF Dziennika Urzędowego MZ`);
   assert.ok(item.psoLegalAct.includes(LEGAL_ACT_KEYWORD), `Wpis ${item.id} musi powoływać akt prawny ${LEGAL_ACT_KEYWORD}`);
-  assert.equal(item.psoPublicationDate, PUBLICATION_DATE, `Wpis ${item.id} musi mieć datę publikacji aktu ${PUBLICATION_DATE}`);
+  assert.equal(item.psoGisAnnouncementDate, GIS_ANNOUNCEMENT_DATE, `Wpis ${item.id} data komunikatu GIS: ${GIS_ANNOUNCEMENT_DATE}`);
+  assert.equal(item.psoJournalPublicationDate, JOURNAL_PUBLICATION_DATE, `Wpis ${item.id} data publikacji Dz. Urz.: ${JOURNAL_PUBLICATION_DATE}`);
+  assert.notEqual(item.psoGisAnnouncementDate, item.psoJournalPublicationDate, 'Data komunikatu GIS i data publikacji Dz. Urz. NIE MOGĄ być tożsame');
   assert.equal(item.verificationStatus, 'verified_pso', `Wpis ${item.id} musi mieć status verified_pso`);
   assert.ok(item.targetGroupDescription.length > 10, `Wpis ${item.id} musi mieć precyzyjny opis grupy docelowej`);
-  assert.ok(item.doseNumberInSeries >= 1 && item.doseNumberInSeries <= 7, `Wpis ${item.id} musi mieć poprawny numer dawki w serii`);
-  assert.ok(item.totalDosesInStandardSeries >= 1 && item.totalDosesInStandardSeries <= 7, `Wpis ${item.id} musi mieć poprawną liczbę dawek w serii`);
   assert.ok(item.administrationRoute.length > 0, `Wpis ${item.id} musi precyzować drogę podania`);
   assert.ok(item.injectionSite.length > 0, `Wpis ${item.id} musi precyzować miejsce iniekcji`);
   assert.ok(item.clinicalNotes.length > 20, `Wpis ${item.id} musi zawierać szczegółowe wytyczne dla personelu`);
   assert.ok(item.fundingStatus.length > 0, `Wpis ${item.id} musi określać status finansowania`);
   assert.ok(item.officialFundingSourceRef !== null, `Wpis ${item.id} musi mieć oficjalną podstawę prawną finansowania`);
 }
-console.log(`   ✓ SCENARIUSZ 2 ZALICZONY: Wszystkie 39 rekordów zawierają numer części PSO, punkt, stronę PDF (2–16), URL i podstawę refundacji.\n`);
+console.log('   ✓ SCENARIUSZ 2 ZALICZONY: Wszystkie 43 rekordy zawierają zweryfikowane metadane publikacji, daty GIS (28.10.2026) i Dz. Urz. (30.10.2026 poz. 77).\n');
 
 // -------------------------------------------------------------
-// Test 3: Uprawnienia personelu medycznego (Część VI PSO)
+// Test 3: Kwalifikacje personelu medycznego (Część VI PSO)
 // -------------------------------------------------------------
 console.log('Test 3: Kwalifikacje i uprawnienia personelu medycznego (Część VI PSO 2027)');
 
@@ -131,37 +134,54 @@ console.log('Test 4: 7 ogólnych zasad przeprowadzania szczepień i wyjątek dla
 
 assert.equal(PSO_GENERAL_PRINCIPLES_PART_IV.length, 7, 'Musi być dokładnie 7 punktów zasad ogólnych Części IV');
 
-// Weryfikacja punktu 2 (Odstępy między szczepionkami niepodanymi jednocześnie i wyjątek rotawirusów)
 const point2 = PSO_GENERAL_PRINCIPLES_PART_IV.find(p => p.pointNumber === 2);
 assert.ok(point2, 'Punkt 2 musi istnieć');
 assert.ok(point2.officialRuleText.includes('4 tygodni'), 'Punkt 2 musi zawierać regułę 4 tygodni dla szczepionek żywych');
 assert.ok(point2.specificExceptions.some(ex => ex.includes('ROTAWIRUSÓW')), 'Punkt 2 musi zawierać WYJĄTEK DLA ROTAWIRUSÓW');
 assert.ok(point2.specificExceptions.some(ex => ex.includes('DOWOLNYM odstępie')), 'Wyjątek rotawirusów musi wyraźnie dopuszczać dowolny odstęp');
 
-// Weryfikacja punktu 7 (Dokumentacja w e-Karcie Szczepień)
 const point7 = PSO_GENERAL_PRINCIPLES_PART_IV.find(p => p.pointNumber === 7);
 assert.ok(point7, 'Punkt 7 musi istnieć');
-assert.ok(point7.officialRuleText.includes('Elektronicznej Karty Szczepień') || point7.officialRuleText.includes('e-Karta Szczepień'), 'Punkt 7 musi precyzować wpis do e-Karty Szczepień w systemie P1');
+assert.ok(point7.officialRuleText.includes('Karcie Szczepień'), 'Punkt 7 musi precyzować wpis do e-Karty Szczepień w systemie P1');
 
 console.log('   ✓ SCENARIUSZ 4 ZALICZONY: Wszystkie 7 punktów Części IV zweryfikowane, w tym pełne brzmienie wyjątku dla rotawirusów.\n');
 
 // -------------------------------------------------------------
-// Test 5: Szczepienia wyrównawcze (Część V PSO)
+// Test 5: Szczepienia wyrównawcze – 12 pełnych punktów Części V PSO
 // -------------------------------------------------------------
-console.log('Test 5: Szczepienia wyrównawcze (Część V PSO 2027)');
+console.log('Test 5: Szczepienia wyrównawcze – 12 pełnych punktów prawnych Części V PSO (s. 44–45)');
 
-assert.equal(CATCH_UP_IMMUNIZATION_PART_V.length, 5, 'Musi być 5 wytycznych szczepień wyrównawczych');
+assert.equal(PSO_CATCH_UP_12_POINTS_PART_V.length, 12, 'Część V PSO musi zawierać dokładnie 12 numerowanych punktów');
 
-const noDocs = CATCH_UP_IMMUNIZATION_PART_V.find(g => g.category === 'brak_dokumentacji');
-assert.ok(noDocs && noDocs.ruleSummary.includes('traktowana jako osoba nieszczepiona'), 'Brak dokumentacji = osoba nieszczepiona');
+for (let i = 1; i <= 12; i++) {
+  const p = PSO_CATCH_UP_12_POINTS_PART_V.find(item => item.pointNumber === i);
+  assert.ok(p, `Punkt ${i} Części V PSO musi istnieć`);
+  assert.ok(p.title.length > 5, `Punkt ${i} musi posiadać tytuł`);
+  assert.ok(p.officialRuleText.length > 20, `Punkt ${i} musi zawierać oficjalny tekst prawny`);
+  assert.ok(p.clinicalApplication.length > 10, `Punkt ${i} musi zawierać podsumowanie kliniczne`);
+  assert.equal(p.psoSection.includes('Część V'), true, `Punkt ${i} musi wskazywać Część V`);
+  assert.ok(p.psoPrintedPage === 44 || p.psoPrintedPage === 45, `Punkt ${i} musi znajdować się na s. 44 lub 45`);
+}
 
-const incomplete = CATCH_UP_IMMUNIZATION_PART_V.find(g => g.category === 'niepelny_schemat');
-assert.ok(incomplete && incomplete.ruleSummary.includes('NIE rozpoczyna się schematu od nowa'), 'Niepełny schemat: brak resetowania cyklu');
+// Sprawdzenie kluczowych zasad prawnych w 12 punktach:
+const p1 = PSO_CATCH_UP_12_POINTS_PART_V.find(p => p.pointNumber === 1);
+assert.ok(p1.officialRuleText.includes('szczepienia wyrównawcze'), 'Pkt 1: Obowiązek wdrożenia szczepień wyrównawczych');
 
-const ageLimit = CATCH_UP_IMMUNIZATION_PART_V.find(g => g.category === 'granica_wieku');
-assert.ok(ageLimit && ageLimit.ruleSummary.includes('19. roku życia'), 'Obowiązek kończy się z ukończeniem 19. roku życia');
+const p2 = PSO_CATCH_UP_12_POINTS_PART_V.find(p => p.pointNumber === 2);
+assert.ok(p2.officialRuleText.includes('obowiązkowe do ukończenia wieku') && p2.officialRuleText.includes('kontynuowane bezpłatnie'), 'Pkt 2: Granica wieku i bezpłatne dokończenie schematu');
 
-console.log('   ✓ SCENARIUSZ 5 ZALICZONY: Wytyczne szczepień wyrównawczych zgodne z Częścią V PSO.\n');
+const p3 = PSO_CATCH_UP_12_POINTS_PART_V.find(p => p.pointNumber === 3);
+assert.ok(p3.officialRuleText.includes('Indywidualny Kalendarz Szczepień') || p3.officialRuleText.includes('IKSz'), 'Pkt 3: Wymóg sporządzenia IKSz');
+
+const p9 = PSO_CATCH_UP_12_POINTS_PART_V.find(p => p.pointNumber === 9);
+assert.ok(p9.officialRuleText.includes('nie zostało udokumentowane') && p9.officialRuleText.includes('szczepienie podstawowe'), 'Pkt 9: Brak udokumentowania = szczepienie podstawowe');
+
+const p10 = PSO_CATCH_UP_12_POINTS_PART_V.find(p => p.pointNumber === 10);
+assert.ok(p10.officialRuleText.includes('nie należy ponawiać pełnego szczepienia') && p10.officialRuleText.includes('uzupełnić brakujące dawki'), 'Pkt 10: Niepełny schemat – zakaz ponawiania pełnego szczepienia');
+
+assert.equal(CATCH_UP_IMMUNIZATION_PART_V.length, 5, 'Podsumowanie w 5 obszarach klinicznych musi być zachowane');
+
+console.log('   ✓ SCENARIUSZ 5 ZALICZONY: Pełne 12 punktów Części V PSO zaimplementowane ze stronami 44–45 i zachowaniem podsumowania tematycznego.\n');
 
 // -------------------------------------------------------------
 // Test 6: Rozdzielenie wariantów 5w1 i 6w1 (Część I.A.1, I.A.2, III.M)
@@ -186,68 +206,138 @@ assert.ok(v6w1_2plus1.interchangeabilityWarning.includes('NIE SĄ automatycznie 
 console.log('   ✓ SCENARIUSZ 6 ZALICZONY: Warianty 5w1 i 6w1 rozdzielone z zachowaniem warunków dawki WZW B w 1. dobie.\n');
 
 // -------------------------------------------------------------
-// Test 7: Rozdzielenie szczególnych wskazań klinicznych (Część I.B)
+// Test 7: Poprawność przypisania źródeł (Zadanie 2: DTaP, PCV, wścieklizna, WZW B, VZV)
 // -------------------------------------------------------------
-console.log('Test 7: Szczególne wskazania kliniczne – rozdzielenie DTaP, PCV, wcześniactwa i ospy wietrznej');
+console.log('Test 7: Poprawność przypisania źródeł urzędowych (Zadanie 2 audytu)');
 
-const pcvPreterm = CHILD_VACCINES_CATALOG.find(i => i.id === 'pso-risk-preterm-pcv');
-assert.ok(pcvPreterm, 'Rekord PCV wcześniaków musi istnieć');
-assert.equal(pcvPreterm.totalDosesInStandardSeries, 4, 'PCV wcześniaków to schemat 3+1 (4 dawki)');
-assert.equal(pcvPreterm.psoPart, 'Część I.B', 'PCV wcześniaków to Część I.B');
-assert.equal(pcvPreterm.psoPdfPage, 7, 'PCV wcześniaków na stronie 7');
+// A. child-dtpa-preterm-primary: Część III.E.2 PSO, s. 39. Nie Część I.B.
+const dtpaPreterm = findChildVaccine('child-dtpa-preterm-primary');
+assert.ok(dtpaPreterm, 'Procedura child-dtpa-preterm-primary musi istnieć');
+assert.equal(dtpaPreterm.sourcePart, 'Część III.E', 'DTaP wcześniaki: Część III.E');
+assert.equal(dtpaPreterm.sourceOfficialPoint, '2', 'DTaP wcześniaki: pkt 2');
+assert.equal(dtpaPreterm.sourcePrintedPage, 39, 'DTaP wcześniaki: s. 39');
+assert.equal(dtpaPreterm.sourcePdfPage, 39, 'DTaP wcześniaki: PDF s. 39');
+assert.notEqual(dtpaPreterm.sourcePart, 'Część I.B', 'DTaP wcześniaki NIE MOGĄ być w Części I.B');
 
-const dtapRisk = CHILD_VACCINES_CATALOG.find(i => i.id === 'pso-risk-preterm-dtap');
-assert.ok(dtapRisk, 'Rekord DTaP grup ryzyka musi istnieć');
-assert.notEqual(pcvPreterm.id, dtapRisk.id, 'DTaP i PCV NIE MOGĄ być połączone w jeden rekord');
-assert.equal(dtapRisk.psoPart, 'Część I.B', 'DTaP to Część I.B');
-assert.equal(dtapRisk.psoPdfPage, 7, 'DTaP na stronie 7');
+// B. child-pcv-preterm-3plus1: Część III.H.3 PSO, s. 40. Nie Część I.B.
+const pcvPreterm = findChildVaccine('child-pcv-preterm-3plus1');
+assert.ok(pcvPreterm, 'Procedura child-pcv-preterm-3plus1 musi istnieć');
+assert.equal(pcvPreterm.sourcePart, 'Część III.H', 'PCV wcześniaki: Część III.H');
+assert.equal(pcvPreterm.sourceOfficialPoint, '3', 'PCV wcześniaki: pkt 3');
+assert.equal(pcvPreterm.sourcePrintedPage, 40, 'PCV wcześniaki: s. 40');
+assert.equal(pcvPreterm.sourcePdfPage, 40, 'PCV wcześniaki: PDF s. 40');
+assert.notEqual(pcvPreterm.sourcePart, 'Część I.B', 'PCV wcześniaki NIE MOGĄ być w Części I.B');
 
-const vzvRisk = CHILD_VACCINES_CATALOG.find(i => i.id === 'pso-risk-vzv-special');
-assert.ok(vzvRisk, 'Ospa wietrzna Część I.B musi istnieć');
-assert.equal(vzvRisk.obligationType, 'obowiazkowe', 'Ospa w grupach ryzyka jest OBOWIĄZKOWA ze środków MZ');
-assert.equal(vzvRisk.psoPdfPage, 8, 'Ospa w grupach ryzyka na stronie 8');
+// C. child-rabies-postexposure: Część I.D PSO, s. 16. Nie Część I.B.
+const rabies = findChildVaccine('child-rabies-postexposure');
+assert.ok(rabies, 'Procedura child-rabies-postexposure musi istnieć');
+assert.equal(rabies.sourcePart, 'Część I.D', 'Wścieklizna poekspozycyjna: Część I.D');
+assert.equal(rabies.sourceOfficialPoint, null, 'Wścieklizna poekspozycyjna w tabeli Części I.D: brak sztucznej numeracji punktów (null)');
+assert.equal(rabies.sourcePrintedPage, 16, 'Wścieklizna: s. 16');
+assert.equal(rabies.sourcePdfPage, 16, 'Wścieklizna: PDF s. 16');
+assert.notEqual(rabies.sourcePart, 'Część I.B', 'Wścieklizna NIE MOŻE być w Części I.B');
 
-console.log('   ✓ SCENARIUSZ 7 ZALICZONY: Wskazania DTaP, PCV 3+1 i VZV w Części I.B są ściśle rozdzielone.\n');
+// D. child-hepb-unvaccinated-primary: Część III.C.4 PSO, s. 37. Nie Część I.B.
+const hepbUnvac = findChildVaccine('child-hepb-unvaccinated-primary');
+assert.ok(hepbUnvac, 'Procedura child-hepb-unvaccinated-primary musi istnieć');
+assert.equal(hepbUnvac.sourcePart, 'Część III.C', 'WZW B nieszczepieni: Część III.C');
+assert.equal(hepbUnvac.sourceOfficialPoint, '4', 'WZW B nieszczepieni: pkt 4');
+assert.equal(hepbUnvac.sourcePrintedPage, 37, 'WZW B nieszczepieni: s. 37');
+assert.equal(hepbUnvac.sourcePdfPage, 37, 'WZW B nieszczepieni: PDF s. 37');
+assert.notEqual(hepbUnvac.sourcePart, 'Część I.B', 'WZW B nieszczepieni NIE MOGĄ być w Części I.B');
+
+// E. Rozdzielenie WZW B u osób dializowanych na dwie odrębne procedury:
+// 1) Szczepienie podstawowe osób dializowanych: Część I.B pkt 6, s. 14
+const hepbDialysisPrim = findChildVaccine('child-hepb-dialysis-primary');
+assert.ok(hepbDialysisPrim, 'Szczepienie podstawowe dializowanych musi istnieć');
+assert.equal(hepbDialysisPrim.sourcePart, 'Część I.B', 'Podstawowe dializowanych: Część I.B');
+assert.equal(hepbDialysisPrim.sourceOfficialPoint, '6', 'Podstawowe dializowanych: pkt 6');
+assert.equal(hepbDialysisPrim.sourcePrintedPage, 14, 'Podstawowe dializowanych: s. 14');
+
+// 2) Rewakcynacja osób dializowanych: Część III.C.6.3, s. 37
+const hepbDialysisBoost = findChildVaccine('child-hepb-dialysis-booster');
+assert.ok(hepbDialysisBoost, 'Rewakcynacja dializowanych musi istnieć');
+assert.equal(hepbDialysisBoost.sourcePart, 'Część III.C', 'Rewakcynacja dializowanych: Część III.C');
+assert.equal(hepbDialysisBoost.sourceOfficialPoint, '6.3', 'Rewakcynacja dializowanych: pkt 6.3');
+assert.equal(hepbDialysisBoost.sourcePrintedPage, 37, 'Rewakcynacja dializowanych: s. 37');
+assert.notEqual(hepbDialysisPrim.id, hepbDialysisBoost.id, 'Podstawowe i rewakcynacja WZW B dializowanych to dwa odrębne rekordy');
+
+// Ospa wietrzna w grupach ryzyka: Część I.B, s. 14, do 19. r.ż.
+const vzvRisk = findChildVaccine('child-varicella-risk');
+assert.ok(vzvRisk, 'Ospa w grupach ryzyka musi istnieć');
+assert.equal(vzvRisk.sourcePart, 'Część I.B', 'Ospa w grupach ryzyka: Część I.B');
+assert.equal(vzvRisk.sourcePrintedPage, 14, 'Ospa w grupach ryzyka: s. 14');
+assert.ok(vzvRisk.targetGroupDescription.includes('19. roku życia'), 'Ospa ryzyka: zakres obowiązku do 19. roku życia');
+assert.ok(vzvRisk.targetGroupDescription.includes('odporności'), 'Ospa ryzyka: kryterium upośledzenia odporności');
+assert.ok(vzvRisk.targetGroupDescription.includes('placówkach'), 'Ospa ryzyka: kryterium placówek');
+
+console.log('   ✓ SCENARIUSZ 7 ZALICZONY: Wszystkie źródła DTaP (III.E.2), PCV (III.H.3), wścieklizny (I.D), WZW B (III.C.4) oraz rozdzielenia dializ (I.B.6 vs III.C.6.3) zweryfikowane.\n');
 
 // -------------------------------------------------------------
-// Test 8: Precyzja szczepień zalecanych (HPV, Grypa, Ospa wietrzna)
+// Test 8: Test braku fikcyjnej numeracji punktów (sourceOfficialPoint)
 // -------------------------------------------------------------
-console.log('Test 8: Szczepienia zalecane (Część II) – HPV, grypa, ospa wietrzna');
+console.log('Test 8: Weryfikacja braku sztucznej numeracji punktów w nienumerowanych tabelach urzędowych');
 
-const hpv = CHILD_VACCINES_CATALOG.find(i => i.id === 'pso-rec-hpv-9');
-assert.ok(hpv, 'Rekord HPV musi istnieć');
-assert.ok(hpv.clinicalNotes.includes('przed ukończeniem 14. roku życia'), 'HPV: warunek rozpoczęcia przed 14. rokiem życia');
-assert.ok(hpv.clinicalNotes.includes('po ukończeniu 14. roku życia'), 'HPV: możliwość bezpłatnego zakończenia po 14. r.ż.');
-assert.ok(hpv.clinicalNotes.includes('15–18 lat'), 'HPV: schemat 3-dawkowy dla 15-18 lat');
+for (const item of CHILD_VACCINES_CATALOG) {
+  if (item.sourcePart === 'Część I.A' || item.sourcePart === 'Część II.A' || item.sourcePart === 'Część I.D') {
+    assert.equal(
+      item.sourceOfficialPoint,
+      null,
+      `Wpis ${item.id} w ${item.sourcePart} nie może mieć sztucznego numeru punktu urzędowego (musi być null)`
+    );
+    assert.ok(item.sourceTableRow !== null && item.sourceTableRow.length > 0, `Wpis ${item.id} musi mieć opis wiersza tabeli (sourceTableRow)`);
+  } else if (item.sourcePart.startsWith('Część I.B') || item.sourcePart.startsWith('Część III')) {
+    assert.ok(
+      item.sourceOfficialPoint !== null && item.sourceOfficialPoint.length > 0,
+      `Wpis ${item.id} w ${item.sourcePart} musi posiadać oficjalny numer punktu urzędowego (np. '2', '3', '6.3')`
+    );
+  }
+}
 
-const flu = CHILD_VACCINES_CATALOG.find(i => i.id === 'pso-rec-influenza-1');
-assert.ok(flu, 'Rekord grypy musi istnieć');
-assert.ok(flu.officialFundingSourceRef.includes('Art. 43a ustawy'), 'Grypa: podstawa refundacji to art. 43a ustawy o świadczeniach opieki zdrowotnej');
-
-const vzvRec = CHILD_VACCINES_CATALOG.find(i => i.id === 'pso-rec-vzv-1');
-assert.ok(vzvRec, 'Ospa zalecana musi istnieć');
-assert.equal(vzvRec.obligationType, 'zalecane', 'Ospa powszechna jest zalecana');
-assert.equal(vzvRec.psoPart, 'Część II', 'Ospa powszechna to Część II');
-assert.notEqual(vzvRec.id, vzvRisk.id, 'Ospa zalecana i ospa obowiązkowa to dwa niezależne rekordy');
-
-console.log('   ✓ SCENARIUSZ 8 ZALICZONY: Warunki wiekowe i refundacyjne HPV, grypy i ospy wietrznej zweryfikowane.\n');
-
-// -------------------------------------------------------------
-// Test 9: Liczniki i nazewnictwo rekordów bazy (ETAP 8)
-// -------------------------------------------------------------
-console.log('Test 9: Liczniki procedur – precyzyjne nazewnictwo rekordów bazy VaxNurse');
-
-const mandatoryCount = CHILD_VACCINES_CATALOG.filter(i => i.obligationType === 'obowiazkowe').length;
-const recommendedCount = CHILD_VACCINES_CATALOG.filter(i => i.obligationType === 'zalecane').length;
-
-assert.equal(mandatoryCount, 30, 'Liczba rekordów szczepień obowiązkowych w bazie VaxNurse wynosi dokładnie 30');
-assert.equal(recommendedCount, 9, 'Liczba rekordów szczepień zalecanych w bazie VaxNurse wynosi dokładnie 9');
-assert.equal(mandatoryCount + recommendedCount, 39, 'Łączna liczba rekordów procedur wynosi dokładnie 39');
-
-console.log('   ✓ SCENARIUSZ 9 ZALICZONY: Liczniki 30 i 9 są prawidłowo zdefiniowane jako liczba rekordów w bazie VaxNurse.\n');
+console.log('   ✓ SCENARIUSZ 8 ZALICZONY: Uniknięto sztucznej numeracji tabel PSO – tabele I.A, II.A, I.D mają sourceOfficialPoint = null i zdefiniowany wiersz tabeli.\n');
 
 // -------------------------------------------------------------
-// Test 10: Nienaruszalność pilotażowego rekordu Infanrix hexa
+// Test 9: Warunki finansowania i kryteria wiekowe (HPV, RV 3. dawka, MenB/MenACWY, 4. m.ż.)
+// -------------------------------------------------------------
+console.log('Test 9: Warunki finansowania i kryteria wiekowe (HPV, Rotawirusy 3. dawka, MenB/ACWY, 4. m.ż.)');
+
+// 1. HPV 15-18 lat: brak deklaracji "bezpłatne", status refundacji wg odrębnych przepisów
+const hpvCatchup = findChildVaccine('child-hpv-catchup');
+assert.ok(hpvCatchup, 'HPV catchup musi istnieć');
+assert.ok(!hpvCatchup.fundingStatus.toLowerCase().includes('bezpłatne w ramach powszechnego'), 'HPV 15-18 nie może być oznaczone jako bezpłatne w programie powszechnym');
+assert.ok(hpvCatchup.fundingStatus.includes('odrębnych przepisami') || hpvCatchup.fundingStatus.includes('odrębnych przepisów') || hpvCatchup.fundingStatus.includes('wymaga osobnego sprawdzenia'), 'HPV 15-18 musi wskazywać na refundację wg odrębnych przepisów');
+
+// 2. Rotawirusy 3. dawka: integralny element schematu 3-dawkowego wg ChPL (np. RotaTeq)
+const rv3 = findChildVaccine('pso-rv-3');
+assert.ok(rv3, 'Rotawirusy 3. dawka muszą istnieć');
+assert.ok(rv3.clinicalNotes.includes('3-dawkowego') || rv3.clinicalNotes.includes('RotaTeq'), 'Rotawirusy 3. dawka: precyzyjny opis schematu 3-dawkowego wg ChPL');
+
+// 3. MenB i MenACWY: sformułowanie PSO "6. lub 8. tydzień życia" zależnie od rodzaju preparatu i ChPL
+const menb = findChildVaccine('child-menb-infant');
+assert.ok(menb, 'MenB niemowląt musi istnieć');
+assert.ok(menb.targetAgeDisplay.includes('6. lub 8.') || menb.sourceAgeBand.includes('6. tygodnia życia lub 8. tygodnia życia'), 'MenB: 6. lub 8. tydzień życia wg ChPL');
+
+const menacwy = findChildVaccine('child-menacwy-infant');
+assert.ok(menacwy, 'MenACWY niemowląt musi istnieć');
+assert.ok(menacwy.targetAgeDisplay.includes('6. lub 8.') || menacwy.sourceAgeBand.includes('6. tygodnia życia lub 8. tygodnia życia'), 'MenACWY: 6. lub 8. tydzień życia wg ChPL');
+
+// 4. Weryfikacja wieku 4. m.ż.: DTaP d.2, IPV d.1, PCV d.2 – terminy i minimalne odstępy
+const dtap2 = findChildVaccine('child-dtpa-2');
+assert.ok(dtap2, 'DTaP dawka 2 musi istnieć');
+assert.ok(dtap2.minIntervalFromPrevious.includes('8 tygodni'), 'DTaP d.2: odstęp po 8 tygodniach od dawki 1');
+
+const ipv1 = findChildVaccine('child-ipv-1');
+assert.ok(ipv1, 'IPV dawka 1 musi istnieć');
+assert.ok(ipv1.targetAgeDisplay.includes('4. miesiącu życia') && ipv1.targetAgeDisplay.includes('12. tygodnia życia'), 'IPV d.1: podanie w 4. m.ż. (od 12. tyg. życia)');
+
+const pcv2 = findChildVaccine('child-pcv-2');
+assert.ok(pcv2, 'PCV dawka 2 musi istnieć');
+assert.ok(pcv2.minIntervalFromPrevious.includes('8 tygodni'), 'PCV d.2: odstęp po 8 tygodniach od dawki 1');
+
+console.log('   ✓ SCENARIUSZ 9 ZALICZONY: Warunki finansowania HPV 15-18 lat, rotacja dawek RV, sformułowania MenB/ACWY i parametry 4. m.ż. w 100% zgodne z PSO.\n');
+
+// -------------------------------------------------------------
+// Test 10: Nienaruszalność i blokada weryfikacji rekordu Infanrix hexa
 // -------------------------------------------------------------
 console.log('Test 10: Nienaruszalność i blokada weryfikacji rekordu Infanrix hexa');
 

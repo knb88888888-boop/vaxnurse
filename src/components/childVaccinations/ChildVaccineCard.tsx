@@ -66,17 +66,17 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
 
           <span className="short-code-chip">{item.shortCode}</span>
 
-          <span className="pso-part-chip" title={`Część dokumentu PSO 2027: ${item.psoPart}, ${item.psoPointOrSubpoint}`}>
-            {item.psoPart} • {item.psoPointOrSubpoint}
+          <span className="pso-part-chip" title={`Część dokumentu PSO 2027: ${item.sourcePart || item.psoPart}, ${item.sourceOfficialPoint ? `pkt ${item.sourceOfficialPoint}` : item.sourceTableRow || item.psoPointOrSubpoint}`}>
+            {item.sourcePart || item.psoPart} • {item.sourceOfficialPoint ? `pkt ${item.sourceOfficialPoint}` : item.sourceTableRow || item.psoPointOrSubpoint}
           </span>
 
           <span className="pso-page-chip" title="Numer strony w oficjalnym PDF Dziennika Urzędowego MZ">
-            str. {item.psoPdfPage}
+            str. {item.sourcePrintedPage || item.psoPdfPage}
           </span>
         </div>
 
         <div className="top-badges-right">
-          <span className="verification-pso-chip" title={`Weryfikacja z oficjalnym komunikatem GIS z dnia ${item.psoPublicationDate}`}>
+          <span className="verification-pso-chip" title={`Weryfikacja z PSO 2027: Komunikat GIS z ${item.psoGisAnnouncementDate || '28.10.2026'}, Dz. Urz. MZ z ${item.psoJournalPublicationDate || '30.10.2026'}`}>
             <span className="dot-pulse"></span>
             <span>Zweryfikowano PSO</span>
           </span>
@@ -236,30 +236,30 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
               <div className="source-meta-item">
                 <FileText size={15} className="source-icon" />
                 <div className="source-meta-text">
-                  <strong>Pozycja w dokumencie:</strong> {item.psoSection} (strona {item.psoPdfPage} PDF)
+                  <strong>Pozycja w dokumencie:</strong> {item.sourcePart || item.psoPart} {item.sourceOfficialPoint ? `(pkt ${item.sourceOfficialPoint})` : (item.sourceTableRow ? `(wiersz: ${item.sourceTableRow})` : '')} – strona {item.sourcePrintedPage || item.psoPdfPage} Dziennika
                 </div>
               </div>
 
               <div className="source-meta-item">
                 <Layers size={15} className="source-icon" />
                 <div className="source-meta-text">
-                  <strong>Część dokumentu:</strong> {item.psoPart}, {item.psoPointOrSubpoint}
+                  <strong>Część i punkt źródłowy:</strong> {item.sourcePart || item.psoPart}{item.sourceOfficialPoint ? `, punkt ${item.sourceOfficialPoint}` : ' (tabela bez oficjalnych podpunktów)'}
                 </div>
               </div>
             </div>
 
             <div className="source-legal-act">
-              <strong>Akt prawny:</strong> {item.psoLegalAct} (data publikacji komunikatu: {item.psoPublicationDate})
+              <strong>Akt prawny:</strong> {item.psoJournalEntry || 'Dz. Urz. MZ 2026 poz. 77'} (Komunikat GIS z dn. {item.psoGisAnnouncementDate || '28.10.2026'}, opublikowany w Dz. Urz. MZ w dn. {item.psoJournalPublicationDate || '30.10.2026'})
             </div>
 
             <div className="source-links-row">
               <a
-                href={item.psoOfficialUrl}
+                href={`${item.psoOfficialUrl}#page=${item.sourcePdfPage || item.psoPdfPage}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="pso-official-anchor-btn"
               >
-                <span>Otwórz oficjalny PDF Dziennika Urzędowego MZ (akt.pdf, str. {item.psoPdfPage})</span>
+                <span>Otwórz oficjalny PDF Dziennika Urzędowego MZ (akt.pdf, str. {item.sourcePdfPage || item.psoPdfPage})</span>
                 <ExternalLink size={14} />
               </a>
 

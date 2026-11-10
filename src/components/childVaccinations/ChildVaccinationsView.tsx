@@ -27,6 +27,7 @@ import {
   STAGE_GROUPS_CONFIG,
   STAFF_QUALIFICATIONS_PSO_PART_VI,
   PSO_GENERAL_PRINCIPLES_PART_IV,
+  PSO_CATCH_UP_12_POINTS_PART_V,
   CATCH_UP_IMMUNIZATION_PART_V,
   COMBINED_VACCINES_VARIANTS_PART_III_M
 } from '../../data/childVaccinesData';
@@ -52,6 +53,8 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
 }) => {
   // Active Tab
   const [activeTab, setActiveTab] = useState<ViewTab>('procedures');
+  // Sub-tab for catch-up vaccinations
+  const [catchupSubTab, setCatchupSubTab] = useState<'all12' | 'summary5'>('all12');
 
   // Load products from localStorage or default catalog to reflect any pending/clarification statuses
   const catalogVaccines: VaccineProduct[] = useMemo(() => {
@@ -226,13 +229,13 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
           <div>
             <div className="pso-banner-meta">
               <span className="pso-badge-tag">Oficjalny publikator państwowy</span>
-              <span className="pso-date-tag">Komunikat GIS z 28.10.2026 r. (Dz. Urz. Min. Zdrow. 2026 poz. 77)</span>
+              <span className="pso-date-tag">Komunikat GIS: 28.10.2026 r. • Dz. Urz. Min. Zdrow.: 30.10.2026 r. poz. 77</span>
             </div>
             <h3 className="pso-banner-title">
               Program Szczepień Ochronnych na 2027 rok (Komunikat Głównego Inspektora Sanitarnego)
             </h3>
             <p className="pso-banner-desc">
-              Każdy rekord zawiera numer części PSO, punkt, dokładną stronę PDF oraz status weryfikacji. Wszystkie dane są bezpośrednio cytowane z oficjalnego załącznika aktu prawnego.
+              Każdy rekord zawiera numer części PSO, punkt/tabelę, dokładną stronę PDF oraz status weryfikacji. Wszystkie dane są bezpośrednio cytowane z oficjalnego załącznika aktu prawnego opublikowanego 30.10.2026 r. w Dzienniku Urzędowym Ministra Zdrowia poz. 77.
             </p>
           </div>
         </div>
@@ -258,7 +261,7 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
         >
           <Baby size={16} />
           <span>Procedury i etapy wiekowe</span>
-          <span className="section-tab-count">39 rekordów bazy</span>
+          <span className="section-tab-count">{CHILD_VACCINES_CATALOG.length} procedur w bazie</span>
         </button>
 
         <button
@@ -648,7 +651,7 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
               <h3>Ogólne zasady przeprowadzania i organizacji szczepień (Część IV PSO 2027)</h3>
             </div>
             <p className="intro-text">
-              Poniższe 7 punktów stanowi integralny tekst wytycznych Głównego Inspektora Sanitarnego (Dz. Urz. Min. Zdrow. 2026 poz. 77, strony 24–26). Wszelkie wyjątki i warunki kliniczne zostały zachowane w pełnym brzmieniu.
+              Poniższe 7 punktów stanowi integralny tekst wytycznych Głównego Inspektora Sanitarnego (Dz. Urz. Min. Zdrow. z 30.10.2026 r. poz. 77, strony 43–44). Wszelkie wyjątki i warunki kliniczne zostały zachowane w pełnym brzmieniu.
             </p>
           </div>
 
@@ -702,30 +705,73 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
               <h3>Zasady przeprowadzania szczepień wyrównawczych (Część V PSO 2027)</h3>
             </div>
             <p className="intro-text">
-              Wytyczne postępowania w przypadku opóźnień, niepełnej dokumentacji, ustalania Indywidualnego Kalendarza Szczepień (IKSz) oraz zakończenia okresu obowiązku (Dz. Urz. Min. Zdrow. 2026 poz. 77, strony 26–27).
+              Oficjalne wytyczne Głównego Inspektora Sanitarnego dotyczące szczepień wyrównawczych obejmują 12 numerowanych punktów regulujących postępowanie w przypadku opóźnień, niepełnej dokumentacji, ustalania Indywidualnego Kalendarza Szczepień (IKSz) oraz zakończenia okresu obowiązku (Dz. Urz. Min. Zdrow. z 30.10.2026 r. poz. 77, strona 44–45).
             </p>
+
+            <div className="catchup-subtabs-bar">
+              <button
+                type="button"
+                className={`subtab-btn ${catchupSubTab === 'all12' ? 'active' : ''}`}
+                onClick={() => setCatchupSubTab('all12')}
+              >
+                <span>Wszystkie 12 oficjalnych punktów Części V PSO (pełna treść prawna)</span>
+              </button>
+              <button
+                type="button"
+                className={`subtab-btn ${catchupSubTab === 'summary5' ? 'active' : ''}`}
+                onClick={() => setCatchupSubTab('summary5')}
+              >
+                <span>Podsumowanie w 5 obszarach klinicznych</span>
+              </button>
+            </div>
           </div>
 
-          <div className="catchup-grid">
-            {CATCH_UP_IMMUNIZATION_PART_V.map(g => (
-              <div key={g.id} className="catchup-card">
-                <div className="catchup-card-header">
-                  <h4 className="catchup-title">{g.title}</h4>
-                  <span className="catchup-source">{g.psoSection} (strona {g.psoPdfPage} PDF)</span>
-                </div>
+          {catchupSubTab === 'all12' ? (
+            <div className="principles-detailed-list">
+              {PSO_CATCH_UP_12_POINTS_PART_V.map(item => (
+                <div key={item.pointNumber} className="principle-detailed-card">
+                  <div className="principle-header-box">
+                    <div className="principle-point-badge">Punkt {item.pointNumber}</div>
+                    <h4 className="principle-point-title">{item.title}</h4>
+                    <span className="principle-source-location">{item.psoSection} (strona {item.psoPdfPage} akt.pdf)</span>
+                  </div>
 
-                <div className="catchup-summary-box">
-                  <strong>Zasada nadrzędna:</strong> {g.ruleSummary}
-                </div>
+                  <div className="principle-body-box">
+                    <div className="official-text-container">
+                      <span className="box-label">Oficjalna treść przepisu Części V:</span>
+                      <p className="official-text">{item.officialRuleText}</p>
+                    </div>
 
-                <ul className="catchup-procedures-list">
-                  {g.detailedProcedures.map((proc, idx) => (
-                    <li key={idx} className="procedure-bullet-item">{proc}</li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
+                    <div className="clinical-app-container">
+                      <span className="box-label">Zastosowanie praktyczne w punkcie szczepień / POZ:</span>
+                      <p className="clinical-app-text">{item.clinicalApplication}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="catchup-grid">
+              {CATCH_UP_IMMUNIZATION_PART_V.map(g => (
+                <div key={g.id} className="catchup-card">
+                  <div className="catchup-card-header">
+                    <h4 className="catchup-title">{g.title}</h4>
+                    <span className="catchup-source">{g.psoSection} (strona {g.psoPdfPage} PDF)</span>
+                  </div>
+
+                  <div className="catchup-summary-box">
+                    <strong>Zasada nadrzędna:</strong> {g.ruleSummary}
+                  </div>
+
+                  <ul className="catchup-procedures-list">
+                    {g.detailedProcedures.map((proc, idx) => (
+                      <li key={idx} className="procedure-bullet-item">{proc}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
