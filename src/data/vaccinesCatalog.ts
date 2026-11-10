@@ -4,7 +4,8 @@ import type {
   VaccineType,
   VaccineTargetGroup,
   ChPLSection,
-  ChPLStructure
+  ChPLStructure,
+  DiscrepancyStatus
 } from '../types/vaccines';
 
 export const VERIFICATION_STATUS_META: Record<
@@ -46,6 +47,24 @@ export const VERIFICATION_STATUS_META: Record<
     description: 'Pojawiła się nowa wersja komunikatu ChPL lub zmiana w rejestrze RPL wymagająca ponownego sprawdzenia.',
     badgeClass: 'status-reverify',
     isVerified: false
+  }
+};
+
+export const DISCREPANCY_STATUS_META: Record<
+  DiscrepancyStatus,
+  { label: string; badgeClass: string; isResolved: boolean; description: string }
+> = {
+  requires_clarification: {
+    label: 'Wymaga wyjaśnienia',
+    badgeClass: 'disc-requires-clarif',
+    isResolved: false,
+    description: 'Niezgodność wewnętrzna w oficjalnym druku ChPL oczekuje na sprostowanie przez wytwórcę lub URPL/EMA.'
+  },
+  resolved_with_official_document: {
+    label: 'Wyjaśniona dokumentem urzędowym',
+    badgeClass: 'disc-resolved-official',
+    isResolved: true,
+    description: 'Niezgodność została formalnie wyjaśniona zarejestrowanym dokumentem urzędowym podmiotu odpowiedzialnego lub organu rejestracyjnego.'
   }
 };
 
@@ -597,7 +616,7 @@ export const VACCINES_CATALOG: VaccineProduct[] = [
     documentDownloadDate: '10.11.2026',
     userVerificationDate: null,
     userVerificationNotes: null,
-    verificationStatus: 'pending_verification',
+    verificationStatus: 'requires_source_clarification',
     atcCode: 'J07CA09',
     sourceDiscrepancies: [
       {
@@ -611,10 +630,12 @@ export const VACCINES_CATALOG: VaccineProduct[] = [
         status: 'requires_clarification',
         description: 'Niezgodność wewnętrzna oficjalnej ChPL: punkt 2 podaje 0,0289 mikrograma fenyloalaniny na dawkę, podczas gdy punkt 4.4 podaje 0,0298 mikrograma na dawkę. Aplikacja VaxNurse nie ujednolica wartości automatycznie i blokuje status zweryfikowania do czasu urzędowego wyjaśnienia przez podmiot odpowiedzialny / URPL / EMA.',
         resolution: {
-          clarificationDocument: null,
-          receivedDate: null,
-          source: null,
-          verifierNotes: null,
+          documentId: '',
+          issuer: '',
+          documentDate: '',
+          receivedDate: '',
+          documentUrlOrLocation: '',
+          verifierJustification: '',
           isResolved: false
         }
       }
@@ -622,6 +643,16 @@ export const VACCINES_CATALOG: VaccineProduct[] = [
     clarificationDocument: null,
     clarificationDate: null,
     clarificationSource: null,
+    statusHistory: [
+      {
+        id: 'hist-init-01',
+        timestamp: '10.11.2026 r., 12:00',
+        previousStatus: 'pending_verification',
+        newStatus: 'requires_source_clarification',
+        reason: 'Wykryto niezgodność wewnętrzną ChPL (disc-phenylalanine-content-01: zawartość fenyloalaniny 0,0289 µg vs 0,0298 µg). Blokada zatwierdzenia.',
+        author: 'System kontroli zgodności ChPL VaxNurse'
+      }
+    ],
     chpl: INFANRIX_HEXA_CHPL
   },
   {

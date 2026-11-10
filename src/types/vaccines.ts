@@ -7,18 +7,26 @@ export type VaccineVerificationStatus =
   | 'requires_reverification';      // Wymaga ponownej weryfikacji (zgodność wsteczna)
 
 export type DiscrepancyStatus =
-  | 'requires_clarification'   // Oczekuje na wyjaśnienie urzędowe
-  | 'resolved';                // Wyjaśnione / sprostowane
+  | 'requires_clarification'            // Wymaga wyjaśnienia
+  | 'resolved_with_official_document';  // Wyjaśniona dokumentem urzędowym
 
 /**
- * Warunki formalnego wyjaśnienia rozbieżności w dokumentacji (warunki przyszłej weryfikacji).
+ * Warunki formalnego wyjaśnienia rozbieżności w dokumentacji (walidacja 6 wymaganych pól).
  */
 export interface DiscrepancyResolution {
-  clarificationDocument: string | null;  // Dokument wyjaśniający rozbieżność (np. pismo GSK, decyzja URPL, aneks EMA)
-  receivedDate: string | null;           // Data otrzymania wyjaśnienia
-  source: string | null;                 // Źródło wyjaśnienia (np. GSK Commercial Sp. z o.o., URPL, EMA)
-  verifierNotes: string | null;          // Notatka osoby weryfikującej
-  isResolved?: boolean;                  // Czy rozbieżność została formalnie uznana za wyjaśnioną
+  documentId: string;                   // 1. Identyfikator dokumentu (np. sygnatura pisma URPL/DPR/2026/012 lub GSK/VR/323859/CORR)
+  issuer: string;                       // 2. Instytucja lub podmiot wystawiający (np. URPLWMiPB lub GSK Services Sp. z o.o.)
+  documentDate: string;                 // 3. Data dokumentu (np. 2026-03-10)
+  receivedDate: string;                 // 4. Data otrzymania (np. 2026-03-15)
+  documentUrlOrLocation: string;        // 5. Odnośnik lub lokalizacja dokumentu (np. https://urpl.gov.pl/... lub Archiwum ChPL PS-1/2026)
+  verifierJustification: string;        // 6. Uzasadnienie osoby weryfikującej (ocena medyczna i podpis weryfikatora)
+  registeredAt?: string;                // Data i czas zarejestrowania w systemie
+  registeredBy?: string;                // Nazwisko / rola osoby rejestrującej
+  isResolved: boolean;                  // Czy rozbieżność została formalnie uznana za wyjaśnioną dokumentem urzędowym
+  // Kompatybilność wsteczna
+  clarificationDocument?: string | null;
+  source?: string | null;
+  verifierNotes?: string | null;
 }
 
 /**
@@ -124,6 +132,15 @@ export interface ChPLStructure {
   revisionDate: ChPLSection;
 }
 
+export interface StatusHistoryEntry {
+  id: string;
+  timestamp: string;
+  previousStatus: VaccineVerificationStatus;
+  newStatus: VaccineVerificationStatus;
+  reason: string;
+  author: string;
+}
+
 /**
  * Model preparatu szczepionkowego w systemie VaxNurse.
  */
@@ -143,12 +160,13 @@ export interface VaccineProduct {
   documentDownloadDate: string | null;          // Data pobrania / pozyskania dokumentu źródłowego
   userVerificationDate: string | null;          // Data ręcznej weryfikacji przez użytkownika (personel medyczny)
   userVerificationNotes: string | null;         // Notatki personelu medycznego z weryfikacji
-  verificationStatus: VaccineVerificationStatus;// Status weryfikacji całego rekordu (początkowo 'pending_verification')
+  verificationStatus: VaccineVerificationStatus;// Status weryfikacji całego rekordu
   atcCode: string | null;                       // Kod ATC (Pkt 5.1 ChPL)
   sourceDiscrepancies?: SourceDiscrepancy[];    // Niezgodności / rozbieżności wykryte w źródłach urzędowych
   clarificationDocument?: string | null;        // Dokument wyjaśniający rozbieżność (warunki przyszłej weryfikacji)
   clarificationDate?: string | null;            // Data otrzymania wyjaśnienia
   clarificationSource?: string | null;          // Źródło wyjaśnienia (np. GSK Polska / URPL / EMA)
+  statusHistory?: StatusHistoryEntry[];         // Historia zmian statusów i decyzji personelu
 
   // Oficjalna struktura ChPL (punkty 1–10 EMA QRD v10.4)
   chpl: ChPLStructure;

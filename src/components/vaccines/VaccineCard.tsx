@@ -12,6 +12,7 @@ import {
 import type { VaccineProduct } from '../../types/vaccines';
 import {
   VERIFICATION_STATUS_META,
+  DISCREPANCY_STATUS_META,
   VACCINE_TYPE_LABELS,
   TARGET_GROUP_LABELS
 } from '../../data/vaccinesCatalog';
@@ -40,9 +41,9 @@ export const VaccineCard: React.FC<VaccineCardProps> = ({ vaccine, onOpenDetails
             {TARGET_GROUP_LABELS[vaccine.targetGroup]}
           </span>
           {vaccine.sourceDiscrepancies && vaccine.sourceDiscrepancies.length > 0 && (
-            <span className="v-card-disc-pill" title="Wykryto niezgodność wewnętrzną w druku ChPL (status: requires_clarification)">
+            <span className="v-card-disc-pill" title="Wykryto niezgodność wewnętrzną w druku ChPL (status: Wymaga wyjaśnienia)">
               <AlertTriangle size={12} />
-              <span>Rozbieżność w ChPL</span>
+              <span>Niezgodność w ChPL: {DISCREPANCY_STATUS_META[vaccine.sourceDiscrepancies[0].status]?.label || 'Wymaga wyjaśnienia'}</span>
             </span>
           )}
         </div>
@@ -101,7 +102,7 @@ export const VaccineCard: React.FC<VaccineCardProps> = ({ vaccine, onOpenDetails
         <div className="v-card-unverified-warning discrepancy">
           <AlertTriangle size={15} className="warning-icon disc-icon" />
           <span>
-            <strong>Niezgodność wewnętrzna w ChPL (status: requires_clarification):</strong> Rozbieżność w ilości fenyloalaniny (0,0289 µg w pkt 2 vs 0,0298 µg w pkt 4.4). Weryfikacja zablokowana do czasu urzędowego sprostowania.
+            <strong>Niezgodność w ChPL (status: {DISCREPANCY_STATUS_META[vaccine.sourceDiscrepancies[0].status]?.label || 'Wymaga wyjaśnienia'}):</strong> Rozbieżność w ilości fenyloalaniny (0,0289 µg w pkt 2 vs 0,0298 µg w pkt 4.4). Zatwierdzenie zablokowane do czasu urzędowego sprostowania.
           </span>
         </div>
       ) : !statusMeta.isVerified && (

@@ -29,20 +29,80 @@ interface VaccinesDatabaseViewProps {
   onBackToDashboard: () => void;
 }
 
+const VAX_STORAGE_KEY = 'vaxnurse_vaccines_catalog_state_v1';
+const VAX_ACTIVE_ID_KEY = 'vaxnurse_active_vaccine_id_v1';
+
 export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
   module,
   onBackToDashboard
 }) => {
-  const [vaccines, setVaccines] = useState<VaccineProduct[]>(VACCINES_CATALOG);
+  const [vaccines, setVaccines] = useState<VaccineProduct[]>(() => {
+    try {
+      const stored = localStorage.getItem(VAX_STORAGE_KEY);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      console.warn('Błąd odczytu bazy szczepionek z localStorage:', e);
+    }
+    return VACCINES_CATALOG;
+  });
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<VaccineType | 'all'>('all');
   const [selectedTargetGroup, setSelectedTargetGroup] = useState<VaccineTargetGroup | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<VaccineVerificationStatus | 'all'>('all');
-  const [activeVaccineDetail, setActiveVaccineDetail] = useState<VaccineProduct | null>(null);
+
+  const [activeVaccineDetail, setActiveVaccineDetail] = useState<VaccineProduct | null>(() => {
+    try {
+      const activeId = localStorage.getItem(VAX_ACTIVE_ID_KEY);
+      if (activeId) {
+        const stored = localStorage.getItem(VAX_STORAGE_KEY);
+        const list = stored ? JSON.parse(stored) : VACCINES_CATALOG;
+        return list.find((v: VaccineProduct) => v.id === activeId) || null;
+      }
+    } catch (e) {
+      console.warn('Błąd odczytu aktywnego preparatu z localStorage:', e);
+    }
+    return null;
+  });
 
   const handleUpdateVaccine = (updatedVaccine: VaccineProduct) => {
-    setVaccines(prev => prev.map(v => v.id === updatedVaccine.id ? updatedVaccine : v));
+    setVaccines(prev => {
+      const next = prev.map(v => v.id === updatedVaccine.id ? updatedVaccine : v);
+      try {
+        localStorage.setItem(VAX_STORAGE_KEY, JSON.stringify(next));
+      } catch (e) {
+        console.warn('Błąd zapisu bazy do localStorage:', e);
+      }
+      return next;
+    });
     setActiveVaccineDetail(updatedVaccine);
+  };
+
+  const handleOpenDetails = (vac: VaccineProduct) => {
+    setActiveVaccineDetail(vac);
+    try {
+      localStorage.setItem(VAX_ACTIVE_ID_KEY, vac.id);
+    } catch {}
+  };
+
+  const handleBackToList = () => {
+    setActiveVaccineDetail(null);
+    try {
+      localStorage.removeItem(VAX_ACTIVE_ID_KEY);
+    } catch {}
+  };
+
+  const handleResetCatalogToDefault = () => {
+    if (window.confirm('Czy na pewno chcesz przywrócić domyślny stan bazy preparatów z oficjalnego katalogu? Wszystkie zarejestrowane w przeglądarce wyjaśnienia i zmiany statusów zostaną zresetowane.')) {
+      try {
+        localStorage.removeItem(VAX_STORAGE_KEY);
+        localStorage.removeItem(VAX_ACTIVE_ID_KEY);
+      } catch {}
+      setVaccines(VACCINES_CATALOG);
+      setActiveVaccineDetail(null);
+    }
   };
 
   // Filter vaccines
@@ -101,7 +161,7 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
     return (
       <VaccineDetailView
         vaccine={activeVaccineDetail}
-        onBackToList={() => setActiveVaccineDetail(null)}
+        onBackToList={handleBackToList}
         onUpdateVaccine={handleUpdateVaccine}
       />
     );
@@ -282,12 +342,22 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
 
       {/* Meta Results Counter */}
       <div className="vaccines-results-meta">
-        <span className="results-count-text">
-          Liczba preparatów w katalogu: <strong>{filteredVaccines.length}</strong> z {VACCINES_CATALOG.length}
-        </span>
-        <span className="results-subtext">
-          Kliknij kartę preparatu, aby otworzyć oficjalną Kartę ChPL (punkty 1–10)
-        </span>
+        <div className="results-meta-left">
+          <span className="results-count-text">
+            Liczba preparatów w katalogu: <strong>{filteredVaccines.length}</strong> z {VACCINES_CATALOG.length}
+          </span>
+          <span className="results-subtext">
+            Kliknij kartę preparatu, aby otworzyć oficjalną Kartę ChPL (punkty 1–10)
+          </span>
+        </div>
+        <button
+          type="button"
+          className="btn-reset-catalog-demo"
+          onClick={handleResetCatalogToDefault}
+          title="Przywróć stan początkowy katalogu (czyści zapisane wyjaśnienia w pamięci przeglądarki)"
+        >
+          Przywróć stan początkowy danych
+        </button>
       </div>
 
       {/* Vaccines Grid */}
@@ -297,7 +367,7 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
             <VaccineCard
               key={vaccine.id}
               vaccine={vaccine}
-              onOpenDetails={vac => setActiveVaccineDetail(vac)}
+              onOpenDetails={handleOpenDetails}
             />
           ))}
         </div>
