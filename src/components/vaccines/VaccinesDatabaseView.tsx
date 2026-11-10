@@ -124,12 +124,12 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
           <div>
             <div className="module-view-badges">
               <span className="module-category-pill">Moduł kliniczny</span>
-              <span className="status-badge-ready">Struktura 13 sekcji ChPL</span>
+              <span className="status-badge-ready">Karta ChPL (EMA QRD v10.4)</span>
             </div>
             <h1 className="module-view-title">{module.label} — Katalog Produktów Leczniczych</h1>
             <p className="module-view-lead">
               Katalog referencyjny preparatów szczepionkowych stosowanych u dzieci i dorosłych.
-              Każda karta posiada ustrukturyzowany podział na 13 punktów Charakterystyki Produktu Leczniczego (ChPL).
+              Każda karta preparatu odwzorowuje oficjalną strukturę punktów 1–10 Charakterystyki Produktu Leczniczego (EMA QRD v10.4).
             </p>
           </div>
         </div>
@@ -279,7 +279,7 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
           Liczba preparatów w katalogu: <strong>{filteredVaccines.length}</strong> z {VACCINES_CATALOG.length}
         </span>
         <span className="results-subtext">
-          Kliknij kartę preparatu, aby otworzyć szczegółowy widok 13 sekcji ChPL
+          Kliknij kartę preparatu, aby otworzyć oficjalną Kartę ChPL (punkty 1–10)
         </span>
       </div>
 
@@ -314,7 +314,7 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
       {/* Footer Navigation Back */}
       <div className="module-view-footer">
         <p className="footer-status-note">
-          Moduł Baza Preparatów VaxNurse – struktura referencyjna 13 sekcji ChPL. Wszelkie treści wymagają potwierdzenia z RPL.
+          Moduł Baza Preparatów VaxNurse – struktura referencyjna ChPL (punkty 1–10, EMA QRD v10.4). Wszelkie treści wymagają potwierdzenia z RPL.
         </p>
         <button
           type="button"

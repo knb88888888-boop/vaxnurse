@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ArrowLeft,
   ExternalLink,
@@ -12,9 +12,14 @@ import {
   ThermometerSnowflake,
   Activity,
   Heart,
-  Info
+  Info,
+  ChevronDown,
+  ChevronUp,
+  FlaskConical,
+  Package,
+  Calendar
 } from 'lucide-react';
-import type { VaccineProduct, ChPLSectionReference } from '../../types/vaccines';
+import type { VaccineProduct, ChPLSection } from '../../types/vaccines';
 import {
   VERIFICATION_STATUS_META,
   VACCINE_TYPE_LABELS,
@@ -32,56 +37,117 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
 }) => {
   const statusMeta = VERIFICATION_STATUS_META[vaccine.verificationStatus];
 
-  // Helper render for ChPL sections
-  const renderChPLSection = (
-    sectionNumber: string,
-    sectionName: string,
-    sectionData: ChPLSectionReference,
-    icon: React.ReactNode
-  ) => {
+  // State to manage collapsible section groups
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    sec1: true,
+    sec2: true,
+    sec3: true,
+    sec4: true, // 4. Szczegółowe dane kliniczne
+    sec5: true, // 5. Właściwości farmakologiczne
+    sec6: true, // 6. Dane farmaceutyczne
+    sec7: true,
+    sec8: true,
+    sec9: true,
+    sec10: true,
+    secOptional: false
+  });
+
+  const toggleSection = (key: string) => {
+    setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const expandAll = () => {
+    setExpandedSections({
+      sec1: true,
+      sec2: true,
+      sec3: true,
+      sec4: true,
+      sec5: true,
+      sec6: true,
+      sec7: true,
+      sec8: true,
+      sec9: true,
+      sec10: true,
+      secOptional: true
+    });
+  };
+
+  const collapseAll = () => {
+    setExpandedSections({
+      sec1: false,
+      sec2: false,
+      sec3: false,
+      sec4: false,
+      sec5: false,
+      sec6: false,
+      sec7: false,
+      sec8: false,
+      sec9: false,
+      sec10: false,
+      secOptional: false
+    });
+  };
+
+  // Helper render for single section or subsection
+  const renderSectionBox = (sec: ChPLSection, icon: React.ReactNode, isSub: boolean = false) => {
+    const secStatus = VERIFICATION_STATUS_META[sec.verificationStatus];
+
     return (
-      <div className="v-detail-section-card" id={`chpl-sec-${sectionNumber}`}>
-        <div className="v-detail-sec-header">
-          <div className="v-sec-title-box">
-            <span className="v-sec-icon-box">{icon}</span>
+      <div key={sec.sectionNumber} className={`chpl-point-box ${isSub ? 'subsection' : ''}`}>
+        <div className="point-box-header">
+          <div className="point-box-title-group">
+            <span className="point-icon-wrapper">{icon}</span>
             <div>
-              <span className="v-sec-chpl-ref">Punkt {sectionData.sectionNumber} ChPL</span>
-              <h3 className="v-sec-heading">{sectionName}</h3>
+              <span className="point-number-tag">Punkt {sec.sectionNumber} ChPL</span>
+              <h4 className="point-title-text">{sec.sectionTitle}</h4>
             </div>
           </div>
-          <div className="v-sec-meta-badges">
-            <span className="v-source-pill">
-              Źródło: {sectionData.officialSource || 'Rejestr RPL (ChPL)'}
+
+          <div className="point-box-meta-badges">
+            <span className="point-source-tag" title={sec.officialSource || undefined}>
+              Źródło: {sec.officialSource || 'RPL (eZdrowie)'}
             </span>
-            <span className={`v-sec-status-pill ${sectionData.isVerified ? 'verified' : 'unverified'}`}>
-              {sectionData.isVerified ? 'Zweryfikowano z ChPL' : 'Treść niezweryfikowana'}
+            <span className={`point-status-tag ${secStatus.badgeClass}`}>
+              <span className="status-mini-dot"></span>
+              {secStatus.label}
             </span>
           </div>
         </div>
 
-        <div className="v-detail-sec-body">
-          {sectionData.content ? (
-            <div className="v-sec-content-text">{sectionData.content}</div>
+        <div className="point-box-body">
+          {sec.content ? (
+            <div className="point-content-present">
+              <p className="point-text">{sec.content}</p>
+              {sec.verificationNote && (
+                <span className="point-note-text">
+                  <Info size={13} /> {sec.verificationNote}
+                </span>
+              )}
+            </div>
           ) : (
-            <div className="v-empty-clinical-section">
-              <div className="v-empty-icon-col">
-                <AlertTriangle size={18} className="v-empty-alert-icon" />
+            <div className="point-content-unverified">
+              <div className="unverified-icon-col">
+                <AlertTriangle size={16} className="unverified-alert-icon" />
               </div>
-              <div className="v-empty-text-col">
-                <strong>Treść kliniczna punktu {sectionData.sectionNumber} oczekuje na weryfikację</strong>
+              <div className="unverified-text-col">
+                <strong>Punkt {sec.sectionNumber} – treść oczekuje na weryfikację z drukiem ChPL</strong>
                 <p>
-                  Zgodnie z procedurą bezpieczeństwa VaxNurse, treść tego punktu nie została jeszcze potwierdzona z aktualnym drukiem ChPL. 
-                  Przed podaniem leku lub kwalifikacją pacjenta zweryfikuj treść bezpośrednio w oficjalnym rejestrze RPL.
+                  Aplikacja VaxNurse nie uzupełnia danych klinicznych domysłami. Treść tego punktu nie została jeszcze zweryfikowana z oficjalnym drukiem w Rejestrze Produktów Leczniczych.
                 </p>
-                <div className="v-empty-links-row">
+                {sec.verificationNote && (
+                  <span className="unverified-note">
+                    <strong>Wskazówka:</strong> {sec.verificationNote}
+                  </span>
+                )}
+                <div className="unverified-link-row">
                   <a
                     href={vaccine.currentChplUrl || 'https://rejestrymedyczne.ezdrowie.gov.pl/rpl/search/public'}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="v-link-verify-chpl"
+                    className="btn-verify-in-rpl"
                   >
-                    <span>Otwórz oficjalny rekord w RPL</span>
-                    <ExternalLink size={13} />
+                    <span>Weryfikuj w oficjalnym rekordzie RPL</span>
+                    <ExternalLink size={12} />
                   </a>
                 </div>
               </div>
@@ -92,9 +158,11 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
     );
   };
 
+  const { chpl } = vaccine;
+
   return (
     <div className="vaccine-detail-container">
-      {/* Back button */}
+      {/* Top Navigation */}
       <div className="module-view-nav">
         <button
           type="button"
@@ -104,7 +172,7 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
           <ArrowLeft size={16} />
           <span>Powrót do Bazy preparatów</span>
         </button>
-        <span className="view-mode-pill">Karta preparatu (13 sekcji ChPL)</span>
+        <span className="view-mode-pill">Karta ChPL (EMA QRD v10.4)</span>
       </div>
 
       {/* Main Product Header Card */}
@@ -122,7 +190,7 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
               {TARGET_GROUP_LABELS[vaccine.targetGroup]}
             </span>
             {vaccine.atcCode && (
-              <span className="v-atc-pill">Kod ATC: {vaccine.atcCode}</span>
+              <span className="v-atc-pill">Kod ATC: {vaccine.atcCode} (Pkt 5.1)</span>
             )}
           </div>
 
@@ -134,7 +202,7 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
                 rel="noopener noreferrer"
                 className="btn-rpl-official"
               >
-                <span>Otwórz rekord w RPL</span>
+                <span>Rekord w RPL</span>
                 <ExternalLink size={15} />
               </a>
             )}
@@ -155,43 +223,43 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
         <div className="v-detail-header-body">
           <h1 className="v-detail-title">{vaccine.tradeName}</h1>
           <p className="v-detail-substance">
-            <strong>Substancja czynna / antygeny:</strong> {vaccine.activeSubstance}
+            <strong>Substancja czynna (Pkt 2 ChPL):</strong> {vaccine.activeSubstance}
           </p>
 
           <div className="v-detail-specs-grid">
             <div className="v-spec-item">
-              <span className="v-spec-label">Podmiot odpowiedzialny:</span>
+              <span className="v-spec-label">Podmiot odpowiedzialny (Pkt 7):</span>
               <span className="v-spec-value">{vaccine.manufacturer}</span>
             </div>
             <div className="v-spec-item">
-              <span className="v-spec-label">Postać farmaceutyczna:</span>
+              <span className="v-spec-label">Postać farmaceutyczna (Pkt 3):</span>
               <span className="v-spec-value">{vaccine.pharmaceuticalForm}</span>
             </div>
             <div className="v-spec-item">
-              <span className="v-spec-label">Pozwolenie na dopuszczenie:</span>
-              <span className="v-spec-value">{vaccine.marketingAuthorizationNumber || 'Brak danych'}</span>
+              <span className="v-spec-label">Numer pozwolenia (Pkt 8):</span>
+              <span className="v-spec-value">{vaccine.marketingAuthorizationNumber || 'Brak danych w bazie'}</span>
             </div>
             <div className="v-spec-item">
-              <span className="v-spec-label">Data weryfikacji rekordu:</span>
-              <span className="v-spec-value">{vaccine.lastVerifiedDate || 'Niezweryfikowany'}</span>
+              <span className="v-spec-label">Standard struktury:</span>
+              <span className="v-spec-value highlight-ema">EMA QRD v10.4 (Punkty 1–10)</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Mandatory Safety Reassurance Banner */}
+      {/* Mandatory Clinical Safety Banner */}
       <section className="v-detail-safety-alert" aria-label="Komunikat bezpieczeństwa">
         <div className="v-safety-icon-wrapper">
           <ShieldAlert size={24} className="v-safety-alert-icon" />
         </div>
         <div className="v-safety-content">
           <h2 className="v-safety-title">
-            Status weryfikacji dokumentacji: {statusMeta.label}
+            Struktura oficjalnej Charakterystyki Produktu Leczniczego (Punkty 1–10)
           </h2>
           <p className="v-safety-desc">
-            Aplikacja VaxNurse <strong>nie zawiera domyślnych ani wygenerowanych przez AI dawek, schematów ani przeciwwskazań</strong>. 
-            Struktura poniższej karty została przygotowana według oficjalnego standardu 13 punktów ChPL.
-            Przed użyciem preparatu należy bezwzględnie potwierdzić aktualne brzmienie Charakterystyki w państwowym Rejestrze Produktów Leczniczych (RPL).
+            Układ poniższej karty odwzorowuje europejski wzorzec <strong>EMA QRD Product Information Template (v10.4, 02/2024)</strong>.
+            Zgodnie z zasadami rzetelności medycznej <strong>aplikacja VaxNurse nie generuje automatycznych dawek ani przeciwwskazań</strong>.
+            Wszelkie decyzje kwalifikacyjne wymagają weryfikacji aktualnego druku ChPL w państwowym Rejestrze Produktów Leczniczych.
           </p>
           <div className="v-safety-links">
             <a
@@ -200,7 +268,7 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
               rel="noopener noreferrer"
               className="v-safety-link"
             >
-              <span>Główne źródło: Rejestr RPL (eZdrowie)</span>
+              <span>Rejestr RPL eZdrowie (główne źródło)</span>
               <ExternalLink size={13} />
             </a>
             <a
@@ -209,186 +277,295 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
               rel="noopener noreferrer"
               className="v-safety-link"
             >
-              <span>Źródło pomocnicze: Urząd Rejestracji Leków (URPL)</span>
+              <span>URPL (źródło pomocnicze)</span>
               <ExternalLink size={13} />
             </a>
           </div>
         </div>
       </section>
 
-      {/* 13 Structured ChPL Sections Grid */}
-      <div className="v-sections-list">
-        {/* 1. Informacje podstawowe */}
-        <div className="v-detail-section-card" id="chpl-sec-1">
-          <div className="v-detail-sec-header">
-            <div className="v-sec-title-box">
-              <span className="v-sec-icon-box"><Info size={18} /></span>
-              <div>
-                <span className="v-sec-chpl-ref">Sekcja 1</span>
-                <h3 className="v-sec-heading">1. Informacje podstawowe i techniczne</h3>
-              </div>
-            </div>
-            <div className="v-sec-meta-badges">
-              <span className="v-source-pill">Rejestr RPL</span>
-              <span className="v-sec-status-pill unverified">Struktura robocza</span>
-            </div>
-          </div>
-          <div className="v-detail-sec-body">
-            <div className="v-basic-info-grid">
-              <div className="v-basic-box">
-                <span className="v-basic-lbl">Nazwa handlowa:</span>
-                <strong className="v-basic-val">{vaccine.tradeName}</strong>
-              </div>
-              <div className="v-basic-box">
-                <span className="v-basic-lbl">Klasyfikacja ATC:</span>
-                <strong className="v-basic-val">{vaccine.atcCode || 'Do weryfikacji'}</strong>
-              </div>
-              <div className="v-basic-box">
-                <span className="v-basic-lbl">Informacje o opakowaniu:</span>
-                <span className="v-basic-val text-muted">
-                  {vaccine.sections.basicInfo.packagingInfo || 'Wymaga weryfikacji z drukiem ChPL / RPL'}
-                </span>
-              </div>
-              <div className="v-basic-box">
-                <span className="v-basic-lbl">Rozpuszczalnik / igły:</span>
-                <span className="v-basic-val text-muted">
-                  {vaccine.sections.basicInfo.solventInfo || 'Do potwierdzenia w pkt 6.5 i 6.6 ChPL'}
-                </span>
-              </div>
-            </div>
-          </div>
+      {/* Accordion Controls Bar */}
+      <div className="chpl-view-toolbar">
+        <span className="toolbar-info-text">
+          Układ oficjalny: <strong>10 głównych punktów ChPL</strong>
+        </span>
+        <div className="toolbar-buttons">
+          <button type="button" className="btn-toolbar-toggle" onClick={expandAll}>
+            Rozwiń wszystkie punkty
+          </button>
+          <button type="button" className="btn-toolbar-toggle" onClick={collapseAll}>
+            Zwiń wszystkie punkty
+          </button>
         </div>
+      </div>
 
-        {/* 2. Skład jakościowy i ilościowy */}
-        {renderChPLSection(
-          '2',
-          '2. Skład jakościowy i ilościowy',
-          vaccine.sections.qualitativeComposition,
-          <Layers size={18} />
-        )}
-
-        {/* 3. Postać farmaceutyczna */}
-        {renderChPLSection(
-          '3',
-          '3. Postać farmaceutyczna',
-          vaccine.sections.pharmaceuticalFormDetails,
-          <FileText size={18} />
-        )}
-
-        {/* 4. Wskazania do stosowania */}
-        {renderChPLSection(
-          '4.1',
-          '4. Wskazania do stosowania',
-          vaccine.sections.indications,
-          <Activity size={18} />
-        )}
-
-        {/* 5. Dawkowanie i sposób podawania */}
-        {renderChPLSection(
-          '4.2',
-          '5. Dawkowanie i sposób podawania',
-          vaccine.sections.dosageAndAdministration,
-          <Clock size={18} />
-        )}
-
-        {/* 6. Przeciwwskazania */}
-        {renderChPLSection(
-          '4.3',
-          '6. Przeciwwskazania',
-          vaccine.sections.contraindications,
-          <AlertTriangle size={18} />
-        )}
-
-        {/* 7. Ostrzeżenia i środki ostrożności */}
-        {renderChPLSection(
-          '4.4',
-          '7. Ostrzeżenia i środki ostrożności',
-          vaccine.sections.warningsAndPrecautions,
-          <ShieldAlert size={18} />
-        )}
-
-        {/* 8. Interakcje */}
-        {renderChPLSection(
-          '4.5',
-          '8. Interakcje z innymi produktami leczniczymi',
-          vaccine.sections.interactions,
-          <FileCheck size={18} />
-        )}
-
-        {/* 9. Ciąża i karmienie piersią */}
-        {renderChPLSection(
-          '4.6',
-          '9. Stosowanie w ciąży i podczas karmienia piersią',
-          vaccine.sections.pregnancyAndLactation,
-          <Heart size={18} />
-        )}
-
-        {/* 10. Działania niepożądane */}
-        {renderChPLSection(
-          '4.8',
-          '10. Działania niepożądane',
-          vaccine.sections.adverseEffects,
-          <AlertTriangle size={18} />
-        )}
-
-        {/* 11. Warunki przechowywania */}
-        {renderChPLSection(
-          '6.4',
-          '11. Warunki przechowywania (Łańcuch chłodniczy)',
-          vaccine.sections.storageConditions,
-          <ThermometerSnowflake size={18} />
-        )}
-
-        {/* 12. Podmiot odpowiedzialny */}
-        {renderChPLSection(
-          '7',
-          '12. Podmiot odpowiedzialny',
-          vaccine.sections.marketingAuthorizationHolder,
-          <Building2 size={18} />
-        )}
-
-        {/* 13. Dokumentacja i historia wersji ChPL */}
-        <div className="v-detail-section-card" id="chpl-sec-13">
-          <div className="v-detail-sec-header">
-            <div className="v-sec-title-box">
-              <span className="v-sec-icon-box"><FileCheck size={18} /></span>
+      {/* ============================================================== */}
+      {/* 10 GŁÓWNYCH PUNKTÓW CHPL (EMA QRD v10.4)                      */}
+      {/* ============================================================== */}
+      <div className="chpl-points-container">
+        {/* PUNKT 1: Nazwa produktu leczniczego */}
+        <section className="chpl-main-card" id="chpl-point-1">
+          <header className="chpl-card-header" onClick={() => toggleSection('sec1')}>
+            <div className="card-header-left">
+              <span className="card-num-circle">1</span>
               <div>
-                <span className="v-sec-chpl-ref">Sekcja 13</span>
-                <h3 className="v-sec-heading">13. Dokumentacja i historia wersji ChPL</h3>
+                <h3 className="card-header-title">1. Nazwa produktu leczniczego</h3>
+                <span className="card-header-subtitle">Name of the medicinal product</span>
               </div>
             </div>
-            <div className="v-sec-meta-badges">
-              <span className="v-source-pill">Metadane urzędowe</span>
-              <span className="v-sec-status-pill unverified">Do weryfikacji</span>
+            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 1">
+              {expandedSections.sec1 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+          </header>
+          {expandedSections.sec1 && (
+            <div className="chpl-card-body">
+              {renderSectionBox(chpl.name, <Info size={17} />)}
             </div>
-          </div>
-          <div className="v-detail-sec-body">
-            <div className="v-basic-info-grid">
-              <div className="v-basic-box">
-                <span className="v-basic-lbl">Rejestr państwowy:</span>
-                <strong className="v-basic-val">{vaccine.sections.documentationHistory.registrySource}</strong>
+          )}
+        </section>
+
+        {/* PUNKT 2: Skład jakościowy i ilościowy */}
+        <section className="chpl-main-card" id="chpl-point-2">
+          <header className="chpl-card-header" onClick={() => toggleSection('sec2')}>
+            <div className="card-header-left">
+              <span className="card-num-circle">2</span>
+              <div>
+                <h3 className="card-header-title">2. Skład jakościowy i ilościowy</h3>
+                <span className="card-header-subtitle">Qualitative and quantitative composition</span>
               </div>
-              <div className="v-basic-box">
-                <span className="v-basic-lbl">Data ostatniej rewizji:</span>
-                <span className="v-basic-val text-muted">
-                  {vaccine.chplVersionDate || 'Wymaga sprawdzenia w metadanych RPL'}
-                </span>
+            </div>
+            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 2">
+              {expandedSections.sec2 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+          </header>
+          {expandedSections.sec2 && (
+            <div className="chpl-card-body">
+              {renderSectionBox(chpl.composition, <Layers size={17} />)}
+            </div>
+          )}
+        </section>
+
+        {/* PUNKT 3: Postać farmaceutyczna */}
+        <section className="chpl-main-card" id="chpl-point-3">
+          <header className="chpl-card-header" onClick={() => toggleSection('sec3')}>
+            <div className="card-header-left">
+              <span className="card-num-circle">3</span>
+              <div>
+                <h3 className="card-header-title">3. Postać farmaceutyczna</h3>
+                <span className="card-header-subtitle">Pharmaceutical form</span>
               </div>
-              <div className="v-basic-box full-span">
-                <span className="v-basic-lbl">Uwagi techniczne rejestru:</span>
-                <p className="v-basic-val text-muted">
-                  {vaccine.sections.documentationHistory.notes || 'Brak uwag.'}
+            </div>
+            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 3">
+              {expandedSections.sec3 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+          </header>
+          {expandedSections.sec3 && (
+            <div className="chpl-card-body">
+              {renderSectionBox(chpl.pharmaceuticalForm, <FileText size={17} />)}
+            </div>
+          )}
+        </section>
+
+        {/* PUNKT 4: Szczegółowe dane kliniczne (4.1 – 4.9) */}
+        <section className="chpl-main-card clinical-highlight" id="chpl-point-4">
+          <header className="chpl-card-header" onClick={() => toggleSection('sec4')}>
+            <div className="card-header-left">
+              <span className="card-num-circle highlight">4</span>
+              <div>
+                <h3 className="card-header-title">4. Szczegółowe dane kliniczne</h3>
+                <span className="card-header-subtitle">Clinical particulars (podpunkty 4.1 – 4.9)</span>
+              </div>
+            </div>
+            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 4">
+              {expandedSections.sec4 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+          </header>
+          {expandedSections.sec4 && (
+            <div className="chpl-card-body">
+              <div className="subsections-stack">
+                {renderSectionBox(chpl.clinicalParticulars.indications, <Activity size={16} />, true)}
+                {renderSectionBox(chpl.clinicalParticulars.dosageAndAdministration, <Clock size={16} />, true)}
+                {renderSectionBox(chpl.clinicalParticulars.contraindications, <AlertTriangle size={16} />, true)}
+                {renderSectionBox(chpl.clinicalParticulars.warningsAndPrecautions, <ShieldAlert size={16} />, true)}
+                {renderSectionBox(chpl.clinicalParticulars.interactions, <FileCheck size={16} />, true)}
+                {renderSectionBox(chpl.clinicalParticulars.fertilityPregnancyLactation, <Heart size={16} />, true)}
+                {renderSectionBox(chpl.clinicalParticulars.driveAndMachines, <Activity size={16} />, true)}
+                {renderSectionBox(chpl.clinicalParticulars.undesirableEffects, <AlertTriangle size={16} />, true)}
+                {renderSectionBox(chpl.clinicalParticulars.overdose, <Info size={16} />, true)}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* PUNKT 5: Właściwości farmakologiczne (5.1 – 5.3) */}
+        <section className="chpl-main-card" id="chpl-point-5">
+          <header className="chpl-card-header" onClick={() => toggleSection('sec5')}>
+            <div className="card-header-left">
+              <span className="card-num-circle">5</span>
+              <div>
+                <h3 className="card-header-title">5. Właściwości farmakologiczne</h3>
+                <span className="card-header-subtitle">Pharmacological properties (podpunkty 5.1 – 5.3)</span>
+              </div>
+            </div>
+            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 5">
+              {expandedSections.sec5 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+          </header>
+          {expandedSections.sec5 && (
+            <div className="chpl-card-body">
+              <div className="subsections-stack">
+                {renderSectionBox(chpl.pharmacologicalProperties.pharmacodynamics, <FlaskConical size={16} />, true)}
+                {renderSectionBox(chpl.pharmacologicalProperties.pharmacokinetics, <Activity size={16} />, true)}
+                {renderSectionBox(chpl.pharmacologicalProperties.preclinicalSafety, <ShieldAlert size={16} />, true)}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* PUNKT 6: Dane farmaceutyczne (6.1 – 6.6) */}
+        <section className="chpl-main-card" id="chpl-point-6">
+          <header className="chpl-card-header" onClick={() => toggleSection('sec6')}>
+            <div className="card-header-left">
+              <span className="card-num-circle">6</span>
+              <div>
+                <h3 className="card-header-title">6. Dane farmaceutyczne</h3>
+                <span className="card-header-subtitle">Pharmaceutical particulars (podpunkty 6.1 – 6.6)</span>
+              </div>
+            </div>
+            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 6">
+              {expandedSections.sec6 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+          </header>
+          {expandedSections.sec6 && (
+            <div className="chpl-card-body">
+              <div className="subsections-stack">
+                {renderSectionBox(chpl.pharmaceuticalParticulars.excipients, <Layers size={16} />, true)}
+                {renderSectionBox(chpl.pharmaceuticalParticulars.incompatibilities, <AlertTriangle size={16} />, true)}
+                {renderSectionBox(chpl.pharmaceuticalParticulars.shelfLife, <Calendar size={16} />, true)}
+                {renderSectionBox(chpl.pharmaceuticalParticulars.storageSpecialPrecautions, <ThermometerSnowflake size={16} />, true)}
+                {renderSectionBox(chpl.pharmaceuticalParticulars.containerNatureAndContents, <Package size={16} />, true)}
+                {renderSectionBox(chpl.pharmaceuticalParticulars.disposalAndHandling, <FileText size={16} />, true)}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* PUNKT 7: Podmiot odpowiedzialny */}
+        <section className="chpl-main-card" id="chpl-point-7">
+          <header className="chpl-card-header" onClick={() => toggleSection('sec7')}>
+            <div className="card-header-left">
+              <span className="card-num-circle">7</span>
+              <div>
+                <h3 className="card-header-title">7. Podmiot odpowiedzialny posiadający pozwolenie na dopuszczenie do obrotu</h3>
+                <span className="card-header-subtitle">Marketing authorisation holder</span>
+              </div>
+            </div>
+            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 7">
+              {expandedSections.sec7 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+          </header>
+          {expandedSections.sec7 && (
+            <div className="chpl-card-body">
+              {renderSectionBox(chpl.marketingAuthorisationHolder, <Building2 size={17} />)}
+            </div>
+          )}
+        </section>
+
+        {/* PUNKT 8: Numer(-y) pozwolenia */}
+        <section className="chpl-main-card" id="chpl-point-8">
+          <header className="chpl-card-header" onClick={() => toggleSection('sec8')}>
+            <div className="card-header-left">
+              <span className="card-num-circle">8</span>
+              <div>
+                <h3 className="card-header-title">8. Numer(-y) pozwolenia na dopuszczenie do obrotu</h3>
+                <span className="card-header-subtitle">Marketing authorisation number(s)</span>
+              </div>
+            </div>
+            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 8">
+              {expandedSections.sec8 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+          </header>
+          {expandedSections.sec8 && (
+            <div className="chpl-card-body">
+              {renderSectionBox(chpl.marketingAuthorisationNumber, <FileCheck size={17} />)}
+            </div>
+          )}
+        </section>
+
+        {/* PUNKT 9: Data pierwszego pozwolenia / przedłużenia */}
+        <section className="chpl-main-card" id="chpl-point-9">
+          <header className="chpl-card-header" onClick={() => toggleSection('sec9')}>
+            <div className="card-header-left">
+              <span className="card-num-circle">9</span>
+              <div>
+                <h3 className="card-header-title">9. Data wydania pierwszego pozwolenia i data przedłużenia pozwolenia</h3>
+                <span className="card-header-subtitle">Date of first authorisation / renewal of the authorisation</span>
+              </div>
+            </div>
+            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 9">
+              {expandedSections.sec9 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+          </header>
+          {expandedSections.sec9 && (
+            <div className="chpl-card-body">
+              {renderSectionBox(chpl.firstAuthorisationAndRenewal, <Calendar size={17} />)}
+            </div>
+          )}
+        </section>
+
+        {/* PUNKT 10: Data zatwierdzenia tekstu lub jego zmiany */}
+        <section className="chpl-main-card" id="chpl-point-10">
+          <header className="chpl-card-header" onClick={() => toggleSection('sec10')}>
+            <div className="card-header-left">
+              <span className="card-num-circle">10</span>
+              <div>
+                <h3 className="card-header-title">10. Data zatwierdzenia lub częściowej zmiany tekstu ChPL</h3>
+                <span className="card-header-subtitle">Date of revision of the text</span>
+              </div>
+            </div>
+            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 10">
+              {expandedSections.sec10 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+          </header>
+          {expandedSections.sec10 && (
+            <div className="chpl-card-body">
+              {renderSectionBox(chpl.revisionDate, <Clock size={17} />)}
+            </div>
+          )}
+        </section>
+
+        {/* OPCJONALNA SEKCJA: Punkty 11 i 12 EMA QRD (Radiofarmaceutyki) */}
+        <section className="chpl-main-card optional-card" id="chpl-point-optional">
+          <header className="chpl-card-header" onClick={() => toggleSection('secOptional')}>
+            <div className="card-header-left">
+              <span className="card-num-circle muted">11-12</span>
+              <div>
+                <h3 className="card-header-title">Punkty 11 i 12 szablonu EMA QRD (Opcjonalne)</h3>
+                <span className="card-header-subtitle">Dawkometria i instrukcje dla radiofarmaceutyków</span>
+              </div>
+            </div>
+            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń informację o punktach 11 i 12">
+              {expandedSections.secOptional ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+          </header>
+          {expandedSections.secOptional && (
+            <div className="chpl-card-body">
+              <div className="chpl-optional-notice">
+                <Info size={18} className="optional-info-icon" />
+                <p>
+                  Zgodnie z oficjalnym szablonem <strong>EMA QRD Product Information Template v10.4</strong>, punkty 11 (Dosimetry) oraz 12 (Instructions for preparation of radiopharmaceuticals) dotyczą wyłącznie preparatów radiofarmaceutycznych. 
+                  Dla szczepionek i standardowych produktów leczniczych stosowanych w punkcie szczepień punkty te <strong>nie mają zastosowania i nie wchodzą w zakres druku ChPL</strong>.
                 </p>
               </div>
             </div>
-          </div>
-        </div>
+          )}
+        </section>
       </div>
 
       {/* Footer Navigation Back */}
       <div className="module-view-footer">
         <p className="footer-status-note">
-          Karta preparatu w strukturze 13 sekcji ChPL (VaxNurse) – status: {statusMeta.label}.
+          Karta ChPL (punkty 1–10, szablon EMA QRD v10.4) – status weryfikacji dokumentacji: {statusMeta.label}.
         </p>
         <button
           type="button"

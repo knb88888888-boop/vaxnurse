@@ -60,14 +60,14 @@ export const APP_MODULES: ModuleDefinition[] = [
   {
     id: 'vaccines-database',
     label: 'Baza preparatów',
-    description: 'Katalog produktów leczniczych dla dzieci i dorosłych: struktura 13 sekcji ChPL oraz integracja z RPL.',
+    description: 'Katalog produktów leczniczych dla dzieci i dorosłych: Karta ChPL (punkty 1–10 EMA QRD v10.4) oraz integracja z RPL.',
     category: 'clinical',
     icon: Syringe,
     isCore: true,
-    badge: 'ChPL (13 sekcji)',
-    purposeNote: 'Referencyjny katalog preparatów ze strukturą 13 punktów ChPL i powiązaniem z rejestrem RPL.',
+    badge: 'Karta ChPL',
+    purposeNote: 'Referencyjny katalog preparatów ze strukturą punktów 1–10 ChPL wg szablonu EMA QRD v10.4 i powiązaniem z rejestrem RPL.',
     keyFeatures: [
-      'Strukturalny podział na 13 oficjalnych sekcji ChPL',
+      'Oficjalna Karta ChPL (punkty 1–10 szablonu EMA QRD v10.4)',
       'Filtrowanie według rodzaju, grupy wiekowej i statusu weryfikacji',
       'Bezpośrednie odsyłacze do oficjalnych rekordów RPL i URPL'
     ]
