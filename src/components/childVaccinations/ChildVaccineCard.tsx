@@ -10,7 +10,9 @@ import {
   FileText,
   Clock,
   ArrowRight,
-  Info
+  Info,
+  Layers,
+  BookOpen
 } from 'lucide-react';
 import type { ChildVaccineItem } from '../../types/childVaccines';
 import type { VaccineProduct } from '../../types/vaccines';
@@ -64,17 +66,19 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
 
           <span className="short-code-chip">{item.shortCode}</span>
 
-          <span className="pathogen-category-chip">
-            {item.pathogenCategory === 'bakterie' && 'Bakterie'}
-            {item.pathogenCategory === 'wirusy' && 'Wirusy'}
-            {item.pathogenCategory === 'mieszane' && 'Mieszane'}
+          <span className="pso-part-chip" title={`Część dokumentu PSO 2027: ${item.psoPart}, ${item.psoPointOrSubpoint}`}>
+            {item.psoPart} • {item.psoPointOrSubpoint}
+          </span>
+
+          <span className="pso-page-chip" title="Numer strony w oficjalnym PDF Dziennika Urzędowego MZ">
+            str. {item.psoPdfPage}
           </span>
         </div>
 
         <div className="top-badges-right">
-          <span className="verification-pso-chip" title={`Data weryfikacji rekordu: ${item.lastVerifiedDate}`}>
+          <span className="verification-pso-chip" title={`Weryfikacja z oficjalnym komunikatem GIS z dnia ${item.psoPublicationDate}`}>
             <span className="dot-pulse"></span>
-            <span>PSO 2027</span>
+            <span>Zweryfikowano PSO</span>
           </span>
         </div>
       </div>
@@ -84,11 +88,20 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
         <h3 className="disease-title">{item.disease}</h3>
         <div className="dose-identity-row">
           <span className="dose-label-pill">{item.doseLabel}</span>
+          <span className="dose-progress-tag">
+            (dawka {item.doseNumberInSeries} z {item.totalDosesInStandardSeries})
+          </span>
           <span className="target-age-label">
             <Clock size={14} className="timing-icon" />
             <span>{item.targetAgeDisplay}</span>
           </span>
         </div>
+      </div>
+
+      {/* Target Group Snippet */}
+      <div className="target-group-snippet">
+        <span className="target-group-label">Grupa docelowa:</span>
+        <span className="target-group-text">{item.targetGroupDescription}</span>
       </div>
 
       {/* Quick Specs Grid (Always visible for fast clinical orientation) */}
@@ -108,8 +121,15 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
         </div>
 
         <div className="spec-item full-width">
-          <span className="spec-label">Finansowanie</span>
-          <span className="spec-value funding-value">{item.fundingStatus}</span>
+          <span className="spec-label">Finansowanie i źródło</span>
+          <span className="spec-value funding-value">
+            {item.fundingStatus}
+            {item.officialFundingSourceRef && (
+              <span className="funding-ref-badge">
+                {item.officialFundingSourceRef}
+              </span>
+            )}
+          </span>
         </div>
       </div>
 
@@ -161,7 +181,7 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
         onClick={() => setIsExpanded(!isExpanded)}
         aria-expanded={isExpanded}
       >
-        <span>{isExpanded ? 'Zwiń szczegóły i wytyczne PSO' : 'Pokaż wytyczne wykonawcze i źródła PSO'}</span>
+        <span>{isExpanded ? 'Zwiń szczegóły i wytyczne PSO' : 'Pokaż wytyczne wykonawcze, ChPL i źródła PSO'}</span>
         {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
       </button>
 
@@ -199,17 +219,37 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
             </div>
           )}
 
+          {/* ChPL Reference Point */}
+          {item.chplReference && (
+            <div className="expanded-section chpl-reference-section">
+              <div className="section-title-with-icon">
+                <BookOpen size={16} className="section-icon emerald" />
+                <h4>Odnośnik do Charakterystyki Produktu Leczniczego (ChPL)</h4>
+              </div>
+              <p className="chpl-ref-text">{item.chplReference}</p>
+            </div>
+          )}
+
           {/* Official PSO Reference Footer */}
           <div className="expanded-source-footer">
-            <div className="source-meta-item">
-              <FileText size={15} className="source-icon" />
-              <div className="source-meta-text">
-                <strong>Pozycja w dokumencie:</strong> {item.psoSection}
+            <div className="source-meta-grid">
+              <div className="source-meta-item">
+                <FileText size={15} className="source-icon" />
+                <div className="source-meta-text">
+                  <strong>Pozycja w dokumencie:</strong> {item.psoSection} (strona {item.psoPdfPage} PDF)
+                </div>
+              </div>
+
+              <div className="source-meta-item">
+                <Layers size={15} className="source-icon" />
+                <div className="source-meta-text">
+                  <strong>Część dokumentu:</strong> {item.psoPart}, {item.psoPointOrSubpoint}
+                </div>
               </div>
             </div>
 
             <div className="source-legal-act">
-              <strong>Akt prawny:</strong> {item.psoLegalAct} (publikacja: {item.psoPublicationDate})
+              <strong>Akt prawny:</strong> {item.psoLegalAct} (data publikacji komunikatu: {item.psoPublicationDate})
             </div>
 
             <div className="source-links-row">
@@ -219,12 +259,12 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                 rel="noopener noreferrer"
                 className="pso-official-anchor-btn"
               >
-                <span>Otwórz oficjalny komunikat GIS (gov.pl)</span>
+                <span>Otwórz oficjalny PDF Dziennika Urzędowego MZ (akt.pdf, str. {item.psoPdfPage})</span>
                 <ExternalLink size={14} />
               </a>
 
               <span className="source-audit-date">
-                Weryfikacja redakcyjna: {item.lastVerifiedDate}
+                Status: {item.verificationStatus === 'verified_pso' ? 'Zweryfikowano z PSO' : 'Oczekuje na weryfikację'} ({item.lastVerifiedDate})
               </span>
             </div>
           </div>

@@ -1141,6 +1141,597 @@
   border-color: #4ade80;
 }
 
+/* ==========================================================================
+   Section Tab Bar Switcher (Procedures, Qualifications, Principles, Catchup, Variants)
+   ========================================================================== */
+
+.pso-sections-tab-bar {
+  display: flex;
+  gap: 0.5rem;
+  background-color: #f1f5f9;
+  padding: 0.35rem;
+  border-radius: 10px;
+  overflow-x: auto;
+  border: 1px solid #cbd5e1;
+}
+
+.pso-section-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--navy-700);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.pso-section-nav-btn:hover {
+  color: var(--navy-900);
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
+.pso-section-nav-btn.active {
+  background-color: #ffffff;
+  color: #0369a1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.section-tab-count {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 12px;
+  background-color: #e0f2fe;
+  color: #0369a1;
+  font-size: 0.725rem;
+  font-weight: 700;
+}
+
+/* --- Card New Metadata Chips --- */
+.pso-part-chip {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background-color: #e0f2fe;
+  color: #0369a1;
+  font-size: 0.725rem;
+  font-weight: 700;
+  border: 1px solid #bae6fd;
+}
+
+.pso-page-chip {
+  padding: 0.2rem 0.45rem;
+  border-radius: 4px;
+  background-color: #f1f5f9;
+  color: #475569;
+  font-size: 0.725rem;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+}
+
+.dose-progress-tag {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.target-group-snippet {
+  padding: 0.35rem 1.15rem 0.5rem 1.15rem;
+  font-size: 0.775rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.target-group-label {
+  font-weight: 700;
+  color: var(--navy-800);
+  margin-right: 0.35rem;
+}
+
+.funding-ref-badge {
+  display: block;
+  font-size: 0.725rem;
+  font-weight: 500;
+  color: #64748b;
+  margin-top: 0.2rem;
+}
+
+.chpl-reference-section {
+  background-color: #ecfdf5;
+  border-left: 3px solid #10b981;
+  padding: 0.65rem 0.85rem;
+  border-radius: 6px;
+}
+
+.chpl-ref-text {
+  margin: 0;
+  font-size: 0.825rem;
+  color: #065f46;
+  font-weight: 600;
+}
+
+.counter-note-inline {
+  font-size: 0.775rem;
+  color: var(--text-tertiary);
+  font-weight: normal;
+}
+
+/* ==========================================================================
+   Tab 2: Staff Qualifications Matrix (Część VI PSO)
+   ========================================================================== */
+
+.qualifications-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.section-intro-card {
+  padding: 1.25rem 1.5rem;
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.intro-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+.intro-title-row h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--navy-900);
+}
+
+.intro-icon {
+  color: #0284c7;
+}
+
+.intro-text {
+  margin: 0 0 0.85rem 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.legal-notice-banner {
+  padding: 0.6rem 0.85rem;
+  background-color: #fef3c7;
+  border-left: 3px solid #d97706;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #92400e;
+}
+
+.qualifications-table-wrapper {
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  overflow-x: auto;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.qualifications-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.825rem;
+}
+
+.qualifications-matrix-table th {
+  background-color: #0f172a;
+  color: #ffffff;
+  padding: 0.85rem 0.75rem;
+  font-weight: 600;
+  font-size: 0.775rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.qualifications-matrix-table th.col-profession {
+  min-width: 240px;
+}
+
+.qualifications-matrix-table th.col-check {
+  text-align: center;
+  min-width: 110px;
+}
+
+.qualification-row {
+  border-bottom: 1px solid #e2e8f0;
+  transition: background-color 0.15s ease;
+}
+
+.qualification-row:hover {
+  background-color: #f8fafc;
+}
+
+.profession-cell {
+  padding: 0.85rem 1rem;
+  vertical-align: top;
+}
+
+.prof-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--navy-900);
+  margin-bottom: 0.25rem;
+}
+
+.prof-cond-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-bottom: 0.4rem;
+}
+
+.prof-legal-notes {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.legal-ref-tag {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background-color: #f1f5f9;
+  color: #475569;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+}
+
+.status-cell {
+  text-align: center;
+  vertical-align: middle;
+  padding: 0.75rem 0.5rem;
+}
+
+.perm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.perm-badge.perm-allowed {
+  background-color: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.perm-badge.perm-denied {
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  border: 1px solid #e2e8f0;
+}
+
+/* ==========================================================================
+   Tab 3: General Principles Full View (Część IV PSO)
+   ========================================================================== */
+
+.principles-full-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.principles-detailed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.principle-detailed-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.principle-header-box {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.principle-point-badge {
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  background-color: #0284c7;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.principle-point-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--navy-900);
+}
+
+.principle-source-location {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-left: auto;
+}
+
+.principle-body-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.box-label {
+  font-size: 0.725rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  margin-bottom: 0.25rem;
+  display: block;
+}
+
+.box-label-amber {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #b45309;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.official-text {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--navy-900);
+  line-height: 1.55;
+  background-color: #f8fafc;
+  padding: 0.85rem;
+  border-radius: 6px;
+  border-left: 3px solid #0284c7;
+}
+
+.clinical-app-text {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.exceptions-container {
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+}
+
+.exceptions-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.exception-item {
+  font-size: 0.825rem;
+  color: #92400e;
+  line-height: 1.45;
+}
+
+/* ==========================================================================
+   Tab 4: Catch-up Immunization (Część V PSO)
+   ========================================================================== */
+
+.catchup-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.catchup-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 1.25rem;
+}
+
+.catchup-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.catchup-card-header {
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.65rem;
+}
+
+.catchup-title {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.975rem;
+  font-weight: 700;
+  color: var(--navy-900);
+}
+
+.catchup-source {
+  font-size: 0.725rem;
+  color: var(--text-tertiary);
+}
+
+.catchup-summary-box {
+  background-color: #f0f9ff;
+  border-left: 3px solid #0284c7;
+  padding: 0.65rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.825rem;
+  color: #0369a1;
+  line-height: 1.45;
+}
+
+.catchup-procedures-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.procedure-bullet-item {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+/* ==========================================================================
+   Tab 5: Combined Vaccine Variants (5w1 and 6w1 - Część I.A / III.M)
+   ========================================================================== */
+
+.combined-variants-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.interchangeability-warning-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background-color: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  color: #991b1b;
+  font-size: 0.825rem;
+  line-height: 1.5;
+  margin-top: 0.75rem;
+}
+
+.warn-icon {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+.combined-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 1.25rem;
+}
+
+.variant-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.variant-card-header {
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.65rem;
+}
+
+.variant-type-tag {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 4px;
+  background-color: #ede9fe;
+  color: #5b21b6;
+  font-size: 0.725rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.variant-name {
+  margin: 0 0 0.25rem 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--navy-900);
+}
+
+.variant-source {
+  font-size: 0.725rem;
+  color: var(--text-tertiary);
+}
+
+.variant-section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.block-label {
+  font-size: 0.725rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-tertiary);
+}
+
+.block-val {
+  margin: 0;
+  font-size: 0.825rem;
+  color: var(--navy-900);
+  line-height: 1.45;
+}
+
+.block-val.highlight-hbv {
+  background-color: #f0fdf4;
+  border-left: 3px solid #16a34a;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  color: #14532d;
+  font-weight: 600;
+}
+
+.variant-warning-box {
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  padding: 0.65rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.775rem;
+  color: #92400e;
+  line-height: 1.4;
+}
+
+.variant-chpl-ref {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  padding-top: 0.45rem;
+  border-top: 1px dashed #e2e8f0;
+}
+
 @keyframes slideDown {
   from {
     opacity: 0;
