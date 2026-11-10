@@ -1,0 +1,311 @@
+/* Module View Layout */
+.module-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.module-view-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.back-to-dashboard-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  color: var(--navy-800);
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-xs);
+  transition: all var(--transition-fast);
+}
+
+.back-to-dashboard-btn:hover {
+  background-color: var(--bg-surface-subtle);
+  border-color: var(--blue-500);
+  color: var(--blue-700);
+  transform: translateX(-2px);
+}
+
+.view-mode-pill {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--violet-700);
+  background-color: var(--violet-50);
+  border: 1px solid var(--violet-100);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+}
+
+/* Header Card */
+.module-view-header-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 28px 32px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.module-view-header-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.module-view-icon-box {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid var(--blue-100);
+  color: var(--blue-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px -2px rgb(2 132 199 / 0.15);
+}
+
+.module-view-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.module-category-pill {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background-color: var(--bg-surface-subtle);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+}
+
+.module-custom-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--violet-700);
+  background-color: var(--violet-100);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+}
+
+.status-badge-ready {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--emerald-700);
+  background-color: var(--emerald-50);
+  border: 1px solid var(--emerald-100);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+}
+
+.module-view-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--navy-900);
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+.module-view-lead {
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  max-width: 780px;
+  line-height: 1.5;
+}
+
+/* Content Grid */
+.module-view-content-grid {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 24px;
+}
+
+.content-panel {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 26px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-heading {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--navy-900);
+  margin-bottom: 10px;
+}
+
+.panel-text {
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.panel-subheading {
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--navy-800);
+  margin-bottom: 14px;
+}
+
+.features-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 0.875rem;
+  color: var(--navy-800);
+  line-height: 1.45;
+}
+
+.feature-check-icon {
+  color: var(--blue-600);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Safety Panel Styling */
+.safety-panel {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+  border-color: #cbd5e1;
+}
+
+.safety-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.safety-icon {
+  color: var(--emerald-600);
+}
+
+.safety-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--navy-900);
+}
+
+.safety-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.safety-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.safety-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.rule-bullet {
+  color: var(--blue-600);
+  font-weight: bold;
+}
+
+.safety-footer {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.action-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--blue-600);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.action-link-btn:hover {
+  background-color: var(--blue-50);
+}
+
+/* Module View Footer */
+.module-view-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  background-color: var(--bg-surface-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+}
+
+.footer-status-note {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
+.btn-primary-dashboard {
+  padding: 8px 18px;
+  background-color: var(--navy-900);
+  color: #ffffff;
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: background-color var(--transition-fast);
+}
+
+.btn-primary-dashboard:hover {
+  background-color: var(--navy-800);
+}
+
+/* RESPONSIVE MODULE VIEW */
+@media (max-width: 900px) {
+  .module-view-content-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .module-view-header-left {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .module-view-footer {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+}
