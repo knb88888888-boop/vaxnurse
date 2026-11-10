@@ -9,10 +9,12 @@ export type VaccineObligationType = 'obowiazkowe' | 'zalecane';
 export type PopulationScope = 'pediatric' | 'adult' | 'cross_age';
 
 /**
- * Granularne statusy weryfikacji danych (Punkt 5 audytu)
+ * Granularne statusy weryfikacji danych (Punkt 5 audytu oraz rozdzielenie statusów ChPL w PROMPT 18)
  */
 export type PsoVerificationStatus = 'verified_pso' | 'pending_verification';
-export type ChplVerificationStatus = 'verified_chpl' | 'pending_chpl_verification' | 'no_trade_product_linked';
+export type ChplReferenceStatus = 'official_document_identified' | 'reference_name_only' | 'missing';
+export type ChplContentVerificationStatus = 'verified_full' | 'analyzed_with_discrepancy' | 'pending_content_audit' | 'not_verified';
+export type ChplVerificationStatus = 'verified_chpl' | 'requires_source_clarification' | 'pending_chpl_verification' | 'no_trade_product_linked';
 export type FundingVerificationStatus = 'verified_public_free' | 'verified_reimbursement' | 'verified_self_funded' | 'pending_clarification';
 export type ProductLinkageStatus = 'linked_catalog' | 'pending_catalog_entry' | 'not_applicable';
 
@@ -100,13 +102,23 @@ export interface ChildVaccineItem {
   fundingSource: 'mz_budget' | 'free_public_program' | 'self_funded' | 'mixed';
   officialFundingSourceRef: string | null;      // Osobne urzędowe źródło podstawy finansowania / ustawy
   linkedVaccineIds: string[];                   // Identyfikatory w katalogu preparatów (np. ['vac-infanrix-hexa'])
-  chplReference: string | null;                 // Numer punktu z ChPL produktu (np. "ChPL Infanrix hexa pkt 4.2")
+  chplReference: string | null;                 // Opisowe odwołanie do ChPL produktu (np. "ChPL Infanrix hexa pkt 4.2")
+  chplOfficialSourceUrl?: string | null;        // Bezpośredni URL do oficjalnego dokumentu ChPL (np. RPL / GSK / EMA)
+  chplProductName?: string | null;              // Nazwa produktu leczniczego z rejestru
+  chplMarketingAuthorizationHolder?: string | null; // Podmiot odpowiedzialny
+  chplAuthorizationNumber?: string | null;      // Numer pozwolenia
+  chplPharmaceuticalForm?: string | null;       // Postać farmaceutyczna
+  alternativeProductLabel?: string | null;      // Informacja o produkcie alternatywnym
+  alternativeProductStatus?: 'confirmed' | 'pending_verification' | 'none';
+  linkageAuditNote?: string | null;             // Wynik kontroli powiązania handlowego (np. nieścisłości dawki lub alternatywy 6w1)
   alternativeCombinedOptions: string | null;    // Opcja zastąpienia szczepionkami skojarzonymi (5w1 / 6w1)
   verificationStatus: ChildVaccineVerificationStatus; // Status weryfikacji z oficjalnym komunikatem (wstecznie kompatybilny)
   lastVerifiedDate: string;                     // Data weryfikacji rekordu
 
-  // Granularne statusy weryfikacji (Punkt 5 audytu)
+  // Granularne statusy weryfikacji (Punkt 5 audytu + PROMPT 18)
   psoVerificationStatus: PsoVerificationStatus;
+  chplReferenceStatus: ChplReferenceStatus;
+  chplContentVerificationStatus: ChplContentVerificationStatus;
   chplVerificationStatus: ChplVerificationStatus;
   fundingVerificationStatus: FundingVerificationStatus;
   productLinkageStatus: ProductLinkageStatus;

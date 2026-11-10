@@ -355,16 +355,41 @@ assert.equal(infanrix.sourceDiscrepancies[0].status, 'requires_clarification');
 console.log('   ✓ SCENARIUSZ 10 ZALICZONY: Blokada weryfikacji i niezgodność fenyloalaniny Infanrix hexa pozostają w 100% nienaruszone.\n');
 
 // -------------------------------------------------------------
-// Test 11: Weryfikacja rekordu BCG oraz procedur wielowiekowych (cross_age)
+// Test 11: Weryfikacja rekordu BCG (RPL + BCG SSI) oraz procedur wielowiekowych (cross_age)
 // -------------------------------------------------------------
-console.log('Test 11: Weryfikacja rekordu BCG oraz procedur wielowiekowych (cross_age)');
+console.log('Test 11: Weryfikacja rekordu BCG (RPL ID 19535, BCG SSI) oraz procedur wielowiekowych (cross_age)');
 
-// 1. BCG: chplReference: null i status oczekiwania na weryfikację ChPL
+// 1. BCG: oficjalne źródło ChPL w RPL (BCG 10, Synthaverse S.A., R/0210) bez automatycznego awansu treści i bez karty handlowej
 const bcg = findChildVaccine('pso-bcg-0');
 assert.ok(bcg, 'Rekord BCG musi istnieć');
-assert.equal(bcg.chplReference, null, 'BCG zachowuje chplReference: null dopóki produkt nie zostanie w pełni zweryfikowany z dostawą');
-assert.equal(bcg.chplVerificationStatus, 'pending_chpl_verification', 'BCG ma status chplVerificationStatus: pending_chpl_verification');
+assert.equal(
+  bcg.chplOfficialSourceUrl,
+  'https://rejestrymedyczne.ezdrowie.gov.pl/api/rpl/medicinal-products/19535/characteristic',
+  'BCG 10 musi wskazywać bezpośredni URL oficjalnej ChPL w RPL (ID 19535)'
+);
+assert.equal(bcg.chplProductName, 'Szczepionka przeciwgruźlicza BCG 10', 'Nazwa produktu leczniczego BCG 10');
+assert.equal(bcg.chplMarketingAuthorizationHolder, 'Synthaverse S.A.', 'Podmiot odpowiedzialny BCG 10');
+assert.equal(bcg.chplAuthorizationNumber, 'R/0210', 'Numer pozwolenia BCG 10');
+assert.equal(
+  bcg.chplPharmaceuticalForm,
+  'proszek i rozpuszczalnik do sporządzania zawiesiny do wstrzykiwań śródskórnych',
+  'Postać farmaceutyczna BCG 10'
+);
+assert.notEqual(bcg.psoOfficialUrl, bcg.chplOfficialSourceUrl, 'Źródło PSO i źródło ChPL muszą pozostać rozdzielone');
+assert.equal(bcg.psoOfficialUrl, OFFICIAL_PDF_URL, 'BCG zachowuje oficjalny URL aktu PSO');
+
+// BCG Szczepionka SSI – niepotwierdzona w aktywnym obrocie pod tą nazwą -> pending_verification, brak powiązania handlowego
+assert.equal(bcg.alternativeProductStatus, 'pending_verification', 'BCG SSI musi mieć status alternativeProductStatus: pending_verification');
+assert.ok(bcg.alternativeProductLabel?.includes('BCG Szczepionka SSI'), 'BCG musi dokumentować wynik sprawdzenia BCG Szczepionka SSI');
+assert.ok(bcg.alternativeProductLabel?.includes('oczekuje na potwierdzenie'), 'BCG SSI musi być opisana jako oczekująca na potwierdzenie');
+assert.equal(bcg.linkedVaccineIds.length, 0, 'Nie wolno tworzyć powiązania handlowego bez karty produktu i potwierdzenia');
+
+// Statusy BCG: źródło zidentyfikowane, ale treść oczekuje na pełny audyt, a karta handlowa w katalogu jeszcze nie istnieje
 assert.equal(bcg.psoVerificationStatus, 'verified_pso', 'BCG ma zweryfikowane źródło PSO');
+assert.equal(bcg.chplReferenceStatus, 'official_document_identified', 'BCG ma zidentyfikowany oficjalny dokument ChPL w RPL');
+assert.equal(bcg.chplContentVerificationStatus, 'pending_content_audit', 'Treść ChPL BCG 10 oczekuje na pełny audyt');
+assert.equal(bcg.chplVerificationStatus, 'pending_chpl_verification', 'BCG nie może zostać automatycznie oznaczone jako verified_chpl');
+assert.equal(bcg.productLinkageStatus, 'pending_catalog_entry', 'BCG zachowuje productLinkageStatus: pending_catalog_entry');
 
 // 2. Procedury wielowiekowe (dokładnie 4 rekordy cross_age)
 const crossAgeExpected = [
@@ -386,16 +411,18 @@ assert.equal(allCrossAge.length, 4, 'W bazie muszą być dokładnie 4 procedury 
 const allPediatric = CHILD_VACCINES_CATALOG.filter(it => it.populationScope === 'pediatric');
 assert.equal(allPediatric.length, 39, 'W bazie musi być dokładnie 39 procedur z oznaczeniem pediatric');
 
-console.log('   ✓ SCENARIUSZ 11 ZALICZONY: BCG poprawnie oczekuje na weryfikację ChPL, a dokładnie 4 procedury są oznaczone jako cross_age.\n');
+console.log('   ✓ SCENARIUSZ 11 ZALICZONY: BCG 10 wskazuje oficjalny dokument RPL (ID 19535), BCG SSI pozostaje jako pending_verification, a 4 procedury mają cross_age.\n');
 
 // -------------------------------------------------------------
-// Test 12: Granularne statusy weryfikacji i rozróżnienie PSO / ChPL / Katalog
+// Test 12: Rozdzielenie identyfikacji źródła ChPL, weryfikacji treści i powiązań handlowych (PROMPT 18)
 // -------------------------------------------------------------
-console.log('Test 12: Granularne statusy weryfikacji (PSO / ChPL / Finansowanie / Katalog)');
+console.log('Test 12: Rozdzielenie statusów źródła ChPL, weryfikacji treści ChPL oraz kontrola powiązań z vac-infanrix-hexa');
 
 for (const it of CHILD_VACCINES_CATALOG) {
   assert.ok(['verified_pso', 'pending_verification'].includes(it.psoVerificationStatus), `Wpis ${it.id} musi mieć poprawny psoVerificationStatus`);
-  assert.ok(['verified_chpl', 'pending_chpl_verification', 'no_trade_product_linked'].includes(it.chplVerificationStatus), `Wpis ${it.id} musi mieć poprawny chplVerificationStatus`);
+  assert.ok(['official_document_identified', 'reference_name_only', 'missing'].includes(it.chplReferenceStatus), `Wpis ${it.id} musi mieć poprawny chplReferenceStatus`);
+  assert.ok(['verified_full', 'analyzed_with_discrepancy', 'pending_content_audit', 'not_verified'].includes(it.chplContentVerificationStatus), `Wpis ${it.id} musi mieć poprawny chplContentVerificationStatus`);
+  assert.ok(['verified_chpl', 'requires_source_clarification', 'pending_chpl_verification', 'no_trade_product_linked'].includes(it.chplVerificationStatus), `Wpis ${it.id} musi mieć poprawny chplVerificationStatus`);
   assert.ok(['verified_public_free', 'verified_reimbursement', 'verified_self_funded', 'pending_clarification'].includes(it.fundingVerificationStatus), `Wpis ${it.id} musi mieć poprawny fundingVerificationStatus`);
   assert.ok(['linked_catalog', 'pending_catalog_entry', 'not_applicable'].includes(it.productLinkageStatus), `Wpis ${it.id} musi mieć poprawny productLinkageStatus`);
 
@@ -408,12 +435,41 @@ for (const it of CHILD_VACCINES_CATALOG) {
   }
 }
 
+const identifiedDocCount = CHILD_VACCINES_CATALOG.filter(it => it.chplReferenceStatus === 'official_document_identified').length;
+const refNameOnlyCount = CHILD_VACCINES_CATALOG.filter(it => it.chplReferenceStatus === 'reference_name_only').length;
+const trulyVerifiedChplCount = CHILD_VACCINES_CATALOG.filter(it => it.chplContentVerificationStatus === 'verified_full' || it.chplVerificationStatus === 'verified_chpl').length;
+const analyzedDiscrepancyCount = CHILD_VACCINES_CATALOG.filter(it => it.chplContentVerificationStatus === 'analyzed_with_discrepancy').length;
+const pendingAuditCount = CHILD_VACCINES_CATALOG.filter(it => it.chplContentVerificationStatus === 'pending_content_audit').length;
+const notVerifiedContentCount = CHILD_VACCINES_CATALOG.filter(it => it.chplContentVerificationStatus === 'not_verified').length;
 const linkedCount = CHILD_VACCINES_CATALOG.filter(it => it.productLinkageStatus === 'linked_catalog').length;
 const pendingCatalogCount = CHILD_VACCINES_CATALOG.filter(it => it.productLinkageStatus === 'pending_catalog_entry').length;
-assert.equal(linkedCount, 13, 'Dokładnie 13 procedur ma powiązany preparat handlowy w bazie');
+
+assert.equal(identifiedDocCount, 13, 'Dokładnie 13 procedur posiada zidentyfikowany oficjalny dokument ChPL (BCG 10 + 12 Infanrix hexa)');
+assert.equal(refNameOnlyCount, 30, 'Dokładnie 30 procedur zawiera jedynie orientacyjną nazwę handlową produktu');
+assert.equal(trulyVerifiedChplCount, 0, 'Żadna procedura nie może być oznaczona jako w pełni zweryfikowana ChPL bez zamknięcia niezgodności i pełnego audytu');
+assert.equal(analyzedDiscrepancyCount, 12, '12 procedur kalendarzowych powiązanych z Infanrix hexa ma status analyzed_with_discrepancy');
+assert.equal(pendingAuditCount, 2, '2 procedury (pso-bcg-0 oraz pso-risk-preterm-dtap) mają status pending_content_audit');
+assert.equal(notVerifiedContentCount, 29, '29 procedur ma status not_verified (brak pobranego dokumentu ChPL)');
+assert.equal(linkedCount, 13, 'Dokładnie 13 procedur ma powiązany preparat handlowy w bazie (vac-infanrix-hexa)');
 assert.equal(pendingCatalogCount, 30, 'Dokładnie 30 procedur oczekuje na wprowadzenie do katalogu handlowego');
 
-console.log('   ✓ SCENARIUSZ 12 ZALICZONY: Odrębne statusy weryfikacji PSO, ChPL, Finansowania i Katalogu wdrożone bez zrównywania braku preparatu z błędem PSO.\n');
+// Audyt powiązań handlowych vac-infanrix-hexa (wcześniaki DTaP 3w1 vs 6w1, przesunięcie dawki IPV w A.2, HBV w A.2)
+const pretermDtap = findChildVaccine('pso-risk-preterm-dtap');
+assert.ok(pretermDtap, 'pso-risk-preterm-dtap musi istnieć');
+assert.equal(pretermDtap.chplReferenceStatus, 'reference_name_only', 'pso-risk-preterm-dtap wskazuje ChPL Infanrix DTPa (brak dokumentu/karty 3w1 w bazie)');
+assert.equal(pretermDtap.chplVerificationStatus, 'pending_chpl_verification', 'pso-risk-preterm-dtap nie może być oznaczony jako zweryfikowany');
+assert.ok(pretermDtap.linkageAuditNote?.includes('ROZBIEŻNOŚĆ DO WERYFIKACJI') && pretermDtap.linkageAuditNote?.includes('III.E.3'), 'pso-risk-preterm-dtap musi posiadać precyzyjną uwagę o rozbieżności 3w1 vs 6w1');
+
+for (const ipvId of ['pso-ipv-1', 'pso-ipv-2', 'pso-ipv-3']) {
+  const ipvItem = findChildVaccine(ipvId);
+  assert.ok(ipvItem, `${ipvId} musi istnieć`);
+  assert.ok(ipvItem.linkageAuditNote?.includes('Wariant A.2 (6w1)'), `${ipvId} musi zawierać uwagę o przesunięciu numeru dawki IPV w wariancie 6w1`);
+}
+
+const hbv2 = findChildVaccine('pso-hbv-2');
+assert.ok(hbv2?.linkageAuditNote?.includes('Wariant A.2 (6w1)'), 'pso-hbv-2 musi zawierać uwagę o pokryciu dawki przez Infanrix hexa');
+
+console.log('   ✓ SCENARIUSZ 12 ZALICZONY: Rozdzielono identyfikację dokumentu ChPL (13), weryfikację treści (0 verified_full, 12 discrepancy, 2 pending_audit, 29 not_verified) i kontrolę 13 powiązań handlowych.\n');
 
 console.log('================================================================');
 console.log(' WYNIK KOŃCOWY: 12/12 SCENARIUSZY AUDYTU ZALICZONYCH (100%)    ');

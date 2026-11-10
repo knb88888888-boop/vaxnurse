@@ -751,6 +751,32 @@
   border: 1px solid #fde68a;
 }
 
+.verification-chpl-identified-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  background-color: #f0f9ff;
+  color: #0369a1;
+  font-size: 0.725rem;
+  font-weight: 700;
+  border: 1px solid #bae6fd;
+}
+
+.verification-chpl-discrepancy-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  background-color: #fef2f2;
+  color: #991b1b;
+  font-size: 0.725rem;
+  font-weight: 700;
+  border: 1px solid #fecaca;
+}
+
 .dot-pulse {
   width: 6px;
   height: 6px;
@@ -770,6 +796,20 @@
   height: 6px;
   border-radius: 50%;
   background-color: #f59e0b;
+}
+
+.dot-pulse-blue {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #0284c7;
+}
+
+.dot-pulse-red {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #dc2626;
 }
 
 /* Status breakdown in card footer */
@@ -810,6 +850,10 @@
 
 .v-val.status-pending {
   color: #b45309;
+}
+
+.v-val.status-discrepancy {
+  color: #b91c1c;
 }
 
 .v-val.status-muted {
@@ -1041,6 +1085,10 @@
 
 .section-icon.violet {
   color: #6366f1;
+}
+
+.section-icon.emerald {
+  color: #059669;
 }
 
 .clinical-notes-text {
@@ -1343,6 +1391,9 @@
   border-left: 3px solid #10b981;
   padding: 0.65rem 0.85rem;
   border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
 }
 
 .chpl-ref-text {
@@ -1350,6 +1401,70 @@
   font-size: 0.825rem;
   color: #065f46;
   font-weight: 600;
+}
+
+.chpl-registry-meta {
+  font-size: 0.775rem;
+  color: var(--navy-800);
+  line-height: 1.45;
+  padding: 0.45rem 0.65rem;
+  background-color: rgba(255, 255, 255, 0.75);
+  border: 1px solid #a7f3d0;
+  border-radius: 5px;
+}
+
+.chpl-form-row {
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+}
+
+.chpl-source-link-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+}
+
+.chpl-direct-doc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 5px;
+  background-color: #ffffff;
+  border: 1px solid #10b981;
+  color: #065f46;
+  font-size: 0.775rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.chpl-direct-doc-btn:hover {
+  background-color: #d1fae5;
+  border-color: #059669;
+  color: #064e3b;
+}
+
+.alternative-product-notice {
+  padding: 0.5rem 0.7rem;
+  border-radius: 5px;
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 0.775rem;
+  line-height: 1.45;
+}
+
+.linkage-audit-notice {
+  padding: 0.5rem 0.7rem;
+  border-radius: 5px;
+  background-color: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 0.775rem;
+  line-height: 1.45;
 }
 
 .counter-note-inline {

@@ -101,15 +101,25 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
         </div>
 
         <div className="top-badges-right">
-          {item.chplVerificationStatus === 'pending_chpl_verification' ? (
-            <span className="verification-chpl-pending-chip" title="Oczekuje na weryfikację rejestracji ChPL">
-              <span className="dot-pulse-amber"></span>
-              <span>ChPL: do weryfikacji</span>
-            </span>
-          ) : (
-            <span className="verification-chpl-chip" title={`ChPL zweryfikowana: ${item.chplReference || 'Zgodne'}`}>
+          {item.chplContentVerificationStatus === 'verified_full' ? (
+            <span className="verification-chpl-chip" title={`ChPL w pełni zweryfikowana i zatwierdzona: ${item.chplReference || 'Zgodne'}`}>
               <span className="dot-pulse-green"></span>
               <span>ChPL zweryfikowana</span>
+            </span>
+          ) : item.chplContentVerificationStatus === 'analyzed_with_discrepancy' ? (
+            <span className="verification-chpl-discrepancy-chip" title="Treść ChPL przeanalizowana, ale istnieje otwarta rozbieżność źródłowa (fenyloalanina)">
+              <span className="dot-pulse-red"></span>
+              <span>ChPL: niezgodność źródłowa</span>
+            </span>
+          ) : item.chplReferenceStatus === 'official_document_identified' ? (
+            <span className="verification-chpl-identified-chip" title={`Zidentyfikowano oficjalny dokument RPL/ChPL (${item.chplAuthorizationNumber || 'RPL'}). Treść oczekuje na pełny audyt.`}>
+              <span className="dot-pulse-blue"></span>
+              <span>ChPL: dokument zidentyfikowany</span>
+            </span>
+          ) : (
+            <span className="verification-chpl-pending-chip" title="Wyłącznie orientacyjne odwołanie do nazwy handlowej; pełna treść ChPL oczekuje na weryfikację">
+              <span className="dot-pulse-amber"></span>
+              <span>ChPL: do weryfikacji</span>
             </span>
           )}
           <span className="verification-pso-chip" title={`Weryfikacja z PSO 2027: Komunikat GIS z ${item.psoGisAnnouncementDate || '28.10.2026'}, Dz. Urz. MZ z ${item.psoJournalPublicationDate || '30.10.2026'}`}>
@@ -255,14 +265,55 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
             </div>
           )}
 
-          {/* ChPL Reference Point */}
-          {item.chplReference && (
+          {/* ChPL Reference Point & Official Source Details */}
+          {(item.chplReference || item.chplOfficialSourceUrl || item.alternativeProductLabel || item.linkageAuditNote) && (
             <div className="expanded-section chpl-reference-section">
               <div className="section-title-with-icon">
                 <BookOpen size={16} className="section-icon emerald" />
-                <h4>Odnośnik do Charakterystyki Produktu Leczniczego (ChPL)</h4>
+                <h4>Źródło i odnośnik do Charakterystyki Produktu Leczniczego (ChPL)</h4>
               </div>
-              <p className="chpl-ref-text">{item.chplReference}</p>
+              {item.chplReference && <p className="chpl-ref-text">{item.chplReference}</p>}
+
+              {item.chplProductName && (
+                <div className="chpl-registry-meta">
+                  <span><strong>Produkt leczniczy:</strong> {item.chplProductName}</span>
+                  {item.chplMarketingAuthorizationHolder && (
+                    <span> • <strong>Podmiot odp.:</strong> {item.chplMarketingAuthorizationHolder}</span>
+                  )}
+                  {item.chplAuthorizationNumber && (
+                    <span> • <strong>Nr pozwolenia:</strong> {item.chplAuthorizationNumber}</span>
+                  )}
+                  {item.chplPharmaceuticalForm && (
+                    <div className="chpl-form-row"><strong>Postać:</strong> {item.chplPharmaceuticalForm}</div>
+                  )}
+                </div>
+              )}
+
+              {item.chplOfficialSourceUrl && (
+                <div className="chpl-source-link-row">
+                  <a
+                    href={item.chplOfficialSourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="chpl-direct-doc-btn"
+                  >
+                    <span>Otwórz oficjalną ChPL produktu ({item.chplAuthorizationNumber || 'RPL / ChPL'})</span>
+                    <ExternalLink size={13} />
+                  </a>
+                </div>
+              )}
+
+              {item.alternativeProductLabel && (
+                <div className="alternative-product-notice">
+                  <strong>Informacja o produkcie alternatywnym ({item.alternativeProductStatus}):</strong> {item.alternativeProductLabel}
+                </div>
+              )}
+
+              {item.linkageAuditNote && (
+                <div className="linkage-audit-notice">
+                  <strong>Uwaga z kontroli powiązania handlowego:</strong> {item.linkageAuditNote}
+                </div>
+              )}
             </div>
           )}
 
@@ -298,16 +349,35 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
               </div>
             </div>
 
-            {/* Odrębne statusy weryfikacji (Punkt 5 audytu) */}
+            {/* Odrębne statusy weryfikacji (Punkt 5 audytu + PROMPT 18) */}
             <div className="verification-status-breakdown">
               <div className="verification-item">
                 <span className="v-label">Weryfikacja źródła PSO:</span>
                 <span className="v-val status-ok">Zweryfikowano z PSO 2027 (Dz. Urz. MZ 2026 poz. 77)</span>
               </div>
               <div className="verification-item">
-                <span className="v-label">Weryfikacja ChPL:</span>
-                <span className={`v-val ${item.chplVerificationStatus === 'verified_chpl' ? 'status-ok' : 'status-pending'}`}>
-                  {item.chplVerificationStatus === 'verified_chpl' ? 'Zweryfikowano (zgodne z ChPL)' : 'Oczekuje na weryfikację ChPL'}
+                <span className="v-label">Dokument źródłowy ChPL:</span>
+                <span className={`v-val ${item.chplReferenceStatus === 'official_document_identified' ? 'status-ok' : 'status-pending'}`}>
+                  {item.chplReferenceStatus === 'official_document_identified' && 'Zidentyfikowano oficjalny dokument (RPL / GSK / EMA)'}
+                  {item.chplReferenceStatus === 'reference_name_only' && 'Wyłącznie nazwa handlowa (brak podpiętego dokumentu)'}
+                  {item.chplReferenceStatus === 'missing' && 'Brak odniesienia'}
+                </span>
+              </div>
+              <div className="verification-item">
+                <span className="v-label">Weryfikacja treści ChPL:</span>
+                <span
+                  className={`v-val ${
+                    item.chplContentVerificationStatus === 'verified_full'
+                      ? 'status-ok'
+                      : item.chplContentVerificationStatus === 'analyzed_with_discrepancy'
+                        ? 'status-discrepancy'
+                        : 'status-pending'
+                  }`}
+                >
+                  {item.chplContentVerificationStatus === 'verified_full' && 'W pełni zweryfikowana i zatwierdzona'}
+                  {item.chplContentVerificationStatus === 'analyzed_with_discrepancy' && 'Przeanalizowana – otwarta niezgodność źródłowa'}
+                  {item.chplContentVerificationStatus === 'pending_content_audit' && 'Oczekuje na pełną analizę i audyt treści'}
+                  {item.chplContentVerificationStatus === 'not_verified' && 'Niezweryfikowana (brak pobranego dokumentu)'}
                 </span>
               </div>
               <div className="verification-item">
@@ -320,9 +390,9 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                 </span>
               </div>
               <div className="verification-item">
-                <span className="v-label">Katalog handlowy:</span>
+                <span className="v-label">Katalog handlowy VaxNurse:</span>
                 <span className={`v-val ${item.productLinkageStatus === 'linked_catalog' ? 'status-ok' : 'status-muted'}`}>
-                  {item.productLinkageStatus === 'linked_catalog' ? `Powiązany preparat w bazie (${item.linkedVaccineIds.join(', ')})` : 'Oczekuje na wprowadzenie do katalogu handlowego'}
+                  {item.productLinkageStatus === 'linked_catalog' ? `Powiązany preparat w bazie (${item.linkedVaccineIds.join(', ')})` : 'Oczekuje na utworzenie karty handlowej'}
                 </span>
               </div>
             </div>
