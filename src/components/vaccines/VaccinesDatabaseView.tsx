@@ -27,6 +27,7 @@ import { VaccineDetailView } from './VaccineDetailView';
 interface VaccinesDatabaseViewProps {
   module: ModuleDefinition;
   onBackToDashboard: () => void;
+  initialSelectedVaccineId?: string | null;
 }
 
 const VAX_STORAGE_KEY = 'vaxnurse_vaccines_catalog_state_v1';
@@ -34,7 +35,8 @@ const VAX_ACTIVE_ID_KEY = 'vaxnurse_active_vaccine_id_v1';
 
 export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
   module,
-  onBackToDashboard
+  onBackToDashboard,
+  initialSelectedVaccineId
 }) => {
   const [vaccines, setVaccines] = useState<VaccineProduct[]>(() => {
     try {
@@ -56,7 +58,7 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
 
   const [activeVaccineDetail, setActiveVaccineDetail] = useState<VaccineProduct | null>(() => {
     try {
-      const activeId = localStorage.getItem(VAX_ACTIVE_ID_KEY);
+      const activeId = initialSelectedVaccineId || localStorage.getItem(VAX_ACTIVE_ID_KEY);
       if (activeId) {
         const stored = localStorage.getItem(VAX_STORAGE_KEY);
         const list = stored ? JSON.parse(stored) : VACCINES_CATALOG;

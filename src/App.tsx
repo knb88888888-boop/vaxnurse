@@ -5,6 +5,7 @@ import { ModulePlaceholder } from './components/modules/ModulePlaceholder';
 import { SettingsView } from './components/settings/SettingsView';
 import { KnowledgeBaseView } from './components/knowledge/KnowledgeBaseView';
 import { VaccinesDatabaseView } from './components/vaccines/VaccinesDatabaseView';
+import { ChildVaccinationsView } from './components/childVaccinations/ChildVaccinationsView';
 import { APP_MODULES, QUICK_ACCESS_ITEMS } from './data/navigationData';
 import type { ModuleId } from './types/navigation';
 import type { RecentVisit } from './components/dashboard/RecentModules';
@@ -12,6 +13,7 @@ import type { RecentVisit } from './components/dashboard/RecentModules';
 export const App: React.FC = () => {
   const [activeModuleId, setActiveModuleId] = useState<ModuleId>('dashboard');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedVaccineIdForDatabase, setSelectedVaccineIdForDatabase] = useState<string | null>(null);
 
   // Initial recent visits for demonstration of the recent modules section
   const [recentVisits, setRecentVisits] = useState<RecentVisit[]>([
@@ -23,6 +25,11 @@ export const App: React.FC = () => {
 
   const handleSelectModule = (id: ModuleId) => {
     setActiveModuleId(id);
+
+    // If navigating away from vaccines-database without direct selection, clear selected ID
+    if (id !== 'vaccines-database') {
+      setSelectedVaccineIdForDatabase(null);
+    }
 
     // If navigating to an operational module, update the recent visits list
     if (id !== 'dashboard') {
@@ -39,6 +46,14 @@ export const App: React.FC = () => {
 
     // Scroll to top of content smoothly on module change
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSelectVaccineProduct = (vaccineId: string) => {
+    try {
+      localStorage.setItem('vaxnurse_active_vaccine_id_v1', vaccineId);
+    } catch {}
+    setSelectedVaccineIdForDatabase(vaccineId);
+    handleSelectModule('vaccines-database');
   };
 
   const currentModule =
@@ -61,6 +76,13 @@ export const App: React.FC = () => {
           onSearchChange={setSearchQuery}
           onSelectModule={handleSelectModule}
         />
+      ) : activeModuleId === 'child-vaccinations' ? (
+        <ChildVaccinationsView
+          module={currentModule}
+          onBackToDashboard={() => handleSelectModule('dashboard')}
+          onNavigateToModule={handleSelectModule}
+          onSelectVaccineProduct={handleSelectVaccineProduct}
+        />
       ) : activeModuleId === 'settings' ? (
         <SettingsView
           module={currentModule}
@@ -75,6 +97,7 @@ export const App: React.FC = () => {
         <VaccinesDatabaseView
           module={currentModule}
           onBackToDashboard={() => handleSelectModule('dashboard')}
+          initialSelectedVaccineId={selectedVaccineIdForDatabase}
         />
       ) : (
         <ModulePlaceholder
