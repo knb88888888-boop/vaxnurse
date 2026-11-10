@@ -45,6 +45,11 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
   const [currentVaccine, setCurrentVaccine] = useState<VaccineProduct>(initialVaccine);
   const statusMeta = VERIFICATION_STATUS_META[currentVaccine.verificationStatus];
 
+  // Nierozwiązane niezgodności w oficjalnej dokumentacji ChPL (Zadanie 1 i Zadanie 4)
+  const hasUnresolvedDiscrepancies = Boolean(
+    currentVaccine.sourceDiscrepancies?.some(d => d.status === 'requires_clarification')
+  );
+
   // State to manage collapsible section groups
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     sec1: true,
@@ -98,6 +103,14 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
 
   // Helper to update verification status across the product and its sections
   const handleUpdateStatus = (newStatus: VaccineVerificationStatus) => {
+    // Zadanie 4: Nie pozwalaj na status verified_chpl, jeżeli istnieje nierozwiązana niezgodność dotycząca dokumentacji
+    if (newStatus === 'verified_chpl' && hasUnresolvedDiscrepancies) {
+      alert(
+        'Blokada weryfikacji: Preparat posiada nierozwiązane rozbieżności wewnętrzne w oficjalnej dokumentacji ChPL (status: requires_clarification). Do czasu oficjalnego wyjaśnienia lub sprostowania druków przez podmiot odpowiedzialny / URPL / EMA nadanie statusu zweryfikowanego z ChPL jest zablokowane.'
+      );
+      return;
+    }
+
     const now = new Date();
     const formattedDate = `${now.toLocaleDateString('pl-PL')} r., godz. ${now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}`;
     
@@ -161,9 +174,12 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
   // Helper render for single section or subsection
   const renderSectionBox = (sec: ChPLSection, icon: React.ReactNode, isSub: boolean = false) => {
     const secStatus = VERIFICATION_STATUS_META[sec.verificationStatus];
+    const sectionDiscrepancies = currentVaccine.sourceDiscrepancies?.filter(
+      d => d.firstSection === sec.sectionNumber || d.secondSection === sec.sectionNumber
+    ) || [];
 
     return (
-      <div key={sec.sectionNumber} className={`chpl-point-box ${isSub ? 'subsection' : ''}`}>
+      <div key={sec.sectionNumber} className={`chpl-point-box ${isSub ? 'subsection' : ''} ${sectionDiscrepancies.length > 0 ? 'has-discrepancy' : ''}`}>
         <div className="point-box-header">
           <div className="point-box-title-group">
             <span className="point-icon-wrapper">{icon}</span>
@@ -174,6 +190,11 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
           </div>
 
           <div className="point-box-meta-badges">
+            {sectionDiscrepancies.length > 0 && (
+              <span className="point-discrepancy-tag" title="W tym punkcie występuje niezgodność wewnętrzna w oficjalnej ChPL">
+                <AlertTriangle size={12} /> Rozbieżność w ChPL
+              </span>
+            )}
             {sec.pdfPageNumber && (
               <span className="point-page-tag" title="Numer strony w oficjalnym druku PDF ChPL">
                 Strona PDF: str. {sec.pdfPageNumber}
@@ -190,6 +211,55 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
         </div>
 
         <div className="point-box-body">
+          {sectionDiscrepancies.length > 0 && (
+            <div className="point-section-discrepancy-alert">
+              <div className="p-disc-alert-header">
+                <AlertTriangle size={16} className="p-disc-icon" />
+                <span className="p-disc-title">
+                  Niezgodność wewnętrzna oficjalnej ChPL: {sectionDiscrepancies[0].fieldName}
+                </span>
+                <span className="p-disc-status-tag">Status: requires_clarification</span>
+              </div>
+              <div className="p-disc-alert-content">
+                <p>
+                  W punkcie <strong>{sec.sectionNumber}</strong> oficjalny dokument podaje:{' '}
+                  <strong className="p-disc-highlight">
+                    {sec.sectionNumber === sectionDiscrepancies[0].firstSection
+                      ? sectionDiscrepancies[0].firstValue
+                      : sectionDiscrepancies[0].secondValue}
+                  </strong>
+                  , natomiast w punkcie{' '}
+                  <strong>
+                    {sec.sectionNumber === sectionDiscrepancies[0].firstSection
+                      ? sectionDiscrepancies[0].secondSection
+                      : sectionDiscrepancies[0].firstSection}
+                  </strong>{' '}
+                  widnieje:{' '}
+                  <strong className="p-disc-highlight">
+                    {sec.sectionNumber === sectionDiscrepancies[0].firstSection
+                      ? sectionDiscrepancies[0].secondValue
+                      : sectionDiscrepancies[0].firstValue}
+                  </strong>
+                  .
+                </p>
+                <div className="p-disc-notes-row">
+                  <span className="p-disc-rule-note">
+                    <ShieldAlert size={13} /> Zachowano obie wartości zgodnie z tekstem ChPL bez automatycznego ujednolicania.
+                  </span>
+                  <a
+                    href={sectionDiscrepancies[0].documentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-disc-source-link"
+                  >
+                    <span>Sprawdź w oficjalnej ChPL GSK (12.02.2026)</span>
+                    <ExternalLink size={11} />
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+
           {sec.content ? (
             <div className="point-content-present">
               <div className="point-text-block">
@@ -362,6 +432,97 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
       </div>
 
       {/* ============================================================== */}
+      {/* OSTRZEŻENIE O ROZBIEŻNOŚCIACH W DOKUMENTACJI CHPL (ZADANIE 1)  */}
+      {/* ============================================================== */}
+      {hasUnresolvedDiscrepancies && currentVaccine.sourceDiscrepancies && currentVaccine.sourceDiscrepancies.length > 0 && (
+        <section className="v-discrepancy-banner-card" aria-label="Wykryte rozbieżności w oficjalnej dokumentacji ChPL">
+          <div className="v-disc-card-header">
+            <div className="v-disc-header-left">
+              <span className="v-disc-icon-box">
+                <AlertTriangle size={24} className="v-disc-icon" />
+              </span>
+              <div>
+                <div className="v-disc-badges-row">
+                  <span className="v-disc-alert-pill">Wykryto niezgodność w druku ChPL</span>
+                  <span className="v-disc-status-pill">Status: requires_clarification</span>
+                </div>
+                <h2 className="v-disc-headline">
+                  Niezgodność wewnętrzna oficjalnej Charakterystyki Produktu Leczniczego
+                </h2>
+              </div>
+            </div>
+          </div>
+
+          <div className="v-disc-card-body">
+            <p className="v-disc-intro">
+              W trakcie badania dokumentacji źródłowej (polska ChPL GSK z 12.02.2026 oraz unijna EPAR SmPC) wykryto rozbieżność liczbową w oficjalnym tekście urzędowym.
+              Zgodnie z zasadami rzetelności medycznej <strong>aplikacja VaxNurse zachowuje obie wartości zgodnie z sekcjami dokumentu</strong> i nie modyfikuje ich domysłem ani automatycznym ujednoliceniem.
+            </p>
+
+            <div className="v-disc-items-grid">
+              {currentVaccine.sourceDiscrepancies.map(disc => (
+                <div key={disc.id} className="v-disc-item-card">
+                  <div className="v-disc-item-header">
+                    <span className="v-disc-field-label">Badany parametr:</span>
+                    <strong className="v-disc-field-name">{disc.fieldName}</strong>
+                    <span className="v-disc-clarif-badge">Wymaga wyjaśnienia urzędowego</span>
+                  </div>
+
+                  <div className="v-disc-compare-boxes">
+                    <div className="v-disc-compare-tile sec-first">
+                      <span className="v-disc-tile-sec">Punkt {disc.firstSection} ChPL (Skład jakościowy i ilościowy)</span>
+                      <span className="v-disc-tile-val">{disc.firstValue}</span>
+                    </div>
+                    <div className="v-disc-compare-vs">vs</div>
+                    <div className="v-disc-compare-tile sec-second">
+                      <span className="v-disc-tile-sec">Punkt {disc.secondSection} ChPL (Specjalne ostrzeżenia i środki ostrożności)</span>
+                      <span className="v-disc-tile-val">{disc.secondValue}</span>
+                    </div>
+                  </div>
+
+                  <p className="v-disc-desc-paragraph">
+                    <strong>Opis rozbieżności:</strong> {disc.description}
+                  </p>
+
+                  <div className="v-disc-actions-bar">
+                    <a
+                      href={disc.documentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-disc-source-link primary"
+                      title="Otwórz oficjalny PDF ChPL GSK z 12.02.2026"
+                    >
+                      <FileText size={14} />
+                      <span>Oficjalna ChPL GSK Polska (12.02.2026)</span>
+                      <ExternalLink size={13} />
+                    </a>
+                    <a
+                      href="https://www.ema.europa.eu/pl/documents/product-information/infanrix-hexa-epar-product-information_pl.pdf"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-disc-source-link secondary"
+                      title="Otwórz oficjalny polski druk EPAR SmPC Europejskiej Agencji Leków (EMA)"
+                    >
+                      <FileCheck size={14} />
+                      <span>Porównaj z wersją EMA PL</span>
+                      <ExternalLink size={13} />
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="v-disc-footer-warning">
+              <ShieldAlert size={18} className="v-disc-shield-icon" />
+              <span>
+                <strong>Blokada statusu weryfikacji:</strong> Dopóki rozbieżność w oficjalnym druku nie zostanie sprostowana przez wytwórcę lub URPL/EMA (status: <code>requires_clarification</code>), nadanie statusu <em>Zweryfikowany na podstawie ChPL</em> jest zablokowane ze względów bezpieczeństwa.
+              </span>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ============================================================== */}
       {/* KROK 3: PANEL ROZDZIELENIA DAT                                 */}
       {/* ============================================================== */}
       <section className="v-dates-panel" aria-label="Daty rejestracji, pobrania i weryfikacji dokumentacji">
@@ -463,7 +624,9 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
             <p className="v-verif-text">
               {currentVaccine.verificationStatus === 'verified_chpl'
                 ? `Weryfikacja została zatwierdzona w systemie dnia ${currentVaccine.userVerificationDate}. Wszystkie punkty 1–10 odpowiadają aktualnej Charakterystyce Produktu Leczniczego (wersja: ${currentVaccine.chplRevisionDate}).`
-                : 'Aplikacja VaxNurse nie oznacza danych klinicznych jako automatycznie zweryfikowane. Aby zapewnić pełne bezpieczeństwo pacjentów, personel medyczny powinien porównać treść z oficjalnym drukiem ChPL i zatwierdzić zgodność.'}
+                : hasUnresolvedDiscrepancies
+                  ? 'UWAGA: Preparat posiada aktywną niezgodność wewnętrzną w druku ChPL (zawartość fenyloalaniny: 0,0289 µg w pkt 2 vs 0,0298 µg w pkt 4.4, status: requires_clarification). Zgodnie z zasadami rzetelności medycznej nadanie statusu „Zweryfikowany na podstawie ChPL” jest zablokowane do momentu urzędowego wyjaśnienia.'
+                  : 'Aplikacja VaxNurse nie oznacza danych klinicznych jako automatycznie zweryfikowane. Aby zapewnić pełne bezpieczeństwo pacjentów, personel medyczny powinien porównać treść z oficjalnym drukiem ChPL i zatwierdzić zgodność.'}
             </p>
           </div>
         </div>
@@ -473,8 +636,12 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
             <>
               <button
                 type="button"
-                className="btn-verif-approve"
+                className={`btn-verif-approve ${hasUnresolvedDiscrepancies ? 'blocked' : ''}`}
                 onClick={() => handleUpdateStatus('verified_chpl')}
+                disabled={hasUnresolvedDiscrepancies}
+                title={hasUnresolvedDiscrepancies
+                  ? 'Zatwierdzenie zablokowane: preparat posiada nierozwiązane rozbieżności w oficjalnej ChPL (status: requires_clarification)'
+                  : 'Zatwierdź weryfikację z drukiem ChPL'}
               >
                 <CheckCircle2 size={16} />
                 <span>Zatwierdź weryfikację z drukiem ChPL</span>

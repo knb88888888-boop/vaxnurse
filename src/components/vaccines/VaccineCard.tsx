@@ -39,6 +39,12 @@ export const VaccineCard: React.FC<VaccineCardProps> = ({ vaccine, onOpenDetails
           <span className="v-target-badge">
             {TARGET_GROUP_LABELS[vaccine.targetGroup]}
           </span>
+          {vaccine.sourceDiscrepancies && vaccine.sourceDiscrepancies.length > 0 && (
+            <span className="v-card-disc-pill" title="Wykryto niezgodność wewnętrzną w druku ChPL (status: requires_clarification)">
+              <AlertTriangle size={12} />
+              <span>Rozbieżność w ChPL</span>
+            </span>
+          )}
         </div>
 
         {vaccine.atcCode && (
@@ -91,7 +97,14 @@ export const VaccineCard: React.FC<VaccineCardProps> = ({ vaccine, onOpenDetails
       </div>
 
       {/* Verification & Safety Notice */}
-      {!statusMeta.isVerified && (
+      {vaccine.sourceDiscrepancies && vaccine.sourceDiscrepancies.length > 0 ? (
+        <div className="v-card-unverified-warning discrepancy">
+          <AlertTriangle size={15} className="warning-icon disc-icon" />
+          <span>
+            <strong>Niezgodność wewnętrzna w ChPL (status: requires_clarification):</strong> Rozbieżność w ilości fenyloalaniny (0,0289 µg w pkt 2 vs 0,0298 µg w pkt 4.4). Weryfikacja zablokowana do czasu urzędowego sprostowania.
+          </span>
+        </div>
+      ) : !statusMeta.isVerified && (
         <div className="v-card-unverified-warning">
           <AlertTriangle size={15} className="warning-icon" />
           <span>

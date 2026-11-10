@@ -4,6 +4,25 @@ export type VaccineVerificationStatus =
   | 'verified_chpl'            // Zweryfikowany na podstawie ChPL
   | 'requires_reverification'; // Wymaga ponownej weryfikacji
 
+export type DiscrepancyStatus =
+  | 'requires_clarification'   // Oczekuje na wyjaśnienie urzędowe
+  | 'resolved';                // Wyjaśnione / sprostowane
+
+/**
+ * Informacja o rozbieżnościach / niezgodnościach w oficjalnych dokumentach źródłowych (np. wewnętrzne sprzeczności w tekście ChPL).
+ */
+export interface SourceDiscrepancy {
+  id: string;                                   // Identyfikator niezgodności
+  fieldName: string;                            // Nazwa pola (np. "Zawartość fenyloalaniny na dawkę")
+  firstValue: string;                           // Pierwsza wartość (np. "0,0289 mikrograma na dawkę")
+  firstSection: string;                         // Numer sekcji źródłowej (np. "2")
+  secondValue: string;                          // Druga wartość (np. "0,0298 mikrograma na dawkę")
+  secondSection: string;                        // Numer sekcji źródłowej (np. "4.4")
+  documentUrl: string;                          // Link do dokumentu źródłowego
+  status: DiscrepancyStatus;                    // Status (np. 'requires_clarification')
+  description: string;                          // Opis niezgodności
+}
+
 export type VaccineType =
   | 'zywa_atenuowana'
   | 'inaktywowana'
@@ -112,6 +131,7 @@ export interface VaccineProduct {
   userVerificationNotes: string | null;         // Notatki personelu medycznego z weryfikacji
   verificationStatus: VaccineVerificationStatus;// Status weryfikacji całego rekordu (początkowo 'pending_verification')
   atcCode: string | null;                       // Kod ATC (Pkt 5.1 ChPL)
+  sourceDiscrepancies?: SourceDiscrepancy[];    // Niezgodności / rozbieżności wykryte w źródłach urzędowych
 
   // Oficjalna struktura ChPL (punkty 1–10 EMA QRD v10.4)
   chpl: ChPLStructure;

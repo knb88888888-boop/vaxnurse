@@ -279,9 +279,10 @@ const buildChPLStructure = (params: {
   };
 };
 
-const INFANRIX_HEXA_DOC_SOURCE = 'Oficjalna dokumentacja EMA (EPAR SmPC) oraz druki GSK Polska (procedura VR 323859)';
-const INFANRIX_HEXA_PDF_URL = 'https://www.ema.europa.eu/en/documents/product-information/infanrix-hexa-epar-product-information_en.pdf';
-const INFANRIX_HEXA_CHPL_DATE = '12.02.2026';
+const INFANRIX_HEXA_DOC_SOURCE = 'Polska ChPL GSK z 12.02.2026 (VR 323859) oraz polska wersja EMA (EPAR SmPC)';
+export const INFANRIX_HEXA_PDF_URL = 'https://pl.gsk.com/media/b2ip1snt/infanrix-hexa-druki-pl-h-0296-ia-vr-323859-12_02_2026.pdf';
+export const INFANRIX_HEXA_EMA_PL_URL = 'https://www.ema.europa.eu/pl/documents/product-information/infanrix-hexa-epar-product-information_pl.pdf';
+export const INFANRIX_HEXA_CHPL_DATE = '12.02.2026';
 
 export const INFANRIX_HEXA_CHPL: ChPLStructure = {
   name: createChPLSection(
@@ -289,7 +290,7 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
     'Nazwa produktu leczniczego',
     'Infanrix hexa proszek i zawiesina do sporządzania zawiesiny do wstrzykiwań.\nSzczepionka przeciwko błonicy (D), tężcowi (T), krztuścowi (komponenta acelularna) (Pa), wirusowemu zapaleniu wątroby typu B (rDNA) (HBV), poliomyelitis (inaktywowana) (IPV) i przeciwko Haemophilus influenzae typ b (Hib) skoniugowana (adsorbowana).',
     'pending_verification',
-    'Nazwa produktu zgodna z oficjalną Charakterystyką Produktu Leczniczego zatwierdzoną przez EMA.',
+    'Nazwa produktu zgodna z oficjalną Charakterystyką Produktu Leczniczego zatwierdzoną przez EMA i GSK Polska.',
     INFANRIX_HEXA_DOC_SOURCE,
     1,
     INFANRIX_HEXA_PDF_URL,
@@ -298,9 +299,9 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
   composition: createChPLSection(
     '2',
     'Skład jakościowy i ilościowy',
-    'Po rekonstytucji 1 dawka (0,5 ml) zawiera:\n• Toksoid błoniczy (Diphtheria toxoid): nie mniej niż 30 j.m. (adsorbowany na wodorotlenku glinu Al(OH)3)\n• Toksoid tężcowy (Tetanus toxoid): nie mniej niż 40 j.m. (adsorbowany na wodorotlenku glinu Al(OH)3)\n• Antygeny Bordetella pertussis:\n   - Toksoid krztuścowy (PT): 25 mikrogramów\n   - Hemaglutynina włókienkowa (FHA): 25 mikrogramów\n   - Pertaktyna (PRN): 8 mikrogramów\n   (adsorbowane na wodorotlenku glinu Al(OH)3)\n• Antygen powierzchniowy Hepatitis B (r-HBsAg): 10 mikrogramów (otrzymywany z hodowli komórek drożdży Saccharomyces cerevisiae technologią rekombinacji DNA, adsorbowany na fosforanie glinu AlPO4)\n• Poliowirus (inaktywowany) (IPV) namnażany w komórkach Vero:\n   - typ 1 (szczep Mahoney): 40 jednostek antygenu D\n   - typ 2 (szczep MEF-1): 8 jednostek antygenu D\n   - typ 3 (szczep Saukett): 32 jednostki antygenu D\n• Polisacharyd Haemophilus influenzae typ b (fosforan polirybozylorybitolu, PRP): 10 mikrogramów, skoniugowany z toksoidem tężcowym jako nośnikiem białkowym około 25 mikrogramów (adsorbowany na fosforanie glinu AlPO4).\n\nAdiuwanty mineralne (zawartość glinu Al3+):\n- wodorotlenek glinu, uwodniony Al(OH)3: 0,5 mg Al3+\n- fosforan glinu AlPO4: 0,32 mg Al3+\nŁączna zawartość glinu w 1 dawce (0,5 ml): 0,82 mg Al3+.\n\nSubstancje pomocnicze o znanym działaniu: laktoza bezwodna, sodu chlorek.\nPozostałości z procesu wytwarzania w ilościach śladowych: formaldehyd, neomycyna, polimyksyna.',
+    'Po rekonstytucji 1 dawka (0,5 ml) zawiera:\n• Toksoid błoniczy (Diphtheria toxoid): nie mniej niż 30 j.m. (adsorbowany na wodorotlenku glinu Al(OH)3)\n• Toksoid tężcowy (Tetanus toxoid): nie mniej niż 40 j.m. (adsorbowany na wodorotlenku glinu Al(OH)3)\n• Antygeny Bordetella pertussis:\n   - Toksoid krztuścowy (PT): 25 mikrogramów\n   - Hemaglutynina włókienkowa (FHA): 25 mikrogramów\n   - Pertaktyna (PRN): 8 mikrogramów\n   (adsorbowane na wodorotlenku glinu Al(OH)3)\n• Antygen powierzchniowy Hepatitis B (r-HBsAg): 10 mikrogramów (otrzymywany z hodowli komórek drożdży Saccharomyces cerevisiae technologią rekombinacji DNA, adsorbowany na fosforanie glinu AlPO4)\n• Poliowirus (inaktywowany) (IPV) namnażany w komórkach Vero:\n   - typ 1 (szczep Mahoney): 40 jednostek antygenu D\n   - typ 2 (szczep MEF-1): 8 jednostek antygenu D\n   - typ 3 (szczep Saukett): 32 jednostki antygenu D\n• Polisacharyd Haemophilus influenzae typ b (fosforan polirybozylorybitolu, PRP): 10 mikrogramów, skoniugowany z toksoidem tężcowym jako nośnikiem białkowym około 25 mikrogramów (adsorbowany na fosforanie glinu AlPO4).\n\nAdiuwanty mineralne (zawartość glinu Al3+):\n- wodorotlenek glinu, uwodniony Al(OH)3: 0,5 mg Al3+\n- fosforan glinu AlPO4: 0,32 mg Al3+\nŁączna zawartość glinu w 1 dawce (0,5 ml): 0,82 mg Al3+.\n\nSubstancje pomocnicze o znanym działaniu (zgodnie z punktem 2 ChPL):\n• Laktoza bezwodna;\n• Sodu chlorek (sód: mniej niż 1 mmol / 23 mg na dawkę);\n• Potas: mniej niż 1 mmol / 39 mg na dawkę;\n• Kwas para-aminobenzoesowy;\n• Fenyloalanina: 0,0289 mikrograma na dawkę.\n(UWAGA – NIEZGODNOŚĆ WEWNĘTRZNA DOKUMENTACJI: W punkcie 4.4 ChPL podano wartość 0,0298 mikrograma na dawkę. Zachowano obie wartości zgodnie z punktami źródłowymi dokumentu bez ujednolicania – status: requires_clarification).\n\nPozostałości z procesu wytwarzania w ilościach śladowych: formaldehyd, neomycyna, polimyksyna.',
     'pending_verification',
-    'Zweryfikowano z EMA EPAR SmPC: glin Al3+ łącznie 0,82 mg (wodorotlenek 0,5 mg, fosforan 0,32 mg); nośnik tężcowy PRP ok. 25 µg. Usunięto zdezaktualizowane masy soli.',
+    'Zweryfikowano z polską ChPL GSK i EMA: glin Al3+ łącznie 0,82 mg (0,5 mg + 0,32 mg); PRP nośnik tężcowy ok. 25 µg; fenyloalanina w pkt 2: 0,0289 µg/dawkę (rozbieżność z pkt 4.4: 0,0298 µg).',
     INFANRIX_HEXA_DOC_SOURCE,
     1,
     INFANRIX_HEXA_PDF_URL,
@@ -354,9 +355,9 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
     warningsAndPrecautions: createChPLSection(
       '4.4',
       'Specjalne ostrzeżenia i środki ostrożności dotyczące stosowania',
-      '• Badanie kwalifikacyjne: Przed każdym szczepieniem należy zebrać dokładny wywiad medyczny (ze szczególnym uwzględnieniem wcześniejszych szczepień i ewentualnych NOP) oraz przeprowadzić badanie lekarskie.\n\n• Zdarzenia w powiązaniu czasowym ze składnikiem krztuścowym (do starannego rozważenia przez lekarza):\nJeśli po podaniu szczepionki zawierającej antygeny krztuśca wystąpiło którekolwiek z poniższych zdarzeń, decyzję o podaniu kolejnych dawek szczepionki zawierającej krztusiec należy starannie rozważyć:\n  - temperatura ciała ≥ 40,0°C w ciągu 48 godzin od szczepienia, niewywołana innym zidentyfikowanym czynnikiem;\n  - zapaść lub stan podobny do wstrząsu (zespół hipotoniczno-hiporeaktywny, HHE) w ciągu 48 godzin od szczepienia;\n  - uporczywy, nieutulony płacz trwający ≥ 3 godziny, występujący w ciągu 48 godzin od szczepienia;\n  - drgawki z gorączką lub bez gorączki, występujące w ciągu 3 dni (72 godzin) od szczepienia.\nWAŻNE: Zdarzenia te NIE STANOWIĄ automatycznych, bezwzględnych przeciwwskazań do szczepienia. W sytuacjach szczególnych (np. wysokie ryzyko zakażenia krztuścem w otoczeniu) potencjalne korzyści ze szczepienia mogą przewyższać ryzyko.\n\n• Drgawki i zaburzenia neurologiczne: Występowanie w wywiadzie drgawek gorączkowych lub drgawek w rodzinie nie stanowi przeciwwskazania, wymaga jednak wzmożonej uwagi personelu.\n\n• Reakcje gorączkowe i ryzyko przy współpodawaniu z innymi szczepionkami (zgodnie z punktami 4.4 i 4.5 ChPL):\n  - PCV i MMRV: zwiększona częstość występowania reakcji gorączkowych w porównaniu z podaniem samego preparatu Infanrix hexa.\n  - Prevenar 13: zwiększona liczba zgłoszeń drgawek (z gorączką lub bez gorączki) oraz epizodów hipotoniczno-hiporeaktywnych (HHE) przy jednoczesnym podaniu z Infanrix hexa.\n  - Szczepionka przeciw MenB podawana jednocześnie z 7-walentną szczepionką pneumokokową (PCV7) i Infanrix hexa: wyższy wskaźnik gorączki (≥ 38,0°C), bólu w miejscu podania, utraty apetytu i drażliwości. W przypadku podawania szczepionki przeciw MenB jednocześnie ze szczepionkami skojarzonymi można rozważyć ich podanie w oddzielnych terminach („When possible, separate vaccinations can be considered”). Działań tych nie należy przypisywać samej szczepionce MenB.\n  - Postępowanie przeciwgorączkowe: profilaktyczne leczenie przeciwgorączkowe należy wdrożyć zgodnie z lokalnymi wytycznymi medycznymi.\n\n• Zaburzenia krzepnięcia: U niemowląt z małopłytkowością lub zaburzeniami krzepnięcia krwi szczepionkę należy podawać ostrożnie ze względu na ryzyko krwawienia po iniekcji domięśniowej.\n\n• Gotowość przeciwwstrząsowa: Zawsze należy zapewnić możliwość natychmiastowego podjęcia leczenia anafilaksji (dostęp do roztworu adrenaliny 1:1000 i sprzętu reanimacyjnego) oraz obserwować pacjenta po szczepieniu.\n\n• Bardzo niedojrzałe wcześniaki (urodzone ≤ 28. tygodnia ciąży):\nPodczas podawania dawek szczepienia pierwotnego u bardzo niedojrzałych wcześniaków (urodzonych w 28. tygodniu ciąży lub wcześniej), a szczególnie u dzieci z niewydolnością oddechową w wywiadzie, należy wziąć pod uwagę potencjalne ryzyko bezdechu i konieczność monitorowania czynności oddechowych przez 48–72 godziny po szczepieniu.\nZgodnie z ChPL: Ponieważ korzyści ze szczepienia w tej grupie niemowląt są wysokie, szczepienia NIE NALEŻY WSTRZYMYWAĆ ANI OPÓŹNIAĆ wyłącznie z tego powodu.',
+      '• Badanie kwalifikacyjne: Przed każdym szczepieniem należy zebrać dokładny wywiad medyczny (ze szczególnym uwzględnieniem wcześniejszych szczepień i ewentualnych NOP) oraz przeprowadzić badanie lekarskie.\n\n• Zdarzenia w powiązaniu czasowym ze składnikiem krztuścowym (do starannego rozważenia przez lekarza):\nJeśli po podaniu szczepionki zawierającej antygeny krztuśca wystąpiło którekolwiek z poniższych zdarzeń, decyzję o podaniu kolejnych dawek szczepionki zawierającej krztusiec należy starannie rozważyć:\n  - temperatura ciała ≥ 40,0°C w ciągu 48 godzin od szczepienia, niewywołana innym zidentyfikowanym czynnikiem;\n  - zapaść lub stan podobny do wstrząsu (zespół hipotoniczno-hiporeaktywny, HHE) w ciągu 48 godzin od szczepienia;\n  - uporczywy, nieutulony płacz trwający ≥ 3 godziny, występujący w ciągu 48 godzin od szczepienia;\n  - drgawki z gorączką lub bez gorączki, występujące w ciągu 3 dni (72 godzin) od szczepienia.\nWAŻNE: Zdarzenia te NIE STANOWIĄ automatycznych, bezwzględnych przeciwwskazań do szczepienia. W sytuacjach szczególnych (np. wysokie ryzyko zakażenia krztuścem w otoczeniu) potencjalne korzyści ze szczepienia mogą przewyższać ryzyko.\n\n• Drgawki i zaburzenia neurologiczne: Występowanie w wywiadzie drgawek gorączkowych lub drgawek w rodzinie nie stanowi przeciwwskazania, wymaga jednak wzmożonej uwagi personelu.\n\n• Reakcje gorączkowe i ryzyko przy współpodawaniu z innymi szczepionkami (zgodnie z punktami 4.4 i 4.5 ChPL):\n  - PCV i MMRV: zwiększona częstość występowania reakcji gorączkowych w porównaniu z podaniem samego preparatu Infanrix hexa.\n  - Prevenar 13: zwiększona liczba zgłoszeń drgawek (z gorączką lub bez gorączki) oraz epizodów hipotoniczno-hiporeaktywnych (HHE) przy jednoczesnym podaniu z Infanrix hexa.\n  - Szczepionka przeciw MenB podawana jednocześnie z 7-walentną szczepionką pneumokokową (PCV7) i Infanrix hexa: wyższy wskaźnik gorączki (≥ 38,0°C), bólu w miejscu podania, utraty apetytu i drażliwości. W przypadku podawania szczepionki przeciw MenB jednocześnie ze szczepionkami skojarzonymi można rozważyć ich podanie w oddzielnych terminach („When possible, separate vaccinations can be considered”). Działań tych nie należy przypisywać samej szczepionce MenB.\n  - Postępowanie przeciwgorączkowe: profilaktyczne leczenie przeciwgorączkowe należy wdrożyć zgodnie z lokalnymi wytycznymi medycznymi.\n\n• Substancje pomocnicze o znanym działaniu (kwas para-aminobenzoesowy, fenyloalanina, sód, potas – zgodnie z oficjalnym tekstem ChPL):\n  - Kwas para-aminobenzoesowy: może powodować reakcje alergiczne (możliwe reakcje typu późnego) i wyjątkowo skurcz oskrzeli.\n  - Fenyloalanina: Szczepionka zawiera 0,0298 mikrograma fenyloalaniny w każdej dawce. Fenyloalanina może być szkodliwa dla pacjentów z fenyloketonurią (PKU).\n    (UWAGA – NIEZGODNOŚĆ WEWNĘTRZNA DOKUMENTACJI: W punkcie 2 ChPL podano wartość 0,0289 mikrograma na dawkę. Zachowano obie wartości zgodnie z dokumentem źródłowym bez ujednolicania – status: requires_clarification).\n  - Sód: Szczepionka zawiera mniej niż 1 mmol (23 mg) sodu na dawkę, to znaczy uznaje się ją za „wolną od sodu”.\n  - Potas: Szczepionka zawiera mniej niż 1 mmol (39 mg) potasu na dawkę, to znaczy uznaje się ją za „wolną od potasu”.\n\n• Zaburzenia krzepnięcia: U niemowląt z małopłytkowością lub zaburzeniami krzepnięcia krwi szczepionkę należy podawać ostrożnie ze względu na ryzyko krwawienia po iniekcji domięśniowej.\n\n• Gotowość przeciwwstrząsowa: Zawsze należy zapewnić możliwość natychmiastowego podjęcia leczenia anafilaksji (dostęp do roztworu adrenaliny 1:1000 i sprzętu reanimacyjnego) oraz obserwować pacjenta po szczepieniu.\n\n• Bardzo niedojrzałe wcześniaki (urodzone ≤ 28. tygodnia ciąży):\nPodczas podawania dawek szczepienia pierwotnego u bardzo niedojrzałych wcześniaków (urodzonych w 28. tygodniu ciąży lub wcześniej), a szczególnie u dzieci z niewydolnością oddechową w wywiadzie, należy wziąć pod uwagę potencjalne ryzyko bezdechu i konieczność monitorowania czynności oddechowych przez 48–72 godziny po szczepieniu.\nZgodnie z ChPL: Ponieważ korzyści ze szczepienia w tej grupie niemowląt są wysokie, szczepienia NIE NALEŻY WSTRZYMYWAĆ ANI OPÓŹNIAĆ wyłącznie z tego powodu.',
       'pending_verification',
-      'Precyzyjnie rozdzielono profile ryzyka współpodawania (PCV/MMRV, Prevenar 13, potrójne podanie z MenB i PCV7 oraz zalecenie oddzielnych terminów). Uwzględniono ramy NOP (48 h / 3 dni) i klauzulę wcześniaków ≤28 tc.',
+      'Zawiera pełne ostrzeżenia o substancjach pomocniczych (kwas para-aminobenzoesowy, fenyloalanina 0,0298 µg z ostrzeżeniem o PKU, sód <1 mmol, potas <1 mmol), rozdzielone ryzyko współpodawania, ramy NOP (48 h / 3 dni) oraz wcześniaki ≤28 tc.',
       INFANRIX_HEXA_DOC_SOURCE,
       3,
       INFANRIX_HEXA_PDF_URL,
@@ -457,9 +458,9 @@ export const INFANRIX_HEXA_CHPL: ChPLStructure = {
     excipients: createChPLSection(
       '6.1',
       'Wykaz substancji pomocniczych',
-      'Hib powder:\n- lactose anhydrous.\n\nDTPa-HBV-IPV suspension:\n- sodium chloride (NaCl);\n- Medium 199;\n- water for injections.\n\nFor adjuvants, see section 2.\n\n(Pozostałości z procesu wytwarzania w ilościach śladowych: formaldehyd, neomycyna, polimyksyna).',
+      'Proszek Hib (Hib powder):\n- laktoza bezwodna (lactose anhydrous).\n\nZawiesina DTPa-HBV-IPV (DTPa-HBV-IPV suspension):\n- sodu chlorek (sodium chloride, NaCl);\n- Podłoże 199 (Medium 199 – zawierające głównie aminokwasy, w tym fenyloalaninę; sole mineralne, w tym sód i potas; witaminy, w tym kwas para-aminobenzoesowy; oraz inne substancje);\n- woda do wstrzykiwań (water for injections).\n\nSubstancje pomocnicze o działaniu adsorpcyjnym (adiuwanty):\nFor adjuvants, see section 2 („Substancje pomocnicze o działaniu adsorpcyjnym (adiuwanty): patrz punkt 2”).\n\n(Pozostałości z procesu wytwarzania w ilościach śladowych: formaldehyd, neomycyna, polimyksyna).',
       'pending_verification',
-      'Wykaz substancji pomocniczych zgodny z pkt 6.1 ChPL EMA: wykaz proszku Hib i zawiesiny DTPa-HBV-IPV z adnotacją „For adjuvants, see section 2”. Wartości adiuwantów glinowych usunięto z punktu 6.1 i zachowano w punkcie 2.',
+      'Kompletny zapis Medium 199 wg oficjalnej ChPL: aminokwasy (w tym fenyloalanina), sole mineralne (w tym sód i potas), witaminy (w tym kwas para-aminobenzoesowy) oraz inne substancje. Adiuwanty glinowe odsyłają do punktu 2.',
       INFANRIX_HEXA_DOC_SOURCE,
       9,
       INFANRIX_HEXA_PDF_URL,
@@ -578,7 +579,7 @@ export const VACCINES_CATALOG: VaccineProduct[] = [
     targetGroup: 'pediatryczna',
     marketingAuthorizationNumber: 'EU/1/00/152/001, EU/1/00/152/002, EU/1/00/152/005, EU/1/00/152/006, EU/1/00/152/021',
     rplRecordUrl: null, // Pozostawione jako null – publiczny rejestr RPL eZdrowie nie udostępnia statycznego permalinka do procedur centralnych EMA
-    currentChplUrl: 'https://www.ema.europa.eu/en/documents/product-information/infanrix-hexa-epar-product-information_en.pdf',
+    currentChplUrl: 'https://pl.gsk.com/media/b2ip1snt/infanrix-hexa-druki-pl-h-0296-ia-vr-323859-12_02_2026.pdf',
     chplRevisionDate: '12.02.2026',
     chplVersionDate: '12.02.2026',
     documentDownloadDate: '10.11.2026',
@@ -586,6 +587,19 @@ export const VACCINES_CATALOG: VaccineProduct[] = [
     userVerificationNotes: null,
     verificationStatus: 'pending_verification',
     atcCode: 'J07CA09',
+    sourceDiscrepancies: [
+      {
+        id: 'disc-phenylalanine-content-01',
+        fieldName: 'Zawartość fenyloalaniny',
+        firstValue: '0,0289 mikrograma na dawkę',
+        firstSection: '2',
+        secondValue: '0,0298 mikrograma na dawkę',
+        secondSection: '4.4',
+        documentUrl: 'https://pl.gsk.com/media/b2ip1snt/infanrix-hexa-druki-pl-h-0296-ia-vr-323859-12_02_2026.pdf',
+        status: 'requires_clarification',
+        description: 'Niezgodność wewnętrzna oficjalnej ChPL: punkt 2 podaje 0,0289 mikrograma fenyloalaniny na dawkę, podczas gdy punkt 4.4 podaje 0,0298 mikrograma na dawkę. Aplikacja VaxNurse nie ujednolica wartości automatycznie i blokuje status zweryfikowania do czasu urzędowego wyjaśnienia przez podmiot odpowiedzialny / URPL / EMA.'
+      }
+    ],
     chpl: INFANRIX_HEXA_CHPL
   },
   {
