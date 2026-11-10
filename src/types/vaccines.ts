@@ -21,13 +21,15 @@ export type VaccineTargetGroup =
 
 /**
  * Pojedynczy punkt lub podpunkt ChPL zgodny z EMA QRD Product Information Template v10.4 (02/2024).
- * Każdy punkt posiada numerację, oficjalny tytuł, pole na treść, źródło, datę wersji oraz status weryfikacji.
+ * Każdy punkt posiada numerację, oficjalny tytuł, pole na treść, źródło, numer strony PDF, datę wersji oraz status weryfikacji.
  */
 export interface ChPLSection {
   sectionNumber: string;                       // np. "1", "2", "3", "4.1", ..., "5.1", ..., "6.4", "7", "8", "9", "10"
   sectionTitle: string;                        // Oficjalny tytuł sekcji wg EMA QRD 10.4
   content: string | null;                      // Miejsce na treść (null jeśli brak danych w dokumencie lub niezweryfikowane)
   officialSource: string | null;               // Nazwa oficjalnego dokumentu źródłowego
+  pdfPageNumber: number | string | null;       // Numer strony w oficjalnym PDF (jeśli dostępny)
+  sourceDocumentUrl: string | null;            // Bezpośredni adres URL dokumentu źródłowego
   chplVersionDate: string | null;              // Data wersji ChPL
   verificationStatus: VaccineVerificationStatus;// Status weryfikacji danego punktu
   verificationNote: string | null;             // Notatka techniczno-weryfikacyjna
@@ -101,11 +103,14 @@ export interface VaccineProduct {
   vaccineType: VaccineType;                     // Rodzaj szczepionki
   targetGroup: VaccineTargetGroup;              // Grupa docelowa
   marketingAuthorizationNumber: string | null;  // Numer pozwolenia na dopuszczenie do obrotu (Pkt 8 ChPL)
-  rplRecordUrl: string | null;                  // Adres rekordu w RPL
-  currentChplUrl: string | null;                // Adres aktualnej ChPL
-  chplVersionDate: string | null;               // Data wersji ChPL (Pkt 10 ChPL)
-  lastVerifiedDate: string | null;              // Data ostatniej weryfikacji
-  verificationStatus: VaccineVerificationStatus;// Status weryfikacji całego rekordu
+  rplRecordUrl: string | null;                  // Adres rekordu w RPL (null w przypadku braku jednoznacznego permalinka)
+  currentChplUrl: string | null;                // Adres aktualnej ChPL (np. oficjalny PDF podmiotu odpowiedzialnego / EMA)
+  chplRevisionDate: string | null;              // Data sporządzenia / rewizji tekstu ChPL (Pkt 10 ChPL)
+  chplVersionDate: string | null;               // Kompatybilność wsteczna (alias chplRevisionDate)
+  documentDownloadDate: string | null;          // Data pobrania / pozyskania dokumentu źródłowego
+  userVerificationDate: string | null;          // Data ręcznej weryfikacji przez użytkownika (personel medyczny)
+  userVerificationNotes: string | null;         // Notatki personelu medycznego z weryfikacji
+  verificationStatus: VaccineVerificationStatus;// Status weryfikacji całego rekordu (początkowo 'pending_verification')
   atcCode: string | null;                       // Kod ATC (Pkt 5.1 ChPL)
 
   // Oficjalna struktura ChPL (punkty 1–10 EMA QRD v10.4)

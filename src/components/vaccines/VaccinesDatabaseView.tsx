@@ -33,15 +33,21 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
   module,
   onBackToDashboard
 }) => {
+  const [vaccines, setVaccines] = useState<VaccineProduct[]>(VACCINES_CATALOG);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<VaccineType | 'all'>('all');
   const [selectedTargetGroup, setSelectedTargetGroup] = useState<VaccineTargetGroup | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<VaccineVerificationStatus | 'all'>('all');
   const [activeVaccineDetail, setActiveVaccineDetail] = useState<VaccineProduct | null>(null);
 
+  const handleUpdateVaccine = (updatedVaccine: VaccineProduct) => {
+    setVaccines(prev => prev.map(v => v.id === updatedVaccine.id ? updatedVaccine : v));
+    setActiveVaccineDetail(updatedVaccine);
+  };
+
   // Filter vaccines
   const filteredVaccines = useMemo(() => {
-    return VACCINES_CATALOG.filter(v => {
+    return vaccines.filter(v => {
       // Type filter
       if (selectedType !== 'all' && v.vaccineType !== selectedType) {
         return false;
@@ -75,7 +81,7 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
 
       return true;
     });
-  }, [searchQuery, selectedType, selectedTargetGroup, selectedStatus]);
+  }, [vaccines, searchQuery, selectedType, selectedTargetGroup, selectedStatus]);
 
   const hasActiveFilters =
     searchQuery.trim() !== '' ||
@@ -96,6 +102,7 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
       <VaccineDetailView
         vaccine={activeVaccineDetail}
         onBackToList={() => setActiveVaccineDetail(null)}
+        onUpdateVaccine={handleUpdateVaccine}
       />
     );
   }

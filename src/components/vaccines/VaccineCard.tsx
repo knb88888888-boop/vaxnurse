@@ -5,7 +5,9 @@ import {
   FileText,
   FileCheck,
   ChevronRight,
-  AlertTriangle
+  AlertTriangle,
+  Clock,
+  Search
 } from 'lucide-react';
 import type { VaccineProduct } from '../../types/vaccines';
 import {
@@ -77,6 +79,14 @@ export const VaccineCard: React.FC<VaccineCardProps> = ({ vaccine, onOpenDetails
               <span className="v-meta-value">{vaccine.marketingAuthorizationNumber}</span>
             </div>
           )}
+
+          {vaccine.chplRevisionDate && (
+            <div className="v-meta-item">
+              <Clock size={14} className="v-meta-icon" />
+              <span className="v-meta-label">Rewizja ChPL (Pkt 10):</span>
+              <span className="v-meta-value">{vaccine.chplRevisionDate}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -85,7 +95,7 @@ export const VaccineCard: React.FC<VaccineCardProps> = ({ vaccine, onOpenDetails
         <div className="v-card-unverified-warning">
           <AlertTriangle size={15} className="warning-icon" />
           <span>
-            <strong>Brak zweryfikowanej dokumentacji ChPL:</strong> Treści medyczne nie zostały jeszcze potwierdzone z drukiem ChPL. Weryfikuj w RPL.
+            <strong>Oczekuje na weryfikację personelu:</strong> Treści punktów 1–10 odwzorowano z oficjalnego druku ChPL (wersja {vaccine.chplRevisionDate || 'do weryfikacji'}).
           </span>
         </div>
       )}
@@ -103,7 +113,7 @@ export const VaccineCard: React.FC<VaccineCardProps> = ({ vaccine, onOpenDetails
         </button>
 
         <div className="v-external-links">
-          {vaccine.rplRecordUrl && (
+          {vaccine.rplRecordUrl ? (
             <a
               href={vaccine.rplRecordUrl}
               target="_blank"
@@ -114,6 +124,18 @@ export const VaccineCard: React.FC<VaccineCardProps> = ({ vaccine, onOpenDetails
               <span>Rekord w RPL</span>
               <ExternalLink size={13} />
             </a>
+          ) : (
+            <a
+              href="https://rejestrymedyczne.ezdrowie.gov.pl/rpl/search/public"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="v-link-rpl v-link-rpl-search"
+              title="Brak trwałego permalinka w RPL dla procedury centralnej – kliknij, aby otworzyć wyszukiwarkę RPL"
+            >
+              <Search size={12} />
+              <span>Szukaj w RPL</span>
+              <ExternalLink size={12} />
+            </a>
           )}
 
           {vaccine.currentChplUrl && (
@@ -122,9 +144,9 @@ export const VaccineCard: React.FC<VaccineCardProps> = ({ vaccine, onOpenDetails
               target="_blank"
               rel="noopener noreferrer"
               className="v-link-chpl"
-              title="Otwórz oficjalną Charakterystykę Produktu Leczniczego"
+              title="Otwórz oficjalną Charakterystykę Produktu Leczniczego (PDF)"
             >
-              <span>Aktualna ChPL</span>
+              <span>Oficjalna ChPL (PDF)</span>
               <ExternalLink size={13} />
             </a>
           )}

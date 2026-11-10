@@ -17,9 +17,14 @@ import {
   ChevronUp,
   FlaskConical,
   Package,
-  Calendar
+  Calendar,
+  CheckCircle2,
+  RotateCcw,
+  DownloadCloud,
+  UserCheck,
+  Search
 } from 'lucide-react';
-import type { VaccineProduct, ChPLSection } from '../../types/vaccines';
+import type { VaccineProduct, ChPLSection, VaccineVerificationStatus } from '../../types/vaccines';
 import {
   VERIFICATION_STATUS_META,
   VACCINE_TYPE_LABELS,
@@ -29,13 +34,16 @@ import {
 interface VaccineDetailViewProps {
   vaccine: VaccineProduct;
   onBackToList: () => void;
+  onUpdateVaccine?: (updatedVaccine: VaccineProduct) => void;
 }
 
 export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
-  vaccine,
-  onBackToList
+  vaccine: initialVaccine,
+  onBackToList,
+  onUpdateVaccine
 }) => {
-  const statusMeta = VERIFICATION_STATUS_META[vaccine.verificationStatus];
+  const [currentVaccine, setCurrentVaccine] = useState<VaccineProduct>(initialVaccine);
+  const statusMeta = VERIFICATION_STATUS_META[currentVaccine.verificationStatus];
 
   // State to manage collapsible section groups
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -88,6 +96,68 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
     });
   };
 
+  // Helper to update verification status across the product and its sections
+  const handleUpdateStatus = (newStatus: VaccineVerificationStatus) => {
+    const now = new Date();
+    const formattedDate = `${now.toLocaleDateString('pl-PL')} r., godz. ${now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}`;
+    
+    const updateSectionStatus = (sec: ChPLSection): ChPLSection => ({
+      ...sec,
+      verificationStatus: newStatus,
+      verificationNote: newStatus === 'verified_chpl'
+        ? 'Zweryfikowano z oficjalną ChPL przez personel medyczny punktu szczepień.'
+        : sec.verificationNote
+    });
+
+    const updated: VaccineProduct = {
+      ...currentVaccine,
+      verificationStatus: newStatus,
+      userVerificationDate: newStatus === 'verified_chpl' ? formattedDate : null,
+      userVerificationNotes: newStatus === 'verified_chpl'
+        ? `Zatwierdzono w punkcie szczepień na podstawie oficjalnej ChPL (wersja: ${currentVaccine.chplRevisionDate || 'b.d.'}).`
+        : null,
+      chpl: {
+        ...currentVaccine.chpl,
+        name: updateSectionStatus(currentVaccine.chpl.name),
+        composition: updateSectionStatus(currentVaccine.chpl.composition),
+        pharmaceuticalForm: updateSectionStatus(currentVaccine.chpl.pharmaceuticalForm),
+        clinicalParticulars: {
+          indications: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.indications),
+          dosageAndAdministration: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.dosageAndAdministration),
+          contraindications: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.contraindications),
+          warningsAndPrecautions: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.warningsAndPrecautions),
+          interactions: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.interactions),
+          fertilityPregnancyLactation: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.fertilityPregnancyLactation),
+          driveAndMachines: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.driveAndMachines),
+          undesirableEffects: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.undesirableEffects),
+          overdose: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.overdose)
+        },
+        pharmacologicalProperties: {
+          pharmacodynamics: updateSectionStatus(currentVaccine.chpl.pharmacologicalProperties.pharmacodynamics),
+          pharmacokinetics: updateSectionStatus(currentVaccine.chpl.pharmacologicalProperties.pharmacokinetics),
+          preclinicalSafety: updateSectionStatus(currentVaccine.chpl.pharmacologicalProperties.preclinicalSafety)
+        },
+        pharmaceuticalParticulars: {
+          excipients: updateSectionStatus(currentVaccine.chpl.pharmaceuticalParticulars.excipients),
+          incompatibilities: updateSectionStatus(currentVaccine.chpl.pharmaceuticalParticulars.incompatibilities),
+          shelfLife: updateSectionStatus(currentVaccine.chpl.pharmaceuticalParticulars.shelfLife),
+          storageSpecialPrecautions: updateSectionStatus(currentVaccine.chpl.pharmaceuticalParticulars.storageSpecialPrecautions),
+          containerNatureAndContents: updateSectionStatus(currentVaccine.chpl.pharmaceuticalParticulars.containerNatureAndContents),
+          disposalAndHandling: updateSectionStatus(currentVaccine.chpl.pharmaceuticalParticulars.disposalAndHandling)
+        },
+        marketingAuthorisationHolder: updateSectionStatus(currentVaccine.chpl.marketingAuthorisationHolder),
+        marketingAuthorisationNumber: updateSectionStatus(currentVaccine.chpl.marketingAuthorisationNumber),
+        firstAuthorisationAndRenewal: updateSectionStatus(currentVaccine.chpl.firstAuthorisationAndRenewal),
+        revisionDate: updateSectionStatus(currentVaccine.chpl.revisionDate)
+      }
+    };
+
+    setCurrentVaccine(updated);
+    if (onUpdateVaccine) {
+      onUpdateVaccine(updated);
+    }
+  };
+
   // Helper render for single section or subsection
   const renderSectionBox = (sec: ChPLSection, icon: React.ReactNode, isSub: boolean = false) => {
     const secStatus = VERIFICATION_STATUS_META[sec.verificationStatus];
@@ -104,6 +174,11 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
           </div>
 
           <div className="point-box-meta-badges">
+            {sec.pdfPageNumber && (
+              <span className="point-page-tag" title="Numer strony w oficjalnym druku PDF ChPL">
+                Strona PDF: str. {sec.pdfPageNumber}
+              </span>
+            )}
             <span className="point-source-tag" title={sec.officialSource || undefined}>
               Źródło: {sec.officialSource || 'RPL (eZdrowie)'}
             </span>
@@ -117,7 +192,29 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
         <div className="point-box-body">
           {sec.content ? (
             <div className="point-content-present">
-              <p className="point-text">{sec.content}</p>
+              <div className="point-text-block">
+                {sec.content.split('\n').map((line, idx) => (
+                  <p key={idx} className="point-text-line">
+                    {line}
+                  </p>
+                ))}
+              </div>
+
+              {sec.sourceDocumentUrl && (
+                <div className="point-source-link-row">
+                  <a
+                    href={sec.sourceDocumentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-point-source-link"
+                    title="Otwórz oficjalny druk ChPL w formacie PDF"
+                  >
+                    <span>Otwórz oficjalny PDF ChPL {sec.pdfPageNumber ? `(str. ${sec.pdfPageNumber})` : ''}</span>
+                    <ExternalLink size={12} />
+                  </a>
+                </div>
+              )}
+
               {sec.verificationNote && (
                 <span className="point-note-text">
                   <Info size={13} /> {sec.verificationNote}
@@ -141,12 +238,12 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
                 )}
                 <div className="unverified-link-row">
                   <a
-                    href={vaccine.currentChplUrl || 'https://rejestrymedyczne.ezdrowie.gov.pl/rpl/search/public'}
+                    href={currentVaccine.currentChplUrl || 'https://rejestrymedyczne.ezdrowie.gov.pl/rpl/search/public'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn-verify-in-rpl"
                   >
-                    <span>Weryfikuj w oficjalnym rekordzie RPL</span>
+                    <span>Weryfikuj w oficjalnym źródle ChPL / RPL</span>
                     <ExternalLink size={12} />
                   </a>
                 </div>
@@ -158,7 +255,7 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
     );
   };
 
-  const { chpl } = vaccine;
+  const { chpl } = currentVaccine;
 
   return (
     <div className="vaccine-detail-container">
@@ -184,20 +281,20 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
               {statusMeta.label}
             </span>
             <span className="v-type-badge">
-              {VACCINE_TYPE_LABELS[vaccine.vaccineType]}
+              {VACCINE_TYPE_LABELS[currentVaccine.vaccineType]}
             </span>
             <span className="v-target-badge">
-              {TARGET_GROUP_LABELS[vaccine.targetGroup]}
+              {TARGET_GROUP_LABELS[currentVaccine.targetGroup]}
             </span>
-            {vaccine.atcCode && (
-              <span className="v-atc-pill">Kod ATC: {vaccine.atcCode} (Pkt 5.1)</span>
+            {currentVaccine.atcCode && (
+              <span className="v-atc-pill">Kod ATC: {currentVaccine.atcCode} (Pkt 5.1)</span>
             )}
           </div>
 
           <div className="v-detail-quick-actions">
-            {vaccine.rplRecordUrl && (
+            {currentVaccine.rplRecordUrl ? (
               <a
-                href={vaccine.rplRecordUrl}
+                href={currentVaccine.rplRecordUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-rpl-official"
@@ -205,47 +302,204 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
                 <span>Rekord w RPL</span>
                 <ExternalLink size={15} />
               </a>
-            )}
-            {vaccine.currentChplUrl && (
+            ) : (
               <a
-                href={vaccine.currentChplUrl}
+                href="https://rejestrymedyczne.ezdrowie.gov.pl/rpl/search/public"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-rpl-search"
+                title="Brak jednoznacznego trwałego permalinka w RPL eZdrowie dla procedury centralnej EMA – kliknij, aby przejść do wyszukiwarki ogólnej"
+              >
+                <Search size={14} />
+                <span>Szukaj w RPL (brak permalinka)</span>
+                <ExternalLink size={13} />
+              </a>
+            )}
+
+            {currentVaccine.currentChplUrl && (
+              <a
+                href={currentVaccine.currentChplUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-chpl-official"
+                title="Pobierz lub wyświetl oficjalny plik PDF ChPL"
               >
-                <span>Aktualna ChPL</span>
-                <ExternalLink size={15} />
+                <FileText size={15} />
+                <span>Oficjalny druk ChPL (PDF)</span>
+                <ExternalLink size={14} />
               </a>
             )}
           </div>
         </div>
 
         <div className="v-detail-header-body">
-          <h1 className="v-detail-title">{vaccine.tradeName}</h1>
+          <h1 className="v-detail-title">{currentVaccine.tradeName}</h1>
           <p className="v-detail-substance">
-            <strong>Substancja czynna (Pkt 2 ChPL):</strong> {vaccine.activeSubstance}
+            <strong>Substancja czynna (Pkt 2 ChPL):</strong> {currentVaccine.activeSubstance}
           </p>
 
           <div className="v-detail-specs-grid">
             <div className="v-spec-item">
               <span className="v-spec-label">Podmiot odpowiedzialny (Pkt 7):</span>
-              <span className="v-spec-value">{vaccine.manufacturer}</span>
+              <span className="v-spec-value">{currentVaccine.manufacturer}</span>
             </div>
             <div className="v-spec-item">
               <span className="v-spec-label">Postać farmaceutyczna (Pkt 3):</span>
-              <span className="v-spec-value">{vaccine.pharmaceuticalForm}</span>
+              <span className="v-spec-value">{currentVaccine.pharmaceuticalForm}</span>
             </div>
             <div className="v-spec-item">
               <span className="v-spec-label">Numer pozwolenia (Pkt 8):</span>
-              <span className="v-spec-value">{vaccine.marketingAuthorizationNumber || 'Brak danych w bazie'}</span>
+              <span className="v-spec-value">{currentVaccine.marketingAuthorizationNumber || 'Brak danych w bazie'}</span>
             </div>
             <div className="v-spec-item">
-              <span className="v-spec-label">Standard struktury:</span>
-              <span className="v-spec-value highlight-ema">EMA QRD v10.4 (Punkty 1–10)</span>
+              <span className="v-spec-label">Powiązanie z rejestrem RPL:</span>
+              <span className={`v-spec-value ${currentVaccine.rplRecordUrl ? '' : 'rpl-null-notice'}`}>
+                {currentVaccine.rplRecordUrl ? 'Dostępny bezpośredni permalink' : 'Brak permalinka (wyszukiwanie wg nazwy)'}
+              </span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* ============================================================== */}
+      {/* KROK 3: PANEL ROZDZIELENIA DAT                                 */}
+      {/* ============================================================== */}
+      <section className="v-dates-panel" aria-label="Daty rejestracji, pobrania i weryfikacji dokumentacji">
+        <div className="v-dates-header">
+          <div className="v-dates-title-group">
+            <Calendar size={20} className="v-dates-header-icon" />
+            <div>
+              <h2 className="v-dates-title">Metryka czasowa dokumentacji i weryfikacji</h2>
+              <p className="v-dates-subtitle">
+                Wyraźne rozdzielenie daty sporządzenia ChPL, daty pobrania pliku źródłowego oraz ręcznej weryfikacji klinicznej.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="v-dates-cards-grid">
+          {/* Data 1: Data rewizji tekstu ChPL (Pkt 10) */}
+          <div className="v-date-card">
+            <div className="v-date-card-top">
+              <span className="v-date-icon-box blue">
+                <Clock size={16} />
+              </span>
+              <span className="v-date-pill">Punkt 10 ChPL</span>
+            </div>
+            <span className="v-date-label">Data zatwierdzenia / rewizji tekstu ChPL</span>
+            <span className="v-date-value">
+              {currentVaccine.chplRevisionDate || 'Brak w dokumencie'}
+            </span>
+            <span className="v-date-desc">
+              Urzędowa data zatwierdzenia lub zmiany druków informacyjnych przez EMA/URPL (procedura VR 323859).
+            </span>
+          </div>
+
+          {/* Data 2: Data pobrania dokumentu źródłowego */}
+          <div className="v-date-card">
+            <div className="v-date-card-top">
+              <span className="v-date-icon-box teal">
+                <DownloadCloud size={16} />
+              </span>
+              <span className="v-date-pill">Źródło oficjalne</span>
+            </div>
+            <span className="v-date-label">Data pobrania dokumentu źródłowego</span>
+            <span className="v-date-value">
+              {currentVaccine.documentDownloadDate || 'Brak daty'}
+            </span>
+            <span className="v-date-desc">
+              Pobrano z oficjalnego repozytorium wytwórcy (GSK Polska / EMA) do bazy referencyjnej VaxNurse.
+            </span>
+          </div>
+
+          {/* Data 3: Data ręcznej weryfikacji przez personel */}
+          <div className={`v-date-card ${currentVaccine.userVerificationDate ? 'verified' : 'pending'}`}>
+            <div className="v-date-card-top">
+              <span className={`v-date-icon-box ${currentVaccine.userVerificationDate ? 'green' : 'amber'}`}>
+                <UserCheck size={16} />
+              </span>
+              <span className={`v-date-pill ${currentVaccine.userVerificationDate ? 'green' : 'amber'}`}>
+                {currentVaccine.userVerificationDate ? 'Zweryfikowano' : 'Oczekuje na akcję'}
+              </span>
+            </div>
+            <span className="v-date-label">Data ręcznej weryfikacji przez personel</span>
+            <span className="v-date-value">
+              {currentVaccine.userVerificationDate || 'Brak weryfikacji użytkownika'}
+            </span>
+            <span className="v-date-desc">
+              {currentVaccine.userVerificationDate
+                ? `Potwierdzono przez personel: ${currentVaccine.userVerificationNotes || 'Zgodność z drukiem ChPL'}`
+                : 'Wymaga świadomego zatwierdzenia zgodności przez personel medyczny poniżej.'}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================== */}
+      {/* KROK 4: INTERAKTYWNY PANEL WERYFIKACJI                         */}
+      {/* ============================================================== */}
+      <section className={`v-verification-action-panel ${statusMeta.badgeClass}`} aria-label="Weryfikacja kliniczna karty preparatu">
+        <div className="v-verif-panel-left">
+          <div className="v-verif-icon-box">
+            {currentVaccine.verificationStatus === 'verified_chpl' ? (
+              <CheckCircle2 size={26} className="v-verif-icon verified" />
+            ) : (
+              <AlertTriangle size={26} className="v-verif-icon pending" />
+            )}
+          </div>
+          <div className="v-verif-info">
+            <div className="v-verif-status-row">
+              <span className="v-verif-badge-label">Aktualny status weryfikacji:</span>
+              <span className={`v-status-badge ${statusMeta.badgeClass}`}>
+                <span className="v-status-dot"></span>
+                {statusMeta.label}
+              </span>
+            </div>
+            <h3 className="v-verif-headline">
+              {currentVaccine.verificationStatus === 'verified_chpl'
+                ? 'Karta preparatu została zweryfikowana z oficjalnym drukiem ChPL'
+                : 'Karta preparatu oczekuje na weryfikację przez personel punktu szczepień'}
+            </h3>
+            <p className="v-verif-text">
+              {currentVaccine.verificationStatus === 'verified_chpl'
+                ? `Weryfikacja została zatwierdzona w systemie dnia ${currentVaccine.userVerificationDate}. Wszystkie punkty 1–10 odpowiadają aktualnej Charakterystyce Produktu Leczniczego (wersja: ${currentVaccine.chplRevisionDate}).`
+                : 'Aplikacja VaxNurse nie oznacza danych klinicznych jako automatycznie zweryfikowane. Aby zapewnić pełne bezpieczeństwo pacjentów, personel medyczny powinien porównać treść z oficjalnym drukiem ChPL i zatwierdzić zgodność.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="v-verif-panel-actions">
+          {currentVaccine.verificationStatus !== 'verified_chpl' ? (
+            <>
+              <button
+                type="button"
+                className="btn-verif-approve"
+                onClick={() => handleUpdateStatus('verified_chpl')}
+              >
+                <CheckCircle2 size={16} />
+                <span>Zatwierdź weryfikację z drukiem ChPL</span>
+              </button>
+              <button
+                type="button"
+                className="btn-verif-reject"
+                onClick={() => handleUpdateStatus('requires_reverification')}
+              >
+                <AlertTriangle size={15} />
+                <span>Wymaga ponownej weryfikacji</span>
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="btn-verif-revoke"
+              onClick={() => handleUpdateStatus('pending_verification')}
+            >
+              <RotateCcw size={15} />
+              <span>Cofnij do stanu: Oczekuje na weryfikację</span>
+            </button>
+          )}
+        </div>
+      </section>
 
       {/* Mandatory Clinical Safety Banner */}
       <section className="v-detail-safety-alert" aria-label="Komunikat bezpieczeństwa">
@@ -268,7 +522,7 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
               rel="noopener noreferrer"
               className="v-safety-link"
             >
-              <span>Rejestr RPL eZdrowie (główne źródło)</span>
+              <span>Rejestr RPL eZdrowie (wyszukiwarka)</span>
               <ExternalLink size={13} />
             </a>
             <a
