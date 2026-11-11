@@ -497,3 +497,110 @@ export interface PendingFundingAuditReport {
   pendingProcedureIds: string[];
   details: PendingFundingProcedureDetail[];
 }
+
+export type Stage1ChplProductKey =
+  | 'influvac_2026_2027'
+  | 'vaxigrip_2026_2027'
+  | 'spikevax_xfg'
+  | 'bcg_10';
+
+export type Stage1ChplCheckOutcome =
+  | 'ok'
+  | 'ambiguity_flagged'
+  | 'missing_in_document'
+  | 'extrapolation_note';
+
+/**
+ * Raport (a): Techniczna weryfikacja źródła, wersji, skrótu SHA-256 i metadanych pliku PDF ChPL.
+ */
+export interface Stage1ChplSourceCheck {
+  productKey: Stage1ChplProductKey;
+  productName: string;
+  relatedProcedureIds: string[];
+  rplOrEmaId: string;
+  officialSourceUrl: string;
+  httpStatus: number;
+  contentDispositionOrLastModified: string;
+  fileSizeBytes: number;
+  fileSha256: string;
+  pageCount: number;
+  marketingAuthorizationHolder: string;
+  authorizationNumber: string;
+  seasonOrVariant: string;
+  documentDateInSection10: string | null;
+  sourceCheckStatus: 'verified_match' | 'verified_with_metadata_gap';
+  technicalNotes: string;
+}
+
+/**
+ * Pojedynczy wiersz arkusza treści ChPL dla sekcji 1–10 lub podpunktów klinicznych 4.1–4.9.
+ */
+export interface Stage1ChplSubpointAudit {
+  sectionNumber: ChplAuditSectionNumber;
+  subpointNumber: string;
+  pageRef: string;
+  conciseSummary: string;
+  checkOutcome: Stage1ChplCheckOutcome;
+  discrepancyOrAmbiguity: string | null;
+  sourceExcerptRef: string;
+}
+
+/**
+ * Raport (b): Roboczy arkusz analizy treści ChPL I etapu (sekcje 1–10 oraz 4.1–4.9) bez awansu do verified_full.
+ */
+export interface Stage1ChplContentSheet {
+  productKey: Stage1ChplProductKey;
+  productName: string;
+  relatedProcedureIds: string[];
+  preparatoryAuditorLabel: string;
+  targetStatusAfterStage1: 'pending_content_audit';
+  entries: Stage1ChplSubpointAudit[];
+}
+
+/**
+ * Raport (c): Lista brakujących danych w dokumentach źródłowych, rejestrach lub powiązaniach katalogowych.
+ */
+export interface Stage1MissingDataItem {
+  id: string;
+  productKey: Stage1ChplProductKey;
+  relatedProcedureIds: string[];
+  category:
+    | 'document_metadata'
+    | 'rpl_index_vs_pdf'
+    | 'gtin_linkage'
+    | 'clinical_subsection'
+    | 'market_availability'
+    | 'source_url_limitation';
+  missingElement: string;
+  observedFact: string;
+  impactOnVerification: string;
+}
+
+/**
+ * Raport (d): Lista pytań i niejednoznaczności wymagających wiążącej decyzji kompetentnego audytora klinicznego.
+ */
+export interface Stage1HumanDecisionItem {
+  id: string;
+  productKey: Stage1ChplProductKey;
+  relatedProcedureIds: string[];
+  chplSectionOrSubpoint: string;
+  pageRef: string;
+  clinicalQuestion: string;
+  ambiguitySummary: string;
+  requiresCompetentClinicalAuditorDecision: true;
+  autoResolved: false;
+}
+
+/**
+ * Kompletny pakiet I etapu przygotowawczego audytu ChPL dla 4 preparatów (rozdział audytu technicznego od klinicznego).
+ */
+export interface Stage1ChplAuditBundle {
+  generatedAt: string;
+  preparatoryExtractorNote: string;
+  targetProcedureStatusBefore: 'pending_content_audit';
+  targetProcedureStatusAfter: 'pending_content_audit';
+  sourceAndVersionReport: Stage1ChplSourceCheck[];
+  contentAnalysisSheets: Stage1ChplContentSheet[];
+  missingDataReport: Stage1MissingDataItem[];
+  humanDecisionChecklist: Stage1HumanDecisionItem[];
+}

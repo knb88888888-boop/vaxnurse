@@ -13,6 +13,7 @@ import {
   findChildVaccine
 } from '../src/data/childVaccinesData.ts';
 import { VACCINES_CATALOG } from '../src/data/vaccinesCatalog.ts';
+import { STAGE1_CHPL_AUDIT_BUNDLE } from '../src/data/chplStage1AuditSheets.ts';
 import {
   REQUIRED_CHPL_SECTION_NUMBERS,
   REQUIRED_SECTION_4_SUBPOINTS,
@@ -24,6 +25,7 @@ import {
   getUnconfirmedSeasonalScopes,
   canPromoteToVerifiedFull,
   validateChildVaccineStatusInvariants,
+  validateStage1ChplAuditBundle,
   auditVariantA2IpvCoverage,
   auditChildVaccinesCatalogSummary,
   auditPendingFundingProcedures,
@@ -1614,6 +1616,79 @@ assert.deepEqual(
 
 console.log('   ✓ SCENARIUSZ 18 ZALICZONY: Wszystkie 11 testów końcowych PROMPT 24 przeszły pomyślnie.\n');
 
+console.log('19. SCENARIUSZ 19: PROMPT 25 – integralność I etapu przygotowawczego audytu ChPL (4 preparaty) i blokada awansu verified_full...');
+
+// 19.1 Walidacja pakietu Stage-1 (4 źródła, 4 arkusze po 18 pozycji 1–10 + 4.1–4.9, raport braków i decyzji klinicznych)
+assert.deepEqual(
+  validateStage1ChplAuditBundle(STAGE1_CHPL_AUDIT_BUNDLE),
+  [],
+  '19.1: Pakiet STAGE1_CHPL_AUDIT_BUNDLE nie może mieć błędów walidacji strukturalnej'
+);
+assert.equal(STAGE1_CHPL_AUDIT_BUNDLE.sourceAndVersionReport.length, 4);
+assert.equal(STAGE1_CHPL_AUDIT_BUNDLE.contentAnalysisSheets.length, 4);
+assert.ok(STAGE1_CHPL_AUDIT_BUNDLE.missingDataReport.length >= 8);
+assert.ok(STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist.length >= 8);
+
+for (const sheet of STAGE1_CHPL_AUDIT_BUNDLE.contentAnalysisSheets) {
+  assert.equal(sheet.entries.length, 18, `19.1: Arkusz ${sheet.productKey} musi zawierać dokładnie 18 pozycji (1–3, 4.1–4.9, 5–10)`);
+  assert.equal(sheet.targetStatusAfterStage1, 'pending_content_audit');
+}
+
+// 19.2 Kontrola dokładnych parametrów pobranych dokumentów PDF (bajty, strony, SHA-256)
+const srcByKey = Object.fromEntries(
+  STAGE1_CHPL_AUDIT_BUNDLE.sourceAndVersionReport.map(s => [s.productKey, s])
+);
+assert.equal(srcByKey.influvac_2026_2027.fileSizeBytes, 221500);
+assert.equal(srcByKey.influvac_2026_2027.pageCount, 10);
+assert.equal(srcByKey.influvac_2026_2027.fileSha256, '933f604e3aef5417ed948d2537900ed40e295b3edd21587778ea902d68cf016d');
+assert.equal(srcByKey.vaxigrip_2026_2027.fileSizeBytes, 600348);
+assert.equal(srcByKey.vaxigrip_2026_2027.pageCount, 22);
+assert.equal(srcByKey.vaxigrip_2026_2027.fileSha256, 'ff3f12a3aef271436f12cc19fa9bf8e9d3ac9f03e151bbaafb2f7bf61c6038dc');
+assert.equal(srcByKey.spikevax_xfg.fileSizeBytes, 1878146);
+assert.equal(srcByKey.spikevax_xfg.pageCount, 177);
+assert.equal(srcByKey.spikevax_xfg.fileSha256, 'bd1ba23ca4e25a3f7353f01e3be889dd8962c471ad257e7beefd50351fdb6fec');
+assert.equal(srcByKey.bcg_10.fileSizeBytes, 163805);
+assert.equal(srcByKey.bcg_10.pageCount, 7);
+assert.equal(srcByKey.bcg_10.fileSha256, '51cdd82650908b41bc56b015671724b1c8dfce7bc3628c61b8d364f893768344');
+
+// 19.3 Odrzucanie nieuprawnionego awansu statusu lub pominięcia podpunktu 4.2
+assert.ok(
+  validateStage1ChplAuditBundle({
+    ...STAGE1_CHPL_AUDIT_BUNDLE,
+    targetProcedureStatusAfter: 'verified_full',
+  }).length > 0,
+  '19.3: Próba automatycznego awansu pakietu I etapu do verified_full musi zostać odrzucona'
+);
+assert.ok(
+  validateStage1ChplAuditBundle({
+    ...STAGE1_CHPL_AUDIT_BUNDLE,
+    contentAnalysisSheets: STAGE1_CHPL_AUDIT_BUNDLE.contentAnalysisSheets.map(sheet =>
+      sheet.productKey === 'bcg_10'
+        ? { ...sheet, entries: sheet.entries.filter(e => e.subpointNumber !== '4.2') }
+        : sheet
+    ),
+  }).length > 0,
+  '19.3: Pominięcie podpunktu 4.2 w arkuszu I etapu musi zostać odrzucone'
+);
+
+// 19.4 Zachowanie statusów bazowych w katalogu produkcyjnym (zero awansów verified_full) i nierozstrzygniętych pytań klinicznych
+const covidProc25 = findChildVaccine('pso-rec-covid-pediatric');
+assert.equal(bcgBase.chplContentVerificationStatus, 'pending_content_audit');
+assert.equal(bcgBase.chplVerificationStatus, 'pending_chpl_verification');
+assert.equal(flu.chplContentVerificationStatus, 'pending_content_audit');
+assert.equal(flu.chplVerificationStatus, 'pending_chpl_verification');
+assert.equal(covidProc25?.chplContentVerificationStatus, 'pending_content_audit');
+assert.equal(covidProc25?.chplVerificationStatus, 'pending_chpl_verification');
+assert.equal(catalogSummary.verifiedFull, 0);
+assert.ok(
+  STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist.every(
+    d => d.requiresCompetentClinicalAuditorDecision === true && d.autoResolved === false
+  ),
+  '19.4: Wszystkie wykryte niejednoznaczności kliniczne muszą pozostać otwarte do decyzji kompetentnego audytora'
+);
+
+console.log('   ✓ SCENARIUSZ 19 ZALICZONY: I etap audytu ChPL (4 dokumenty) spójny technicznie, z pełnym zakazem awansu do verified_full.\n');
+
 console.log('================================================================');
-console.log(' WYNIK KOŃCOWY: 18/18 SCENARIUSZY AUDYTU ZALICZONYCH (100%)    ');
+console.log(' WYNIK KOŃCOWY: 19/19 SCENARIUSZY AUDYTU ZALICZONYCH (100%)    ');
 console.log('================================================================\n');

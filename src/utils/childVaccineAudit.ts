@@ -15,6 +15,8 @@ import type {
   PendingFundingAuditReport,
   PendingFundingProcedureDetail,
   ProcedureProductAdequacyStatus,
+  Stage1ChplAuditBundle,
+  Stage1ChplProductKey,
 } from '../types/childVaccines.ts';
 import type { VaccineProduct } from '../types/vaccines.ts';
 
@@ -1074,4 +1076,115 @@ export function getChplManualQueueGroupCounts(
     },
     { A: 0, B: 0, C: 0, D: 0, E: 0 }
   );
+}
+
+const EXPECTED_STAGE1_PRODUCT_KEYS: Stage1ChplProductKey[] = [
+  'influvac_2026_2027',
+  'vaxigrip_2026_2027',
+  'spikevax_xfg',
+  'bcg_10',
+];
+
+const EXPECTED_STAGE1_SUBPOINTS: string[] = [
+  '1',
+  '2',
+  '3',
+  '4.1',
+  '4.2',
+  '4.3',
+  '4.4',
+  '4.5',
+  '4.6',
+  '4.7',
+  '4.8',
+  '4.9',
+  '5',
+  '6',
+  '7',
+  '8',
+  '9',
+  '10',
+];
+
+/**
+ * Waliduje pakiet I etapu przygotowawczego audytu ChPL (PROMPT 25).
+ * Zapewnia rozdział audytu technicznego od klinicznego, kompletność sekcji 1–10 i podpunktów 4.1–4.9
+ * oraz twardy zakaz automatycznego awansu do statusu `verified_full` lub przypisania fałszywego audytora.
+ */
+export function validateStage1ChplAuditBundle(bundle: Stage1ChplAuditBundle): string[] {
+  const errors: string[] = [];
+
+  if (bundle.targetProcedureStatusBefore !== 'pending_content_audit') {
+    errors.push('Stage-1: targetProcedureStatusBefore musi pozostać "pending_content_audit".');
+  }
+  if (bundle.targetProcedureStatusAfter !== 'pending_content_audit') {
+    errors.push('Stage-1: Zakaz automatycznego awansu — targetProcedureStatusAfter musi pozostać "pending_content_audit".');
+  }
+
+  const sourceKeys = new Set(bundle.sourceAndVersionReport.map(s => s.productKey));
+  const sheetKeys = new Set(bundle.contentAnalysisSheets.map(s => s.productKey));
+  for (const key of EXPECTED_STAGE1_PRODUCT_KEYS) {
+    if (!sourceKeys.has(key)) {
+      errors.push(`Stage-1: Brak wpisu w raporcie źródeł (a) dla produktu '${key}'.`);
+    }
+    if (!sheetKeys.has(key)) {
+      errors.push(`Stage-1: Brak arkusza treści (b) dla produktu '${key}'.`);
+    }
+  }
+
+  for (const src of bundle.sourceAndVersionReport) {
+    if (!src.officialSourceUrl.startsWith('https://')) {
+      errors.push(`[${src.productKey}] URL źródła musi zaczynać się od https://.`);
+    }
+    if (src.httpStatus !== 200) {
+      errors.push(`[${src.productKey}] Wymagany status HTTP 200 dla pobranego dokumentu ChPL.`);
+    }
+    if (!/^[a-f0-9]{64}$/i.test(src.fileSha256)) {
+      errors.push(`[${src.productKey}] Nieprawidłowy skrót SHA-256 pobranego pliku PDF.`);
+    }
+    if (src.fileSizeBytes <= 0 || src.pageCount <= 0) {
+      errors.push(`[${src.productKey}] Nieprawidłowy rozmiar pliku lub liczba stron PDF.`);
+    }
+  }
+
+  for (const sheet of bundle.contentAnalysisSheets) {
+    if (sheet.targetStatusAfterStage1 !== 'pending_content_audit') {
+      errors.push(`[${sheet.productKey}] Arkusz I etapu nie może zmieniać statusu z 'pending_content_audit'.`);
+    }
+    if (!sheet.preparatoryAuditorLabel.trim()) {
+      errors.push(`[${sheet.productKey}] Wymagane oznaczenie etapu przygotowawczego w preparatoryAuditorLabel.`);
+    }
+    const subpointsPresent = sheet.entries.map(e => e.subpointNumber);
+    const subpointsSet = new Set(subpointsPresent);
+    if (subpointsPresent.length !== subpointsSet.size) {
+      errors.push(`[${sheet.productKey}] Zduplikowane wpisy podpunktów w arkuszu analizy treści ChPL.`);
+    }
+    for (const reqSub of EXPECTED_STAGE1_SUBPOINTS) {
+      if (!subpointsSet.has(reqSub)) {
+        errors.push(`[${sheet.productKey}] Brak obowiązkowego wpisu dla sekcji/podpunktu '${reqSub}'.`);
+      }
+    }
+    for (const entry of sheet.entries) {
+      if (!entry.pageRef.trim() || !entry.conciseSummary.trim() || !entry.sourceExcerptRef.trim()) {
+        errors.push(`[${sheet.productKey}:${entry.subpointNumber}] Puste pole pageRef, conciseSummary lub sourceExcerptRef.`);
+      }
+      if (entry.checkOutcome !== 'ok' && !entry.discrepancyOrAmbiguity?.trim()) {
+        errors.push(`[${sheet.productKey}:${entry.subpointNumber}] Status '${entry.checkOutcome}' wymaga opisu discrepancyOrAmbiguity.`);
+      }
+    }
+  }
+
+  if (bundle.missingDataReport.length === 0) {
+    errors.push('Stage-1: Lista brakujących danych (c) nie może być pusta dla obecnego stanu dokumentacji.');
+  }
+  if (bundle.humanDecisionChecklist.length === 0) {
+    errors.push('Stage-1: Lista decyzji dla audytora klinicznego (d) nie może być pusta.');
+  }
+  for (const dec of bundle.humanDecisionChecklist) {
+    if (dec.requiresCompetentClinicalAuditorDecision !== true || dec.autoResolved !== false) {
+      errors.push(`[${dec.id}] Pytanie do audytora musi mieć requiresCompetentClinicalAuditorDecision=true i autoResolved=false.`);
+    }
+  }
+
+  return errors;
 }
