@@ -1,11 +1,28 @@
 import type {
+  CatalogCardCompletenessStatus,
   ChildVaccineItem,
+  ChplAuditSectionNumber,
   ChplContentAuditRecord,
   ChplContentVerificationStatus,
   ChplReferenceStatus,
   ChplVerificationStatus,
+  FundingScopeBreakdown,
+  ProcedureProductAdequacyStatus,
 } from '../types/childVaccines.ts';
 import type { VaccineProduct } from '../types/vaccines.ts';
+
+export const REQUIRED_CHPL_SECTION_NUMBERS: ChplAuditSectionNumber[] = [
+  '1',
+  '2',
+  '3',
+  '4',
+  '5',
+  '6',
+  '7',
+  '8',
+  '9',
+  '10',
+];
 
 /**
  * Procedury PSO 2027, w których finansowanie zależy od odrębnych przepisów refundacyjnych
@@ -91,6 +108,38 @@ function isValidChplAuditRecord(
   if (validSections.length === 0) {
     issues.push('Brak listy konkretnych punktów ChPL poddanych analizie w chplAudit.');
   }
+
+  // Zadanie 1 (PROMPT 21): Wymagana pełna, jawna kontrola wszystkich właściwych punktów ChPL 1–10.
+  const sectionReviews = audit.sectionReviews ?? [];
+  if (sectionReviews.length === 0) {
+    issues.push(
+      'Brak jawnej kontroli wszystkich właściwych punktów ChPL 1–10 w chplAudit.sectionReviews (pojedynczy punkt, np. 4.3, nie wystarcza do statusu verified_full).'
+    );
+  } else {
+    for (const sec of REQUIRED_CHPL_SECTION_NUMBERS) {
+      const matches = sectionReviews.filter(entry => entry.sectionNumber === sec);
+      if (matches.length === 0) {
+        issues.push(`Brak jawnego wyniku kontroli dla punktu ${sec} ChPL w sectionReviews.`);
+        continue;
+      }
+      if (matches.length > 1) {
+        issues.push(`Zduplikowany wpis kontroli dla punktu ${sec} ChPL w sectionReviews.`);
+        continue;
+      }
+      const entry = matches[0];
+      if (entry.status === 'not_present_in_document' || entry.status === 'not_applicable') {
+        const justif = entry.justification?.trim() ?? '';
+        if (isPlaceholderValue(justif) || justif.length < 10) {
+          issues.push(
+            `Punkt ${sec} ChPL oznaczony jako '${entry.status}' wymaga konkretnego, jawnego uzasadnienia (min. 10 znaków).`
+          );
+        }
+      } else if (entry.status !== 'verified') {
+        issues.push(`Nieprawidłowy status kontroli dla punktu ${sec} ChPL.`);
+      }
+    }
+  }
+
   if (audit.auditOutcome !== 'compliant') {
     issues.push(`Wynik audytu ChPL wynosi '${audit.auditOutcome}', wymagany jest 'compliant'.`);
   }
@@ -107,8 +156,112 @@ function isValidChplAuditRecord(
 }
 
 /**
- * Kontrola bramki awansu do statusu 'verified_full' / 'verified_chpl'.
- * Zablokuje automatyczne lub przedwczesne oznaczenie pełnej zgodności ChPL.
+ * Niezależny status kompletności karty katalogowej powiązanej z procedurą PSO (Zadanie 2 PROMPT 21).
+ */
+export function deriveCatalogCardCompletenessStatus(
+  item: ChildVaccineItem,
+  catalogVaccines: VaccineProduct[] = []
+): CatalogCardCompletenessStatus {
+  const referencedIds = new Set<string>([
+    ...item.linkedVaccineIds,
+    ...(item.productLinkages?.map(l => l.vaccineId) ?? []),
+  ]);
+
+  if (referencedIds.size === 0 || catalogVaccines.length === 0) {
+    return 'missing_catalog_card';
+  }
+
+  let foundAnyCard = false;
+  let allFoundComplete = true;
+
+  for (const vaccineId of referencedIds) {
+    const product = catalogVaccines.find(v => v.id === vaccineId);
+    if (!product) {
+      allFoundComplete = false;
+      continue;
+    }
+    foundAnyCard = true;
+    const hasOpenDiscrepancies = (product.sourceDiscrepancies ?? []).some(
+      d => d.status !== 'resolved_with_official_document'
+    );
+    if (product.verificationStatus !== 'verified_chpl' || hasOpenDiscrepancies) {
+      allFoundComplete = false;
+    }
+  }
+
+  if (!foundAnyCard) {
+    return 'missing_catalog_card';
+  }
+  return allFoundComplete ? 'complete_verified_card' : 'incomplete_or_unverified_card';
+}
+
+/**
+ * Niezależny status kontroli adekwatności produktu handlowego do procedury PSO (Zadanie 2 PROMPT 21).
+ */
+export function deriveProcedureProductAdequacyStatus(
+  item: ChildVaccineItem,
+  catalogVaccines: VaccineProduct[] = []
+): ProcedureProductAdequacyStatus {
+  const referencedIds = new Set<string>([
+    ...item.linkedVaccineIds,
+    ...(item.productLinkages?.map(l => l.vaccineId) ?? []),
+  ]);
+
+  if (item.chplContentVerificationStatus === 'analyzed_with_discrepancy') {
+    return 'requires_clarification';
+  }
+
+  for (const vaccineId of referencedIds) {
+    const product = catalogVaccines.find(v => v.id === vaccineId);
+    const hasOpenDiscrepancies = (product?.sourceDiscrepancies ?? []).some(
+      d => d.status !== 'resolved_with_official_document'
+    );
+    if (hasOpenDiscrepancies) {
+      return 'requires_clarification';
+    }
+  }
+
+  if (item.productLinkageStatus === 'conditional_alternative') {
+    return 'conditional_with_restrictions';
+  }
+
+  if (item.productLinkageStatus === 'linked_catalog' && referencedIds.size > 0) {
+    const completeness = deriveCatalogCardCompletenessStatus(item, catalogVaccines);
+    if (completeness === 'complete_verified_card') {
+      return item.linkageAuditNote ? 'conditional_with_restrictions' : 'confirmed_adequate';
+    }
+    return 'pending_adequacy_review';
+  }
+
+  return 'pending_adequacy_review';
+}
+
+/**
+ * Zwraca wyłącznie zakresy dopuszczalne w kontekście decyzji pediatrycznej (wyklucza preparaty dla dorosłych, np. Efluelda).
+ */
+export function getPediatricSelectableFundingScopes(item: ChildVaccineItem): FundingScopeBreakdown[] {
+  return (item.fundingAuditDetails?.fundingScopes ?? []).filter(
+    scope => scope.isPediatricSelectable !== false
+  );
+}
+
+/**
+ * Zwraca zakresy referencyjne dorosłych/szczególne, nieprzeznaczone do wyboru jako szczepionka dziecięca.
+ */
+export function getAdultAndSpecialReferenceScopes(item: ChildVaccineItem): FundingScopeBreakdown[] {
+  return [
+    ...(item.fundingAuditDetails?.fundingScopes ?? []).filter(
+      scope => scope.isPediatricSelectable === false
+    ),
+    ...(item.fundingAuditDetails?.adultAndSpecialReferenceScopes ?? []),
+  ];
+}
+
+/**
+ * Kontrola bramki awansu treści dokumentu ChPL do statusu 'verified_full' / 'verified_chpl'.
+ * Zgodnie z Zadaniem 2 (PROMPT 21): brak lub niekompletność karty katalogowej w VACCINES_CATALOG
+ * NIE blokuje potwierdzenia treści oficjalnego dokumentu ChPL (posiada osobny status kompletności
+ * karty i adekwatności produktu do procedury); nadal blokuje otwarta niezgodność źródłowa ChPL.
  */
 export function canPromoteToVerifiedFull(
   item: ChildVaccineItem,
@@ -133,21 +286,15 @@ export function canPromoteToVerifiedFull(
   for (const vaccineId of referencedIds) {
     const product = catalogVaccines.find(v => v.id === vaccineId);
     if (!product) {
-      if (catalogVaccines.length > 0) {
-        reasons.push(`Brak powiązanej karty katalogowej '${vaccineId}' w bazie preparatów.`);
-      }
       continue;
     }
 
-    if (product.verificationStatus !== 'verified_chpl') {
-      reasons.push(`Powiązany preparat ${product.tradeName} (${product.id}) ma status '${product.verificationStatus}', a nie 'verified_chpl'.`);
-    }
     const openDiscrepancies = (product.sourceDiscrepancies ?? []).filter(
       d => d.status !== 'resolved_with_official_document'
     );
     if (openDiscrepancies.length > 0) {
       reasons.push(
-        `Powiązany preparat ${product.tradeName} ma nierozstrzygnięte niezgodności ChPL: ${openDiscrepancies.map(d => d.id).join(', ')}.`
+        `Powiązana karta źródłowa ${product.tradeName} ma nierozstrzygnięte niezgodności ChPL: ${openDiscrepancies.map(d => d.id).join(', ')}.`
       );
     }
   }
@@ -273,6 +420,34 @@ export function validateChildVaccineStatusInvariants(
     );
   }
 
+  // Zadanie 4 (PROMPT 21): Zakaz umieszczania preparatu Efluelda lub zakresów >=60 lat w liście wybieralnej pediatrycznej
+  for (const scope of item.fundingAuditDetails?.fundingScopes ?? []) {
+    const isSelectable = scope.isPediatricSelectable !== false;
+    const textCheck = `${scope.label} ${scope.productScope} ${scope.ageGroup}`.toLowerCase();
+    if (isSelectable && (textCheck.includes('efluelda') || textCheck.includes('>=60') || textCheck.includes('≥60'))) {
+      errors.push(
+        `[${item.id}] Zakres '${scope.scopeId}' zawiera preparat/wskazanie dla dorosłych (Efluelda / >=60), ale nie jest wyłączony z wyboru pediatrycznego (isPediatricSelectable=false).`
+      );
+    }
+  }
+  for (const excluded of item.fundingAuditDetails?.excludedPediatricProducts ?? []) {
+    if (excluded.excludedFromPediatricSelection !== true) {
+      errors.push(`[${item.id}] Produkt wykluczony '${excluded.productName}' musi mieć excludedFromPediatricSelection=true.`);
+    }
+  }
+
+  // Zadanie 5 (PROMPT 21): Walidacja identyfikowalnych źródeł GTIN
+  for (const g of item.fundingAuditDetails?.gtinReferences ?? []) {
+    if (!g.gtin.trim() || !g.sourceDocumentTitle.trim() || !g.sourceDocumentUrl.startsWith('https://')) {
+      errors.push(`[${item.id}] Wpis GTIN '${g.gtin}' musi posiadać identyfikowalne źródło dokumentowe i adres URL.`);
+    }
+    if (!g.crossCheckedWithEparOrRpl && g.verificationStatus === 'confirmed_in_official_guideline_and_product_doc') {
+      errors.push(
+        `[${item.id}] Wpis GTIN '${g.gtin}' bez potwierdzenia w EPAR/RPL/RARS nie może mieć statusu pełnego potwierdzenia dokumentowego produktu.`
+      );
+    }
+  }
+
   return errors;
 }
 
@@ -366,6 +541,9 @@ export interface ChildVaccinesCatalogAuditSummary {
   linkedCatalogPrimaryOrVariant: number;
   conditionalAlternativeLinkages: number;
   pendingCatalogEntry: number;
+  missingCatalogCardCount: number;
+  incompleteCatalogCardCount: number;
+  completeCatalogCardCount: number;
   infanrixHexaVariantA2Links: number;
   infanrixHexaConditionalLinks: number;
   infanrixHexaTotalLinks: number;
@@ -400,6 +578,8 @@ export function auditChildVaccinesCatalogSummary(
     }
   }
 
+  const cardCompletenessList = catalog.map(i => deriveCatalogCardCompletenessStatus(i, catalogVaccines));
+
   return {
     totalProcedures: catalog.length,
     officialDocumentIdentified: catalog.filter(i => i.chplReferenceStatus === 'official_document_identified').length,
@@ -411,6 +591,9 @@ export function auditChildVaccinesCatalogSummary(
     linkedCatalogPrimaryOrVariant: catalog.filter(i => i.productLinkageStatus === 'linked_catalog').length,
     conditionalAlternativeLinkages: catalog.filter(i => i.productLinkageStatus === 'conditional_alternative').length,
     pendingCatalogEntry: catalog.filter(i => i.productLinkageStatus === 'pending_catalog_entry').length,
+    missingCatalogCardCount: cardCompletenessList.filter(s => s === 'missing_catalog_card').length,
+    incompleteCatalogCardCount: cardCompletenessList.filter(s => s === 'incomplete_or_unverified_card').length,
+    completeCatalogCardCount: cardCompletenessList.filter(s => s === 'complete_verified_card').length,
     infanrixHexaVariantA2Links,
     infanrixHexaConditionalLinks,
     infanrixHexaTotalLinks: infanrixHexaVariantA2Links + infanrixHexaConditionalLinks,

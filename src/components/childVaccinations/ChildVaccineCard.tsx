@@ -14,9 +14,15 @@ import {
   Layers,
   BookOpen
 } from 'lucide-react';
-import type { ChildVaccineItem } from '../../types/childVaccines';
+import type { ChildVaccineItem, FundingScopeBreakdown } from '../../types/childVaccines';
 import type { VaccineProduct } from '../../types/vaccines';
 import { VERIFICATION_STATUS_META } from '../../data/vaccinesCatalog';
+import {
+  deriveCatalogCardCompletenessStatus,
+  deriveProcedureProductAdequacyStatus,
+  getAdultAndSpecialReferenceScopes,
+  getPediatricSelectableFundingScopes,
+} from '../../utils/childVaccineAudit';
 
 interface ChildVaccineCardProps {
   item: ChildVaccineItem;
@@ -38,6 +44,62 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
   const linkages = item.productLinkages ?? [];
   const conditionalLinkages = linkages.filter(l => l.relationType === 'conditional_alternative');
   const variantOrDirectLinkages = linkages.filter(l => l.relationType !== 'conditional_alternative');
+  const pediatricScopes = getPediatricSelectableFundingScopes(item);
+  const adultReferenceScopes = getAdultAndSpecialReferenceScopes(item);
+  const catalogCardCompleteness = deriveCatalogCardCompletenessStatus(item, catalogVaccines);
+  const procedureProductAdequacy = deriveProcedureProductAdequacyStatus(item, catalogVaccines);
+  const reviewedSectionsCount = item.chplAudit?.sectionReviews?.length ?? 0;
+
+  const renderFundingScopeCard = (scope: FundingScopeBreakdown) => (
+    <div key={scope.scopeId} className="funding-scope-item">
+      <div className="funding-scope-header">
+        <strong>{scope.label}</strong>
+        <span
+          className={`funding-scope-badge ${
+            scope.fundingStatus === 'verified_public_free'
+              ? 'scope-badge-free'
+              : scope.fundingStatus === 'verified_reimbursement'
+                ? 'scope-badge-reimbursed'
+                : scope.fundingStatus === 'verified_self_funded'
+                  ? 'scope-badge-self'
+                  : scope.fundingStatus === 'regional_pool_closed'
+                    ? 'scope-badge-closed'
+                    : 'scope-badge-pending'
+          }`}
+        >
+          {scope.fundingStatus === 'verified_public_free' && 'Bezpłatne publiczne'}
+          {scope.fundingStatus === 'verified_reimbursement' && 'Refundacja apteczna'}
+          {scope.fundingStatus === 'verified_self_funded' && 'Co do zasady odpłatne'}
+          {scope.fundingStatus === 'regional_pool_closed' && 'Zamknięta pula regionalna'}
+          {scope.fundingStatus === 'pending_clarification' && 'Wymaga doprecyzowania'}
+        </span>
+      </div>
+      <div><strong>Grupa wiekowa:</strong> {scope.ageGroup}</div>
+      <div><strong>Zakres preparatów:</strong> {scope.productScope}</div>
+      <div><strong>Okres obowiązywania:</strong> {scope.validityPeriod}</div>
+      <div>
+        <strong>Źródło:</strong>{' '}
+        {scope.sourceUrl ? (
+          <a href={scope.sourceUrl} target="_blank" rel="noopener noreferrer">{scope.sourceRef}</a>
+        ) : (
+          scope.sourceRef
+        )}
+      </div>
+      <div><strong>Warunki i wyjątki:</strong> {scope.conditionsAndExceptions}</div>
+      <div className="funding-scope-mechanisms">
+        <span><strong>Zakup publiczny:</strong> {scope.mechanismBreakdown.stateVaccinePurchase}</span>{' | '}
+        <span><strong>Usługa:</strong> {scope.mechanismBreakdown.serviceExecutionFunding}</span>{' | '}
+        <span><strong>Refundacja:</strong> {scope.mechanismBreakdown.pharmacyReimbursement}</span>{' | '}
+        <span><strong>Odpłatność częściowa:</strong> {scope.mechanismBreakdown.partialReimbursementDetail}</span>{' | '}
+        <span><strong>Program czasowy:</strong> {scope.mechanismBreakdown.temporaryProgram}</span>{' | '}
+        <span><strong>Dystrybucja / region:</strong> {scope.mechanismBreakdown.regionalAvailabilityAndDistribution}</span>
+      </div>
+      <div className={scope.mechanismBreakdown.localPointAvailabilityConfirmed ? 'point-availability-confirmed' : 'point-availability-unconfirmed'}>
+        <strong>Punktowa dostępność fiolki:</strong>{' '}
+        {scope.mechanismBreakdown.localPointAvailabilityConfirmed ? 'Potwierdzona w punkcie' : 'Niepotwierdzona lokalnie w punkcie'}
+      </div>
+    </div>
+  );
 
   return (
     <div
@@ -359,12 +421,16 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                 <div className="chpl-audit-meta-box">
                   <div><strong>Audyt treści ChPL:</strong> {item.chplAudit.productName} ({item.chplAudit.documentIdOrAuthorizationNumber})</div>
                   <div><strong>Data / wersja dokumentu:</strong> {item.chplAudit.documentVersionOrDate}</div>
-                  <div><strong>Zakres sekcji:</strong> {item.chplAudit.verifiedSectionsScope.join(', ')} | <strong>Data audytu:</strong> {item.chplAudit.auditDate} ({item.chplAudit.auditor})</div>
+                  <div>
+                    <strong>Zakres sekcji:</strong> {item.chplAudit.verifiedSectionsScope.join(', ') || 'brak'}{' '}
+                    | <strong>Kontrola sekcji 1–10 ChPL:</strong> {reviewedSectionsCount}/10 sprawdzonych sekcji{' '}
+                    | <strong>Data audytu:</strong> {item.chplAudit.auditDate} ({item.chplAudit.auditor})
+                  </div>
                   <div>
                     <strong>Wynik kontroli:</strong>{' '}
                     {item.chplAudit.auditOutcome === 'compliant' && 'Zgodna'}
                     {item.chplAudit.auditOutcome === 'discrepancy_detected' && `Wykryto rozbieżności (${item.chplAudit.unresolvedDiscrepanciesCount} otwarte) — awans do w pełni zweryfikowanej ChPL zablokowany`}
-                    {item.chplAudit.auditOutcome === 'pending_review' && 'Oczekuje na pełny audyt treści i utworzenie karty produktu'}
+                    {item.chplAudit.auditOutcome === 'pending_review' && 'Oczekuje na pełną kontrolę wszystkich 10 właściwych sekcji ChPL (1–10)'}
                   </div>
                 </div>
               )}
@@ -431,57 +497,40 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                     </div>
                   )}
 
-                  {item.fundingAuditDetails.fundingScopes && item.fundingAuditDetails.fundingScopes.length > 0 && (
+                  {pediatricScopes.length > 0 && (
                     <div className="funding-scopes-container">
-                      <div><strong>Szczegółowy podział zakresów wiekowych, produktowych i regionalnych ({item.fundingAuditDetails.fundingScopes.length}):</strong></div>
-                      {item.fundingAuditDetails.fundingScopes.map(scope => (
-                        <div key={scope.scopeId} className="funding-scope-item">
-                          <div className="funding-scope-header">
-                            <strong>{scope.label}</strong>
-                            <span
-                              className={`funding-scope-badge ${
-                                scope.fundingStatus === 'verified_public_free'
-                                  ? 'scope-badge-free'
-                                  : scope.fundingStatus === 'verified_reimbursement'
-                                    ? 'scope-badge-reimbursed'
-                                    : scope.fundingStatus === 'verified_self_funded'
-                                      ? 'scope-badge-self'
-                                      : scope.fundingStatus === 'regional_pool_closed'
-                                        ? 'scope-badge-closed'
-                                        : 'scope-badge-pending'
-                              }`}
-                            >
-                              {scope.fundingStatus === 'verified_public_free' && 'Bezpłatne publiczne'}
-                              {scope.fundingStatus === 'verified_reimbursement' && 'Refundacja apteczna'}
-                              {scope.fundingStatus === 'verified_self_funded' && 'Co do zasady odpłatne'}
-                              {scope.fundingStatus === 'regional_pool_closed' && 'Zamknięta pula regionalna'}
-                              {scope.fundingStatus === 'pending_clarification' && 'Wymaga doprecyzowania'}
-                            </span>
-                          </div>
-                          <div><strong>Grupa wiekowa:</strong> {scope.ageGroup}</div>
-                          <div><strong>Zakres preparatów:</strong> {scope.productScope}</div>
-                          <div><strong>Okres obowiązywania:</strong> {scope.validityPeriod}</div>
+                      <div><strong>Szczegółowy podział zakresów pediatrycznych (&lt;18 lat) wg wieku, preparatu i podstawy ({pediatricScopes.length}):</strong></div>
+                      {pediatricScopes.map(renderFundingScopeCard)}
+                    </div>
+                  )}
+
+                  {item.populationScope === 'cross_age' && adultReferenceScopes.length > 0 && (
+                    <div className="funding-scopes-container funding-scopes-adult-boundary">
+                      <div><strong>Zakresy dla osób ≥18. roku życia (brak prawa do DZ) i komunikaty regionalne ({adultReferenceScopes.length}):</strong></div>
+                      <div className="adult-boundary-note">
+                        Granica 18. urodzin: po ukończeniu 18. r.ż. wygasa bezpłatny wykaz D1 („18-”, kod DZ); obowiązują odrębne zasady odpłatności lub programy czasowe wskazane poniżej.
+                      </div>
+                      {adultReferenceScopes.map(renderFundingScopeCard)}
+                    </div>
+                  )}
+
+                  {item.fundingAuditDetails.gtinReferences && item.fundingAuditDetails.gtinReferences.length > 0 && (
+                    <div className="gtin-references-box">
+                      <div><strong>Dokumentacja źródeł kodów GTIN ({item.fundingAuditDetails.gtinReferences.length}):</strong></div>
+                      {item.fundingAuditDetails.gtinReferences.map(g => (
+                        <div key={g.gtin} className="gtin-reference-item">
+                          <div><strong>GTIN {g.gtin}</strong> – {g.productPresentation} ({g.targetAgeGroup}, dawka {g.dose})</div>
                           <div>
-                            <strong>Źródło:</strong>{' '}
-                            {scope.sourceUrl ? (
-                              <a href={scope.sourceUrl} target="_blank" rel="noopener noreferrer">{scope.sourceRef}</a>
-                            ) : (
-                              scope.sourceRef
-                            )}
+                            <strong>Dokument źródłowy:</strong>{' '}
+                            <a href={g.sourceDocumentUrl} target="_blank" rel="noopener noreferrer">{g.sourceDocumentTitle}</a>{' '}
+                            ({g.sourceSectionOrPage})
                           </div>
-                          <div><strong>Warunki i wyjątki:</strong> {scope.conditionsAndExceptions}</div>
-                          <div className="funding-scope-mechanisms">
-                            <span><strong>Zakup publiczny:</strong> {scope.mechanismBreakdown.stateVaccinePurchase}</span>{' | '}
-                            <span><strong>Usługa:</strong> {scope.mechanismBreakdown.serviceExecutionFunding}</span>{' | '}
-                            <span><strong>Refundacja:</strong> {scope.mechanismBreakdown.pharmacyReimbursement}</span>{' | '}
-                            <span><strong>Odpłatność częściowa:</strong> {scope.mechanismBreakdown.partialReimbursementDetail}</span>{' | '}
-                            <span><strong>Program czasowy:</strong> {scope.mechanismBreakdown.temporaryProgram}</span>{' | '}
-                            <span><strong>Dystrybucja / region:</strong> {scope.mechanismBreakdown.regionalAvailabilityAndDistribution}</span>
-                          </div>
-                          <div className={scope.mechanismBreakdown.localPointAvailabilityConfirmed ? 'point-availability-confirmed' : 'point-availability-unconfirmed'}>
-                            <strong>Punktowa dostępność fiolki:</strong>{' '}
-                            {scope.mechanismBreakdown.localPointAvailabilityConfirmed ? 'Potwierdzona w punkcie' : 'Niepotwierdzona lokalnie w punkcie'}
-                          </div>
+                          <div><strong>Kontrola krzyżowa EPAR/RPL/RARS:</strong> {g.notes}</div>
+                          <span className="gtin-status-tag">
+                            {g.verificationStatus === 'confirmed_in_official_guideline_and_product_doc' && 'Potwierdzono w wytycznych i dokumentacji produktu'}
+                            {g.verificationStatus === 'confirmed_operational_guideline_pending_rpl_rars_cross_check' && 'Potwierdzono w wytycznych MZ – kontrola krzyżowa z RPL/RARS w toku'}
+                            {g.verificationStatus === 'pending_gtin_verification' && 'Oczekuje na potwierdzenie źródła GTIN'}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -572,7 +621,7 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                 </span>
               </div>
               <div className="verification-item">
-                <span className="v-label">Katalog handlowy VaxNurse:</span>
+                <span className="v-label">Powiązanie z katalogiem handlowym:</span>
                 <span
                   className={`v-val ${
                     item.productLinkageStatus === 'linked_catalog'
@@ -586,6 +635,39 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                   {item.productLinkageStatus === 'conditional_alternative' && 'Brak karty podstawowej 3w1 (oczekuje); warunkowa alternatywa 6w1 (cz. III.E.3)'}
                   {item.productLinkageStatus === 'pending_catalog_entry' && 'Oczekuje na utworzenie karty handlowej'}
                   {item.productLinkageStatus === 'not_applicable' && 'Nie dotyczy'}
+                </span>
+              </div>
+              <div className="verification-item">
+                <span className="v-label">Kompletność karty w bazie VaxNurse:</span>
+                <span
+                  className={`v-val ${
+                    catalogCardCompleteness === 'complete_verified_card'
+                      ? 'status-ok'
+                      : catalogCardCompleteness === 'incomplete_or_unverified_card'
+                        ? 'status-pending'
+                        : 'status-muted'
+                  }`}
+                >
+                  {catalogCardCompleteness === 'complete_verified_card' && 'Kompletna, zweryfikowana karta produktu'}
+                  {catalogCardCompleteness === 'incomplete_or_unverified_card' && 'Karta niepełna / z otwartą niezgodnością źródłową ChPL'}
+                  {catalogCardCompleteness === 'missing_catalog_card' && 'Brak karty handlowej w bazie preparatów (odrębne od audytu treści ChPL)'}
+                </span>
+              </div>
+              <div className="verification-item">
+                <span className="v-label">Adekwatność produktu dla procedury PSO:</span>
+                <span
+                  className={`v-val ${
+                    procedureProductAdequacy === 'confirmed_adequate'
+                      ? 'status-ok'
+                      : procedureProductAdequacy === 'requires_clarification'
+                        ? 'status-discrepancy'
+                        : 'status-pending'
+                  }`}
+                >
+                  {procedureProductAdequacy === 'confirmed_adequate' && 'Potwierdzona adekwatność dla procedury'}
+                  {procedureProductAdequacy === 'conditional_with_restrictions' && 'Warunkowa / z zastrzeżeniami (np. Wariant A.2 6w1 lub alternatywa)'}
+                  {procedureProductAdequacy === 'requires_clarification' && 'Wymaga wyjaśnienia (otwarta niezgodność źródłowa produktu)'}
+                  {procedureProductAdequacy === 'pending_adequacy_review' && 'Oczekuje na przegląd i powiązanie produktu'}
                 </span>
               </div>
             </div>

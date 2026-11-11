@@ -20,6 +20,31 @@ export type ProductLinkageStatus = 'linked_catalog' | 'conditional_alternative' 
 export type ProductRelationType = 'direct_primary' | 'variant_a2_6in1' | 'conditional_alternative';
 
 /**
+ * Niezależny status kompletności karty produktu w Bazie preparatów VaxNurse (VACCINES_CATALOG)
+ * oraz niezależny status adekwatności produktu do konkretnej procedury PSO (Zadanie 2 PROMPT 21).
+ */
+export type CatalogCardCompletenessStatus =
+  | 'complete_verified_card'
+  | 'incomplete_or_unverified_card'
+  | 'missing_catalog_card';
+
+export type ProcedureProductAdequacyStatus =
+  | 'confirmed_adequate'
+  | 'conditional_with_restrictions'
+  | 'requires_clarification'
+  | 'pending_adequacy_review';
+
+export type ChplAuditSectionNumber = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10';
+export type ChplSectionReviewStatus = 'verified' | 'not_present_in_document' | 'not_applicable';
+
+export interface ChplSectionAuditEntry {
+  sectionNumber: ChplAuditSectionNumber;
+  status: ChplSectionReviewStatus;
+  /** Obowiązkowe uzasadnienie przy statusie 'not_present_in_document' lub 'not_applicable' */
+  justification?: string;
+}
+
+/**
  * Pełny zapis audytu treści ChPL — wymagany przed awansem do statusu 'verified_full'.
  */
 export interface ChplContentAuditRecord {
@@ -34,6 +59,8 @@ export interface ChplContentAuditRecord {
   auditDate: string;
   auditor: string;
   verifiedSectionsScope: string[];
+  /** Jawna kontrola wszystkich 10 właściwych punktów ChPL (1–10) wraz z ew. uzasadnieniem braku punktu */
+  sectionReviews?: ChplSectionAuditEntry[];
   auditOutcome: 'compliant' | 'discrepancy_detected' | 'pending_review';
   unresolvedDiscrepanciesCount: number;
   notes?: string;
@@ -99,11 +126,48 @@ export interface FundingScopeBreakdown {
   ageGroup: string;
   productScope: string;
   fundingStatus: FundingVerificationStatus | 'regional_pool_closed';
+  /** Określa, czy preparat/zakres dotyczy wyboru pediatrycznego w module dziecięcym (false = wyłącznie referencja dorosłych/wykluczenie) */
+  isPediatricSelectable?: boolean;
+  audienceContext?: 'pediatric' | 'adult_only' | 'pregnancy_puerperium' | 'regional_update';
   validityPeriod: string;
   sourceRef: string;
   sourceUrl?: string;
   conditionsAndExceptions: string;
   mechanismBreakdown: FundingMechanismBreakdown;
+}
+
+/**
+ * Preparat wyłączony z modułu wyboru szczepień dziecięcych (np. Efluelda >=60 lat),
+ * zachowany wyłącznie jako bezpieczna referencja dla przyszłego modułu dorosłych.
+ */
+export interface ExcludedPediatricProductRecord {
+  productName: string;
+  gtin?: string;
+  registeredAgeIndication: string;
+  reimbursementSummary: string;
+  exclusionReason: string;
+  excludedFromPediatricSelection: true;
+}
+
+export type GtinVerificationStatus =
+  | 'confirmed_in_official_guideline_and_product_doc'
+  | 'confirmed_operational_guideline_pending_rpl_rars_cross_check'
+  | 'pending_gtin_verification';
+
+/**
+ * Zindywidualizowana dokumentacja źródła kodu GTIN (odrębna od samego komunikatu o nazwie/dawce).
+ */
+export interface GtinSourceRecord {
+  gtin: string;
+  productPresentation: string;
+  targetAgeGroup: string;
+  dose: string;
+  sourceDocumentTitle: string;
+  sourceDocumentUrl: string;
+  sourceSectionOrPage: string;
+  crossCheckedWithEparOrRpl: boolean;
+  verificationStatus: GtinVerificationStatus;
+  notes: string;
 }
 
 /**
@@ -119,6 +183,12 @@ export interface FundingAuditDetails {
   validityOrVerifiedDate: string;
   mechanismBreakdown: FundingMechanismBreakdown;
   fundingScopes?: FundingScopeBreakdown[];
+  /** Zakresy dorosłych/szczególne przechowywane osobno, NIEprezentowane jako wybór dla dziecka */
+  adultAndSpecialReferenceScopes?: FundingScopeBreakdown[];
+  /** Preparaty wyłączone z wyboru pediatrycznego (np. Efluelda >=60 lat) */
+  excludedPediatricProducts?: ExcludedPediatricProductRecord[];
+  /** Identyfikowalne źródła kodów GTIN dla prezentacji i opakowań */
+  gtinReferences?: GtinSourceRecord[];
 }
 
 export type ChildAgeBracketId =
@@ -222,13 +292,15 @@ export interface ChildVaccineItem {
   verificationStatus: ChildVaccineVerificationStatus; // Status weryfikacji z oficjalnym komunikatem (wstecznie kompatybilny)
   lastVerifiedDate: string;                     // Data weryfikacji rekordu
 
-  // Granularne statusy weryfikacji (Punkt 5 audytu + PROMPT 18 + PROMPT 19)
+  // Granularne statusy weryfikacji (Punkt 5 audytu + PROMPT 18 + PROMPT 19 + PROMPT 21)
   psoVerificationStatus: PsoVerificationStatus;
   chplReferenceStatus: ChplReferenceStatus;
   chplContentVerificationStatus: ChplContentVerificationStatus;
   chplVerificationStatus: ChplVerificationStatus;
   fundingVerificationStatus: FundingVerificationStatus;
   productLinkageStatus: ProductLinkageStatus;
+  catalogCardCompletenessStatus?: CatalogCardCompletenessStatus;
+  procedureProductAdequacyStatus?: ProcedureProductAdequacyStatus;
 }
 
 /**
