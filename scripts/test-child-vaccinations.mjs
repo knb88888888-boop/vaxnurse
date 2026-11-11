@@ -26,6 +26,7 @@ import {
   validateChildVaccineStatusInvariants,
   auditVariantA2IpvCoverage,
   auditChildVaccinesCatalogSummary,
+  auditPendingFundingProcedures,
   getChplManualVerificationQueue,
   getChplManualQueueGroupCounts,
 } from '../src/utils/childVaccineAudit.ts';
@@ -499,12 +500,12 @@ const linkedCount = CHILD_VACCINES_CATALOG.filter(it => it.productLinkageStatus 
 const conditionalAltCount = CHILD_VACCINES_CATALOG.filter(it => it.productLinkageStatus === 'conditional_alternative').length;
 const pendingCatalogCount = CHILD_VACCINES_CATALOG.filter(it => it.productLinkageStatus === 'pending_catalog_entry').length;
 
-assert.equal(identifiedDocCount, 14, 'Dokładnie 14 procedur posiada zidentyfikowany oficjalny dokument ChPL (BCG 10 + 12 Infanrix hexa + grypa 2026/2027 Influvac 49462 / Vaxigrip 50032)');
-assert.equal(refNameOnlyCount, 29, 'Dokładnie 29 procedur zawiera jedynie orientacyjną nazwę handlową produktu');
+assert.equal(identifiedDocCount, 15, 'Dokładnie 15 procedur posiada zidentyfikowany oficjalny dokument ChPL (BCG 10 + 12 Infanrix hexa + grypa 2026/2027 Influvac 49462 / Vaxigrip 50032 + COVID-19 EMA EPAR Spikevax XFG PL/EN)');
+assert.equal(refNameOnlyCount, 28, 'Dokładnie 28 procedur zawiera jedynie orientacyjną nazwę handlową produktu');
 assert.equal(trulyVerifiedChplCount, 0, 'Żadna procedura nie może być oznaczona jako w pełni zweryfikowana ChPL bez zamknięcia niezgodności i pełnego audytu');
 assert.equal(analyzedDiscrepancyCount, 12, '12 procedur kalendarzowych powiązanych z Infanrix hexa ma status analyzed_with_discrepancy');
-assert.equal(pendingAuditCount, 2, 'Wyłącznie 2 procedury ze zidentyfikowanym oficjalnym ChPL bez ukończonego audytu (pso-bcg-0, pso-rec-influenza-1) mają status pending_content_audit');
-assert.equal(notVerifiedContentCount, 29, 'Wszystkie 29 procedur z samym odwołaniem referencyjnym mają status not_verified (spójność z brakiem dokumentu)');
+assert.equal(pendingAuditCount, 3, 'Wyłącznie 3 procedury ze zidentyfikowanym oficjalnym ChPL bez ukończonego audytu (pso-bcg-0, pso-rec-influenza-1, pso-rec-covid-pediatric) mają status pending_content_audit');
+assert.equal(notVerifiedContentCount, 28, 'Wszystkie 28 procedur z samym odwołaniem referencyjnym mają status not_verified (spójność z brakiem dokumentu)');
 assert.equal(linkedCount, 12, 'Dokładnie 12 procedur kalendarzowych (Wariant A.2) ma bezpośrednie powiązanie w katalogu (vac-infanrix-hexa)');
 assert.equal(conditionalAltCount, 1, 'Dokładnie 1 procedura (pso-risk-preterm-dtap) ma status conditional_alternative (III.E.2 vs III.E.3)');
 assert.equal(pendingCatalogCount, 30, 'Dokładnie 30 procedur oczekuje na wprowadzenie do katalogu handlowego');
@@ -528,7 +529,7 @@ for (const ipvId of ['pso-ipv-1', 'pso-ipv-2', 'pso-ipv-3']) {
 const hbv2 = findChildVaccine('pso-hbv-2');
 assert.ok(hbv2?.linkageAuditNote?.includes('Wariant A.2 (6w1)'), 'pso-hbv-2 musi zawierać uwagę o pokryciu dawki przez Infanrix hexa');
 
-console.log('   ✓ SCENARIUSZ 12 ZALICZONY: Rozdzielono identyfikację dokumentu ChPL (14), weryfikację treści (0 verified_full, 12 discrepancy, 2 pending_audit, 29 not_verified) i warunkową alternatywę DTaP 3w1/6w1.\n');
+console.log('   ✓ SCENARIUSZ 12 ZALICZONY: Rozdzielono identyfikację dokumentu ChPL (15), weryfikację treści (0 verified_full, 12 discrepancy, 3 pending_audit, 28 not_verified) i warunkową alternatywę DTaP 3w1/6w1.\n');
 
 console.log('13. Weryfikacja wymogów PROMPT 19: niezmienniki statusowe, bramka verified_full, IPV w A.2, BCG/AJVaccines oraz finansowanie...');
 
@@ -1402,6 +1403,217 @@ assert.equal(infanrixProduct?.sourceDiscrepancies?.[0]?.status, 'requires_clarif
 
 console.log('   ✓ SCENARIUSZ 17 ZALICZONY: Wszystkie testy końcowe PROMPT 23 (połóg kod C, Influvac/Vaxigrip 2026/2027, Fluenz Tetra/Fluenz, kolejka 43 ChPL) zaliczone.\n');
 
+// -------------------------------------------------------------
+// Scenariusz 18: Testy końcowe PROMPT 24 (11 testów z Zadania 8)
+// -------------------------------------------------------------
+console.log('18. Testy końcowe PROMPT 24 – uzgodnienie ChPL grypy 2026/2027, EMA Spikevax XFG, rozdzielenie ChPL vs GTIN, finansowanie i kolejka...');
+
+// 18.1 Influvac 49462 i Vaxigrip 50032 mają potwierdzoną zawartość 2026/2027 i wyjaśnioną rozbieżność wyszukiwarki RPL (plus odrzucenie 2024/2025 i 2025/2026)
+assert.ok(flu && flu.chplAudit, '18.1: Procedura pso-rec-influenza-1 musi posiadać obiekt chplAudit');
+assert.equal(flu.chplReferenceStatus, 'official_document_identified', '18.1: Grypa 2026/2027 musi mieć chplReferenceStatus=official_document_identified');
+assert.equal(flu.chplContentVerificationStatus, 'pending_content_audit', '18.1: Grypa 2026/2027 bez pełnego audytu sekcji 4–6 musi mieć pending_content_audit');
+assert.equal(flu.chplAudit.documentOrigin, 'RPL_PL', '18.1: ChPL Influvac/Vaxigrip pochodzą z polskiego RPL');
+assert.equal(flu.chplAudit.targetSeason, '2026/2027', '18.1: Docelowy sezon ChPL grypy musi wynosić 2026/2027');
+assert.equal(flu.chplAudit.sourceSeason, '2026/2027', '18.1: Sezon składu pkt 2 pobranych ChPL musi wynosić 2026/2027');
+assert.equal(flu.chplAudit.fileSizeBytes, 221500, '18.1: Pobrana ChPL Influvac (49462) musi wskazywać dokładny rozmiar 221500 B');
+assert.equal(
+  flu.chplAudit.fileSha256,
+  '933f604e3aef5417ed948d2537900ed40e295b3edd21587778ea902d68cf016d',
+  '18.1: Pobrana ChPL Influvac (49462) musi posiadać zweryfikowany skrót SHA-256'
+);
+assert.equal(flu.chplAudit.secondaryFileSizeBytes, 600348, '18.1: Pobrana ChPL Vaxigrip (50032) musi wskazywać dokładny rozmiar 600348 B');
+assert.equal(
+  flu.chplAudit.secondaryFileSha256,
+  'ff3f12a3aef271436f12cc19fa9bf8e9d3ac9f03e151bbaafb2f7bf61c6038dc',
+  '18.1: Pobrana ChPL Vaxigrip (50032) musi posiadać zweryfikowany skrót SHA-256'
+);
+assert.ok(
+  flu.chplAudit.metadataDiscrepancyNote?.includes('hasDownloadableMaterials=false') &&
+    flu.chplAudit.metadataDiscrepancyNote?.includes('2024/2025') &&
+    flu.chplAudit.metadataDiscrepancyNote?.includes('35346'),
+  '18.1: chplAudit.metadataDiscrepancyNote musi wyjaśniać lag metadanych /search/public i historyczny wpis VaxigripTetra RPL 35346 (2025/2026)'
+);
+
+const fluWrongSeason2024 = {
+  ...flu,
+  chplAudit: {
+    ...flu.chplAudit,
+    sourceSeason: '2024/2025',
+  },
+};
+const fluWrongSeason2025 = {
+  ...flu,
+  chplAudit: {
+    ...flu.chplAudit,
+    sourceSeason: '2025/2026',
+  },
+};
+assert.ok(
+  validateChildVaccineStatusInvariants(fluWrongSeason2024, VACCINES_CATALOG).length > 0 &&
+    validateChildVaccineStatusInvariants(fluWrongSeason2025, VACCINES_CATALOG).length > 0 &&
+    !canPromoteToVerifiedFull(fluWrongSeason2025, VACCINES_CATALOG).allowed,
+  '18.1: Dokumenty ChPL z sezonów 2024/2025 i 2025/2026 muszą być twardo odrzucane dla sezonu 2026/2027'
+);
+
+// 18.2 Zakaz awansu Influvac/Vaxigrip do verified_full bez audytu sekcji 1–10
+assert.equal(canPromoteToVerifiedFull(flu, VACCINES_CATALOG).allowed, false, '18.2: Brak audytu sekcji 4–6 musi blokować awans grypy do verified_full');
+assert.equal(flu.chplVerificationStatus, 'pending_chpl_verification', '18.2: Grypa zachowuje pending_chpl_verification');
+
+// 18.3 pso-rec-covid-pediatric ma przypisaną oficjalną ChPL EMA Spikevax XFG (PL i EN)
+assert.ok(covid && covid.chplAudit, '18.3: COVID-19 (pso-rec-covid-pediatric) musi posiadać obiekt chplAudit EMA Spikevax XFG');
+assert.equal(covid.chplReferenceStatus, 'official_document_identified', '18.3: COVID-19 musi mieć chplReferenceStatus=official_document_identified');
+assert.equal(
+  covid.chplOfficialSourceUrl,
+  'https://www.ema.europa.eu/pl/documents/product-information/spikevax-epar-product-information_pl.pdf',
+  '18.3: Oficjalna polska ChPL EMA EPAR dla Spikevax XFG musi być przypisana w chplOfficialSourceUrl'
+);
+assert.equal(
+  covid.chplAudit.secondaryOfficialSourceUrl,
+  'https://www.ema.europa.eu/en/documents/product-information/spikevax-epar-product-information_en.pdf',
+  '18.3: Wersja angielska EPAR EMA dla Spikevax XFG musi być przypisana w chplAudit.secondaryOfficialSourceUrl'
+);
+assert.equal(covid.chplAudit.documentOrigin, 'EMA_EPAR_CEN_PL_EN', '18.3: Pochodzenie dokumentu COVID-19 musi wskazywać rejestrację centralną EPAR EMA');
+assert.equal(covid.chplAudit.fileSizeBytes, 1878146);
+assert.equal(covid.chplAudit.fileSha256, 'bd1ba23ca4e25a3f7353f01e3be889dd8962c471ad257e7beefd50351fdb6fec');
+assert.equal(covid.chplAudit.secondaryFileSizeBytes, 1387433);
+assert.equal(covid.chplAudit.secondaryFileSha256, '8932b31f46e652f9ee4be89ad65cd6003f9fa5a63be0f2af64affd645a0d7024');
+assert.equal(covid.chplMarketingAuthorizationHolder, 'MODERNA BIOTECH SPAIN, S.L.');
+assert.ok(covid.chplAuthorizationNumber?.includes('EU/1/20/1507/041–050'), '18.3: COVID-19 musi wskazywać numery pozwoleń UE dla Spikevax XFG');
+assert.equal(covid.chplAudit.documentDateStatus, 'missing_in_document', '18.3: Pkt 10 Aneksu I Spikevax XFG nie zawiera wpisanej daty rewizji w tekście PDF');
+
+// 18.4 Zakaz awansu COVID-19 do verified_full bez pełnego audytu sekcji 4 (4.1–4.9), 5 i 6
+assert.equal(covid.chplContentVerificationStatus, 'pending_content_audit', '18.4: COVID-19 po przypisaniu EMA ChPL musi mieć pending_content_audit');
+assert.equal(covid.chplVerificationStatus, 'pending_chpl_verification', '18.4: COVID-19 nie może mieć statusu verified_chpl bez pełnego audytu 1–10');
+assert.equal(covid.productLinkageStatus, 'pending_catalog_entry', '18.4: COVID-19 nadal oczekuje na utworzenie karty Spikevax XFG w VACCINES_CATALOG');
+assert.equal(covid.linkedVaccineIds.length, 0);
+assert.equal(canPromoteToVerifiedFull(covid, VACCINES_CATALOG).allowed, false, '18.4: Bramka verified_full musi blokować awans COVID-19 przy braku sekcji 4, 5 i 6');
+
+// 18.5 Rozdzielenie statusu ChPL EMA vs statusów GTIN MZ + RARS (confirmedByEma=false, confirmedByRpl=false)
+const covidGtinsPrompt24 = covid.fundingAuditDetails?.gtinReferences ?? [];
+assert.equal(covidGtinsPrompt24.length, 2, '18.5: COVID-19 musi zachowywać dokładnie 2 wpisy GTIN (25 µg i 50 µg)');
+for (const gtinCode of ['00380777714110', '00380777712024']) {
+  const g = covidGtinsPrompt24.find(entry => entry.gtin === gtinCode);
+  assert.ok(g, `18.5: Brak wpisu GTIN ${gtinCode}`);
+  assert.equal(g.confirmedByMzGuidelines, true);
+  assert.equal(g.confirmedByRars, true);
+  assert.equal(g.confirmedByEma, false, `18.5: Mimo przypisania EPAR EMA, GTIN ${gtinCode} nie występuje w PDF EMA -> confirmedByEma musi pozostać false`);
+  assert.equal(g.confirmedByRpl, false, `18.5: GTIN ${gtinCode} w RPL CEN (HTTP 400) -> confirmedByRpl musi pozostać false`);
+  assert.equal(g.crossCheckedWithEparOrRpl, false);
+  assert.equal(g.verificationStatus, 'confirmed_mz_guideline_and_rars_pending_rpl_ema');
+}
+const covidFakeEmaGtin = {
+  ...covid,
+  fundingAuditDetails: {
+    ...covid.fundingAuditDetails,
+    gtinReferences: covidGtinsPrompt24.map(g => ({ ...g, confirmedByEma: true })),
+  },
+};
+assert.ok(
+  validateChildVaccineStatusInvariants(covidFakeEmaGtin, VACCINES_CATALOG).length > 0,
+  '18.5: Próba automatycznego oznaczenia confirmedByEma=true bez crossCheckedWithEparOrRpl=true musi być blokowana przez walidator'
+);
+
+// 18.6 Spójność podsumowania finansowania (36 / 0 / 5 / 2) oraz jawne rozliczenie 2 procedur pending_clarification
+assert.deepEqual(catalogSummary.fundingCounts, {
+  verified_public_free: 36,
+  verified_reimbursement: 0,
+  verified_self_funded: 5,
+  pending_clarification: 2,
+});
+const pendingFundingReport = auditPendingFundingProcedures(CHILD_VACCINES_CATALOG);
+assert.equal(pendingFundingReport.pendingProceduresCount, 2, '18.6: Raport pending_clarification musi wskazywać dokładnie 2 procedury');
+assert.deepEqual(
+  pendingFundingReport.pendingProcedureIds,
+  ['pso-rec-influenza-1', 'pso-rec-hpv-catchup'],
+  '18.6: Procedury pending_clarification to wyłącznie pso-rec-influenza-1 oraz pso-rec-hpv-catchup'
+);
+const pendingFluReport = pendingFundingReport.details.find(d => d.procedureId === 'pso-rec-influenza-1');
+const pendingHpvReport = pendingFundingReport.details.find(d => d.procedureId === 'pso-rec-hpv-catchup');
+assert.ok(
+  pendingFluReport &&
+    pendingFluReport.confirmedScopes.length >= 5 &&
+    pendingFluReport.pendingOrClosedScopes.length === 2,
+  '18.6: Raport grypy musi oddzielać 5 potwierdzonych zakresów wstrzykiwanych od 2 wykluczonych zakresów donosowych LAIV'
+);
+assert.ok(
+  pendingHpvReport &&
+    pendingHpvReport.confirmedScopes.length >= 5 &&
+    pendingHpvReport.pendingOrClosedScopes.some(s => s.scopeId === 'hpv-19-26-wsse-wroclaw-closure' && s.fundingStatus === 'regional_pool_closed'),
+  '18.6: Raport HPV musi oddzielać potwierdzone zakresy D1/A1/Gardasil/program od zamkniętych pul regionalnych (regional_pool_closed)'
+);
+
+// 18.7 Spójność warunkowej refundacji ciąży i połogu (art. 43b, kod C, inny lekarz na podstawie zaświadczenia, termin realizacji recepty, POZ vs apteka >=18)
+const fluPregScopePrompt24 = (flu.fundingAuditDetails?.adultAndSpecialReferenceScopes ?? []).find(
+  s => s.scopeId === 'flu-pregnancy-puerperium-reference'
+);
+assert.ok(fluPregScopePrompt24, '18.7: Musi istnieć zakres szczególny flu-pregnancy-puerperium-reference');
+assert.equal(fluPregScopePrompt24.fundingStatus, 'verified_reimbursement');
+assert.equal(fluPregScopePrompt24.isPediatricSelectable, false);
+assert.ok(
+  fluPregScopePrompt24.conditionsAndExceptions.toLowerCase().includes('innego lekarza') &&
+    fluPregScopePrompt24.conditionsAndExceptions.toLowerCase().includes('zaświadczenia') &&
+    fluPregScopePrompt24.conditionsAndExceptions.toLowerCase().includes('termin realizacji recepty') &&
+    fluPregScopePrompt24.conditionsAndExceptions.includes('6 tygodni po upływie 15 dni') &&
+    fluPregScopePrompt24.mechanismBreakdown.pharmacyReimbursement.toLowerCase().includes('recepta farmaceutyczna nie nadaje kodu'),
+  '18.7: Warunkowy kod C w ciąży i połogu musi ujmować receptę lekarza/położnej, receptę innego lekarza na podstawie zaświadczenia, termin realizacji recepty i zakaz kodu C na recepcie farmaceutycznej'
+);
+const fluMissingCertNote = {
+  ...flu,
+  fundingAuditDetails: {
+    ...flu.fundingAuditDetails,
+    adultAndSpecialReferenceScopes: (flu.fundingAuditDetails?.adultAndSpecialReferenceScopes ?? []).map(s =>
+      s.scopeId === 'flu-pregnancy-puerperium-reference'
+        ? { ...s, conditionsAndExceptions: 'art. 43b połogu 6 tygodni 15 dni kod C' }
+        : s
+    ),
+  },
+};
+assert.ok(
+  validateChildVaccineStatusInvariants(fluMissingCertNote, VACCINES_CATALOG).length > 0,
+  '18.7: Walidator musi wykryć usunięcie warunków zaświadczenia / terminu realizacji recepty dla zakresu połogu'
+);
+
+// 18.8 Aktualność kolejki ręcznego audytu ChPL (43 procedury, A:1, B:12, C:20, D:8, E:2) z wpisanym EMA EPAR przy COVID-19
+assert.equal(chplQueue.length, 43);
+assert.deepEqual(queueCounts, { A: 1, B: 12, C: 20, D: 8, E: 2 });
+const covidQueueItem = chplQueue.find(q => q.procedureId === 'pso-rec-covid-pediatric');
+assert.ok(covidQueueItem, '18.8: Kolejka audytu ChPL musi zawierać pso-rec-covid-pediatric');
+assert.equal(covidQueueItem.queueGroup, 'E');
+assert.equal(covidQueueItem.currentChplReferenceStatus, 'official_document_identified');
+assert.equal(covidQueueItem.currentChplContentStatus, 'pending_content_audit');
+assert.ok(
+  covidQueueItem.officialChplSources.includes('https://www.ema.europa.eu/pl/documents/product-information/spikevax-epar-product-information_pl.pdf') &&
+    covidQueueItem.officialChplSources.includes('https://www.ema.europa.eu/en/documents/product-information/spikevax-epar-product-information_en.pdf'),
+  '18.8: Wpis kolejki ChPL dla COVID-19 musi wymieniać oba oficjalne adresy EPAR EMA (PL i EN)'
+);
+assert.ok(
+  covidQueueItem.auditReason.includes('EPAR EMA (PL/EN)'),
+  '18.8: Uzasadnienie w kolejce ChPL dla COVID-19 musi odzwierciedlać zidentyfikowanie oficjalnej ChPL EPAR EMA'
+);
+
+// 18.9 Integralność liczby 43 procedur oraz 0 awansów verified_full i 0 naruszeń niezmienników
+assert.equal(CHILD_VACCINES_CATALOG.length, 43, '18.9: Liczba procedur katalogu musi wynosić dokładnie 43');
+assert.equal(catalogSummary.totalProcedures, 43);
+assert.equal(catalogSummary.verifiedFull, 0, '18.9: Żadna procedura nie może być verified_full przed pełnym audytem');
+assert.deepEqual(catalogSummary.invariantViolations, [], '18.9: Zero naruszeń niezmienników');
+
+// 18.10 Nienaruszalność vac-infanrix-hexa i disc-phenylalanine-content-01
+assert.equal(infanrixProduct?.id, 'vac-infanrix-hexa');
+assert.equal(infanrixProduct?.verificationStatus, 'requires_source_clarification');
+assert.equal(infanrixProduct?.sourceDiscrepancies?.[0]?.id, 'disc-phenylalanine-content-01');
+assert.equal(infanrixProduct?.sourceDiscrepancies?.[0]?.status, 'requires_clarification');
+assert.equal(catalogSummary.infanrixHexaTotalLinks, 13, '18.10: Wszystkie 13 powiązań do vac-infanrix-hexa (12 A.2 + 1 warunkowe) muszą pozostać nienaruszone');
+
+// 18.11 Brak wycieku wykluczonych preparatów dorosłych/niedostępnych (Efluelda / Fluenz / ciąża i połóg) do wyborów pediatrycznych
+const fluSelectableIds = getPediatricSelectableFundingScopes(flu).map(s => s.scopeId);
+assert.deepEqual(
+  fluSelectableIds,
+  ['flu-pediatric-under18-influvac', 'flu-pediatric-under18-vaxigrip'],
+  '18.11: Wybieralne pediatrycznie w grypie 2026/2027 pozostają wyłącznie trójwalentne Influvac i Vaxigrip'
+);
+
+console.log('   ✓ SCENARIUSZ 18 ZALICZONY: Wszystkie 11 testów końcowych PROMPT 24 przeszły pomyślnie.\n');
+
 console.log('================================================================');
-console.log(' WYNIK KOŃCOWY: 17/17 SCENARIUSZY AUDYTU ZALICZONYCH (100%)    ');
+console.log(' WYNIK KOŃCOWY: 18/18 SCENARIUSZY AUDYTU ZALICZONYCH (100%)    ');
 console.log('================================================================\n');

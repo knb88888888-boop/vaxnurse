@@ -10,7 +10,10 @@ import type {
   ChplReferenceStatus,
   ChplSectionAuditEntry,
   ChplVerificationStatus,
+  FundingScopeAuditEntry,
   FundingScopeBreakdown,
+  PendingFundingAuditReport,
+  PendingFundingProcedureDetail,
   ProcedureProductAdequacyStatus,
 } from '../types/childVaccines.ts';
 import type { VaccineProduct } from '../types/vaccines.ts';
@@ -255,6 +258,20 @@ function isValidChplAuditRecord(
         issues.push(`Nieprawidłowy status kontroli dla punktu ${sec} ChPL.`);
       }
     }
+  }
+
+  if (audit.targetSeason && audit.sourceSeason && audit.sourceSeason.trim() !== audit.targetSeason.trim()) {
+    issues.push(
+      `Dokument ChPL z sezonu '${audit.sourceSeason}' nie może stanowić dowodu dla docelowego sezonu '${audit.targetSeason}'.`
+    );
+  }
+  if (
+    item?.id === 'pso-rec-influenza-1' &&
+    (!audit.sourceSeason || audit.sourceSeason === '2024/2025' || audit.sourceSeason === '2025/2026')
+  ) {
+    issues.push(
+      'Dokumentacja ChPL grypy na sezon 2026/2027 nie może opierać się na składzie ani plikach z sezonów 2024/2025 lub 2025/2026.'
+    );
   }
 
   if (audit.auditOutcome !== 'compliant') {
@@ -606,12 +623,15 @@ export function validateChildVaccineStatusInvariants(
         !condLower.includes('6 tygodni') ||
         !condLower.includes('15 dni') ||
         !condLower.includes('połogu') ||
+        !condLower.includes('zaświadczenia') ||
+        !condLower.includes('innego lekarza') ||
+        !condLower.includes('termin realizacji recepty') ||
         !pharmLower.includes('recepta farmaceutyczna') ||
         !servLower.includes('poz') ||
         !servLower.includes('18')
       ) {
         errors.push(
-          `[${item.id}] Warunkowe finansowanie ciąży/połogu ('verified_reimbursement') musi jawnie zachowywać limit art. 43b (6 tyg. po +15 dniach), rozdział POZ vs apteka >=18 oraz zakaz kodu C na recepcie farmaceutycznej.`
+          `[${item.id}] Warunkowe finansowanie ciąży/połogu ('verified_reimbursement') musi jawnie zachowywać limit art. 43b (recepta lekarza/położnej lub innego lekarza na podstawie zaświadczenia, termin realizacji recepty i ważność max. 6 tyg. po +15 dniach), rozdział POZ vs apteka >=18 oraz zakaz kodu C na recepcie farmaceutycznej.`
         );
       }
     }
@@ -630,7 +650,16 @@ export function validateChildVaccineStatusInvariants(
     }
   }
 
-  // Zadanie 5 (PROMPT 21) + Zadanie 2 (PROMPT 22): Walidacja identyfikowalnych źródeł GTIN i rozdzielenie RARS vs RPL/EMA
+  // Zadanie 1 (PROMPT 24): Kontrola zgodności sezonu dokumentu ChPL z sezonem procedury
+  if (item.chplAudit?.targetSeason && item.chplAudit?.sourceSeason) {
+    if (item.chplAudit.sourceSeason.trim() !== item.chplAudit.targetSeason.trim()) {
+      errors.push(
+        `[${item.id}] ChPL z sezonu '${item.chplAudit.sourceSeason}' nie może być przypisany jako aktualna ChPL dla sezonu '${item.chplAudit.targetSeason}'.`
+      );
+    }
+  }
+
+  // Zadanie 5 (PROMPT 21) + Zadanie 2 (PROMPT 22) + Zadanie 3 (PROMPT 24): Walidacja identyfikowalnych źródeł GTIN i ścisłe rozdzielenie statusu dokumentu ChPL vs potwierdzenia GTIN w RPL/EMA
   for (const g of item.fundingAuditDetails?.gtinReferences ?? []) {
     if (!g.gtin.trim() || !g.sourceDocumentTitle.trim() || !g.sourceDocumentUrl.startsWith('https://')) {
       errors.push(`[${item.id}] Wpis GTIN '${g.gtin}' musi posiadać identyfikowalne źródło dokumentowe i adres URL.`);
@@ -640,12 +669,17 @@ export function validateChildVaccineStatusInvariants(
         `[${item.id}] Wpis GTIN '${g.gtin}' z confirmedByRars=true musi wskazywać oficjalne źródło i URL RARS (https://www.gov.pl/web/rars/...).`
       );
     }
+    if ((g.confirmedByRpl || g.confirmedByEma) && !g.crossCheckedWithEparOrRpl) {
+      errors.push(
+        `[${item.id}] Wpis GTIN '${g.gtin}' oznaczony jako confirmedByRpl/confirmedByEma wymaga crossCheckedWithEparOrRpl=true (samo zidentyfikowanie ChPL EPAR bez GTIN nie potwierdza GTIN).`
+      );
+    }
     if (
       g.verificationStatus === 'confirmed_in_official_guideline_and_product_doc' &&
       (!g.crossCheckedWithEparOrRpl || (!g.confirmedByRpl && !g.confirmedByEma))
     ) {
       errors.push(
-        `[${item.id}] Wpis GTIN '${g.gtin}' bez potwierdzenia w EPAR/RPL nie może mieć statusu 'confirmed_in_official_guideline_and_product_doc' (samo potwierdzenie RARS nie wystarcza).`
+        `[${item.id}] Wpis GTIN '${g.gtin}' bez potwierdzenia w EPAR/RPL nie może mieć statusu 'confirmed_in_official_guideline_and_product_doc' (samo potwierdzenie RARS lub sam PDF ChPL bez GTIN nie wystarcza).`
       );
     }
     if (
@@ -843,10 +877,13 @@ const CHPL_QUEUE_GROUP_LABELS: Record<ChplManualQueueGroup, string> = {
 
 function collectOfficialChplSources(item: ChildVaccineItem, linkedProducts: VaccineProduct[]): string[] {
   const sources: string[] = [];
-  if (item.chplOfficialSourceUrl) {
+  if (item.chplOfficialSourceUrl && !sources.includes(item.chplOfficialSourceUrl)) {
     sources.push(item.chplOfficialSourceUrl);
   }
-  if (item.alternativeProductDetails?.officialChplUrl) {
+  if (item.chplAudit?.secondaryOfficialSourceUrl && !sources.includes(item.chplAudit.secondaryOfficialSourceUrl)) {
+    sources.push(item.chplAudit.secondaryOfficialSourceUrl);
+  }
+  if (item.alternativeProductDetails?.officialChplUrl && !sources.includes(item.alternativeProductDetails.officialChplUrl)) {
     sources.push(item.alternativeProductDetails.officialChplUrl);
   }
   for (const product of linkedProducts) {
@@ -858,6 +895,72 @@ function collectOfficialChplSources(item: ChildVaccineItem, linkedProducts: Vacc
     }
   }
   return sources;
+}
+
+/**
+ * Tylko do odczytu (Zadanie 4 PROMPT 24): precyzyjnie wyjaśnia, które procedury
+ * pozostają na poziomie procedury ze statusem `pending_clarification`, dlaczego tak jest
+ * oraz które zakresy wewnętrzne są już potwierdzone, a które oczekują lub są zamknięte.
+ */
+export function auditPendingFundingProcedures(catalog: ChildVaccineItem[]): PendingFundingAuditReport {
+  const pendingItems = catalog.filter(i => i.fundingVerificationStatus === 'pending_clarification');
+
+  const details: PendingFundingProcedureDetail[] = pendingItems.map(item => {
+    const allScopes = [
+      ...(item.fundingAuditDetails?.fundingScopes ?? []),
+      ...(item.fundingAuditDetails?.adultAndSpecialReferenceScopes ?? []),
+    ];
+
+    const toAuditEntry = (s: FundingScopeBreakdown): FundingScopeAuditEntry => ({
+      scopeId: s.scopeId,
+      label: s.label,
+      fundingStatus: s.fundingStatus,
+      isPediatricSelectable: s.isPediatricSelectable !== false,
+      seasonalAvailabilityStatus: s.seasonalAvailabilityStatus,
+      audienceContext: s.audienceContext,
+    });
+
+    const confirmedScopes = allScopes
+      .filter(
+        s =>
+          s.fundingStatus === 'verified_public_free' ||
+          s.fundingStatus === 'verified_reimbursement' ||
+          s.fundingStatus === 'verified_self_funded'
+      )
+      .map(toAuditEntry);
+
+    const pendingOrClosedScopes = allScopes
+      .filter(s => s.fundingStatus === 'pending_clarification' || s.fundingStatus === 'regional_pool_closed')
+      .map(toAuditEntry);
+
+    let stayPendingReason: string;
+    if (item.id === 'pso-rec-influenza-1') {
+      stayPendingReason =
+        'Procedura zachowuje status pending_clarification z uwagi na wykluczone/niedostępne w Polsce w sezonie 2026/2027 zakresy donosowe LAIV (wycofana Fluenz Tetra oraz niedostępna 3-walentna Fluenz), przy jednoczesnym pełnym potwierdzeniu refundacji wstrzykiwanych preparatów trójwalentnych (Influvac, Vaxigrip w D1/A1/D2/E).';
+    } else if (item.id === 'pso-rec-hpv-catchup') {
+      stayPendingReason =
+        'Procedura zachowuje status pending_clarification z powodu zmienności i zamykania regionalnych/terenowych pul programu „Szczepienie przeciw HPV 19–26 lat” (np. komunikat WSSE we Wrocławiu z 20.10.2026 r.), mimo potwierdzonej refundacji aptecznej Cervarix (D1/A1) oraz pełnopłatnej ścieżki Gardasil 9.';
+    } else {
+      stayPendingReason =
+        'Procedura zawiera co najmniej jeden nierozstrzygnięty lub zamknięty zakres wewnętrzny wymagający wyjaśnienia bez obniżania statusu zakresów potwierdzonych.';
+    }
+
+    return {
+      procedureId: item.id,
+      shortCode: item.shortCode,
+      disease: item.disease,
+      procedureFundingStatus: item.fundingVerificationStatus,
+      stayPendingReason,
+      confirmedScopes,
+      pendingOrClosedScopes,
+    };
+  });
+
+  return {
+    pendingProceduresCount: details.length,
+    pendingProcedureIds: details.map(d => d.procedureId),
+    details,
+  };
 }
 
 /**
@@ -894,11 +997,12 @@ export function getChplManualVerificationQueue(
           'Zidentyfikowano i pobrano oficjalne ChPL RPL 2026/2027 (Influvac 49462, Vaxigrip 50032), lecz wymagają one audytu sekcji 1–10 oraz rozgraniczenia od historycznej VaxigripTetra i niedostępnej Fluenz/wycofanej Fluenz Tetra.';
       } else {
         missingDocumentsOrActions = [
-          'Oficjalny ChPL / EPAR EMA dla Spikevax LP.8.1 / Spikevax XFG potwierdzający konkretne opakowania i GTIN (00380777714110 oraz 00380777712024)',
-          'Przeprowadzenie pełnego audytu sekcji 1–10 (w tym 4.1–4.9) po publikacji wiążącej ChPL i powiązanie wariantu dziecięcego w VACCINES_CATALOG',
+          'Pełny audyt kliniczny sekcji 4 (4.1–4.9, w tym Tabele 2–3), 5 i 6 zidentyfikowanego Aneksu I ChPL Spikevax XFG w EPAR EMA PL (str. 64–92) i EN (str. 53–77; EU/1/20/1507/041–050) wraz z wyjaśnieniem braku wpisanej daty w pkt 10',
+          'Utworzenie karty preparatu Spikevax XFG w VACCINES_CATALOG (obecnie pending_catalog_entry)',
+          'Potwierdzenie w przyszłości w źródłach RPL/EMA kodów GTIN 00380777714110 i 00380777712024, które pozostają potwierdzone wyłącznie operacyjnie w Wytycznych MZ i na stronie RARS (confirmedByEma=false, confirmedByRpl=false)',
         ];
         auditReason =
-          'Kody GTIN potwierdzone operacyjnie w RARS/MZ, lecz bez potwierdzenia w polskiej RPL/EMA EPAR i bez pełnej ChPL dla wariantu 2026/2027.';
+          'Zidentyfikowano i pobrano oficjalne ChPL EPAR EMA (PL/EN) dla Spikevax XFG (rejestracja centralna CEN — wpisy RPL 54306/54308/54456 zwracają HTTP 400 na /characteristic), lecz brak jeszcze audytu sekcji klinicznych 4–6, brak wpisanej daty w pkt 10 Aneksu I, brak karty w katalogu, a kody GTIN nie występują w EPAR EMA.';
       }
     } else if (item.linkedVaccineIds.includes('vac-infanrix-hexa')) {
       queueGroup = 'B';

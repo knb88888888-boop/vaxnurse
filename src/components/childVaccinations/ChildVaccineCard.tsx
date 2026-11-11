@@ -429,6 +429,17 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                     <span>Otwórz oficjalną ChPL produktu ({item.chplAuthorizationNumber || 'RPL / ChPL'})</span>
                     <ExternalLink size={13} />
                   </a>
+                  {item.chplAudit?.secondaryOfficialSourceUrl && (
+                    <a
+                      href={item.chplAudit.secondaryOfficialSourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="chpl-direct-doc-btn"
+                    >
+                      <span>Drugi oficjalny dokument ChPL ({item.chplAudit.documentOrigin === 'EMA_EPAR_CEN_PL_EN' ? 'EPAR EMA EN' : 'RPL / ChPL'})</span>
+                      <ExternalLink size={13} />
+                    </a>
+                  )}
                 </div>
               )}
 

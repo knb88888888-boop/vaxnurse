@@ -78,6 +78,26 @@ export interface ChplSectionAuditEntry {
 export interface ChplContentAuditRecord {
   productName: string;
   officialSourceUrl: string;
+  /** Dodatkowy oficjalny dokument ChPL (np. wersja EN EPAR EMA lub drugi preparat równorzędny) */
+  secondaryOfficialSourceUrl?: string;
+  /** Pochodzenie dokumentu rejestracyjnego (RPL krajowy vs procedura centralna EMA EPAR) */
+  documentOrigin?: 'RPL_PL' | 'EMA_EPAR_CEN_PL_EN' | 'MAH_OFFICIAL';
+  /** Docelowy sezon szczepienia, dla którego oceniano ChPL (np. '2026/2027') */
+  targetSeason?: string;
+  /** Sezon epidemiczny wynikający wprost ze składu antygenowego pkt 2 pobranej ChPL */
+  sourceSeason?: string;
+  /** Czas pobrania i kontroli binarnej dokumentu z publicznego endpointu */
+  downloadedAt?: string;
+  /** Rozmiar pobranego pliku PDF w bajtach */
+  fileSizeBytes?: number;
+  /** Skrót SHA-256 pobranego pliku PDF (dowód tożsamości dokumentu) */
+  fileSha256?: string;
+  /** Rozmiar dodatkowego oficjalnego pliku PDF w bajtach */
+  secondaryFileSizeBytes?: number;
+  /** Skrót SHA-256 dodatkowego oficjalnego pliku PDF */
+  secondaryFileSha256?: string;
+  /** Wyjaśnienie ew. rozbieżności metadanych wyszukiwarki publicznej vs treści PDF */
+  metadataDiscrepancyNote?: string;
   documentIdOrAuthorizationNumber: string;
   /** Data dokumentu (np. z pkt 10 ChPL) lub jawnie 'Brak informacji w dokumencie' */
   documentVersionOrDate: string;
@@ -451,4 +471,29 @@ export interface ChplManualQueueItem {
   officialChplSources: string[];
   missingDocumentsOrActions: string[];
   auditReason: string;
+}
+
+export interface FundingScopeAuditEntry {
+  scopeId: string;
+  label: string;
+  fundingStatus: FundingVerificationStatus | 'regional_pool_closed';
+  isPediatricSelectable: boolean;
+  seasonalAvailabilityStatus?: SeasonalAvailabilityStatus;
+  audienceContext?: FundingScopeBreakdown['audienceContext'];
+}
+
+export interface PendingFundingProcedureDetail {
+  procedureId: string;
+  shortCode: string;
+  disease: string;
+  procedureFundingStatus: FundingVerificationStatus;
+  stayPendingReason: string;
+  confirmedScopes: FundingScopeAuditEntry[];
+  pendingOrClosedScopes: FundingScopeAuditEntry[];
+}
+
+export interface PendingFundingAuditReport {
+  pendingProceduresCount: number;
+  pendingProcedureIds: string[];
+  details: PendingFundingProcedureDetail[];
 }
