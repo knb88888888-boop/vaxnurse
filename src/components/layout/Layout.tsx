@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import type { ModuleDefinition, ModuleId } from '../../types/navigation';
+import type { GlobalSearchResult } from '../../utils/globalSearch';
 
 interface LayoutProps {
   modules: ModuleDefinition[];
@@ -9,6 +10,7 @@ interface LayoutProps {
   onSelectModule: (id: ModuleId) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
+  onSelectSearchResult: (result: GlobalSearchResult) => void;
   children: React.ReactNode;
 }
 
@@ -18,6 +20,7 @@ export const Layout: React.FC<LayoutProps> = ({
   onSelectModule,
   searchQuery,
   onSearchChange,
+  onSelectSearchResult,
   children
 }) => {
   const [isOpenMobile, setIsOpenMobile] = useState(false);
@@ -44,7 +47,9 @@ export const Layout: React.FC<LayoutProps> = ({
           searchQuery={searchQuery}
           onSearchChange={onSearchChange}
           onOpenMobileMenu={() => setIsOpenMobile(true)}
+          isOpenMobileMenu={isOpenMobile}
           onNavigateToModule={onSelectModule}
+          onSelectSearchResult={onSelectSearchResult}
         />
 
         <main className="app-content-area" id="main-content">

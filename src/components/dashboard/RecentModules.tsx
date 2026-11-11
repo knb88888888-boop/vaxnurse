@@ -1,85 +1,108 @@
 import React from 'react';
-import { History, ArrowRight, Clock } from 'lucide-react';
+import { History, ArrowRight, Clock, Trash2 } from 'lucide-react';
 import type { ModuleDefinition, ModuleId } from '../../types/navigation';
-
-export interface RecentVisit {
-  moduleId: ModuleId;
-  timestamp: string;
-}
+import {
+  formatRecentVisitTimestamp,
+  type RecentVisitRecord
+} from '../../utils/recentModules';
+import { isModulePlaceholder } from '../../utils/globalSearch';
 
 interface RecentModulesProps {
-  recentVisits: RecentVisit[];
+  recentVisits: RecentVisitRecord[];
   allModules: ModuleDefinition[];
   onSelectModule: (id: ModuleId) => void;
+  onClearHistory?: () => void;
 }
 
 export const RecentModules: React.FC<RecentModulesProps> = ({
   recentVisits,
   allModules,
-  onSelectModule
+  onSelectModule,
+  onClearHistory
 }) => {
-  // Map visits to module definitions
   const moduleMap = new Map(allModules.map(m => [m.id, m]));
 
   const visitsWithDetails = recentVisits
     .map(visit => ({
       module: moduleMap.get(visit.moduleId),
-      timestamp: visit.timestamp
+      visitedAt: visit.visitedAt,
+      visitCount: visit.visitCount
     }))
     .filter(item => item.module !== undefined && item.module.id !== 'dashboard');
 
-  if (visitsWithDetails.length === 0) {
-    return null;
-  }
-
   return (
-    <div className="recent-modules-section">
+    <section className="recent-modules-section" aria-label="Ostatnio używane moduły">
       <div className="section-header">
         <div className="section-title-with-icon">
-          <History size={18} className="section-icon" />
+          <History size={18} className="section-icon" aria-hidden="true" />
           <h2 className="section-title">Ostatnio używane moduły</h2>
         </div>
-        <span className="section-meta-tag">Historia bieżącej sesji</span>
-      </div>
-
-      <div className="recent-modules-list">
-        {visitsWithDetails.slice(0, 4).map(({ module, timestamp }) => {
-          if (!module) return null;
-          const Icon = module.icon;
-
-          return (
-            <div
-              key={module.id}
-              className="recent-module-item"
-              onClick={() => onSelectModule(module.id)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={e => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onSelectModule(module.id);
-                }
-              }}
+        <div className="recent-header-actions">
+          <span className="section-meta-tag">Zapis lokalny w przeglądarce</span>
+          {visitsWithDetails.length > 0 && onClearHistory && (
+            <button
+              type="button"
+              className="btn-clear-recent"
+              onClick={onClearHistory}
             >
-              <div className="recent-item-icon-box">
-                <Icon size={18} className="recent-icon" />
-              </div>
-
-              <div className="recent-item-text">
-                <span className="recent-name">{module.label}</span>
-                <span className="recent-time">
-                  <Clock size={12} /> {timestamp}
-                </span>
-              </div>
-
-              <div className="recent-item-action">
-                <span className="recent-action-label">Przejdź</span>
-                <ArrowRight size={14} className="recent-arrow" />
-              </div>
-            </div>
-          );
-        })}
+              <Trash2 size={13} aria-hidden="true" />
+              <span>Wyczyść historię</span>
+            </button>
+          )}
+        </div>
       </div>
-    </div>
+
+      {visitsWithDetails.length === 0 ? (
+        <div className="recent-empty-state">
+          <Clock size={18} className="recent-empty-icon" aria-hidden="true" />
+          <div className="recent-empty-text">
+            <strong>Brak historii odwiedzonych modułów</strong>
+            <span>
+              Historia zapisze się lokalnie w tej przeglądarce po otwarciu wybranego modułu VaxNurse.
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="recent-modules-list">
+          {visitsWithDetails.slice(0, 6).map(({ module, visitedAt, visitCount }) => {
+            if (!module) return null;
+            const Icon = module.icon;
+            const formattedTime = formatRecentVisitTimestamp(visitedAt);
+            const placeholder = isModulePlaceholder(module.id);
+
+            return (
+              <button
+                key={module.id}
+                type="button"
+                className="recent-module-item"
+                onClick={() => onSelectModule(module.id)}
+              >
+                <span className="recent-item-icon-box" aria-hidden="true">
+                  <Icon size={18} className="recent-icon" />
+                </span>
+
+                <span className="recent-item-text">
+                  <span className="recent-name">
+                    {module.label}
+                    {placeholder && (
+                      <span className="recent-placeholder-tag">W przygotowaniu</span>
+                    )}
+                  </span>
+                  <span className="recent-time">
+                    <Clock size={12} aria-hidden="true" /> {formattedTime}
+                    {visitCount > 1 ? ` • ${visitCount} otw.` : ''}
+                  </span>
+                </span>
+
+                <span className="recent-item-action" aria-hidden="true">
+                  <span className="recent-action-label">Przejdź</span>
+                  <ArrowRight size={14} className="recent-arrow" />
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 };

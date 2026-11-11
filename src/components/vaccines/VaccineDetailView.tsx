@@ -868,6 +868,54 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
         </a>
       </section>
 
+      {currentVaccine.importedVerificationClaim && (
+        <section className="v-import-claim-banner" aria-label="Informacja o deklaracji weryfikacji z pliku kopii">
+          <div className="v-import-claim-icon">
+            <AlertTriangle size={22} />
+          </div>
+          <div className="v-import-claim-content">
+            <h2 className="v-import-claim-title">
+              Deklaracja z importu JSON wymaga ponownej kontroli lokalnej
+            </h2>
+            <p className="v-import-claim-desc">
+              Zaimportowany plik kopii deklarował status:{' '}
+              <strong>
+                {new Map<string, { label: string }>(
+                  Object.entries(VERIFICATION_STATUS_META)
+                ).get(currentVaccine.importedVerificationClaim.claimedStatus)?.label ||
+                  currentVaccine.importedVerificationClaim.claimedStatus}
+              </strong>
+              {currentVaccine.importedVerificationClaim.declaredBy
+                ? ` (deklarowany autor: ${currentVaccine.importedVerificationClaim.declaredBy})`
+                : ''}
+              {currentVaccine.importedVerificationClaim.declaredAt
+                ? `, data z pliku: ${currentVaccine.importedVerificationClaim.declaredAt}`
+                : ''}
+              . Obecny stan lokalny to: <strong>{statusMeta.label}</strong>.{' '}
+              {currentVaccine.importedVerificationClaim.reason}
+            </p>
+          </div>
+        </section>
+      )}
+
+      {currentVaccine.mergeConflict && (
+        <section className="v-merge-conflict-banner" aria-label="Konflikt wersji katalogu i stanu lokalnego">
+          <div className="v-merge-conflict-icon">
+            <AlertTriangle size={22} />
+          </div>
+          <div className="v-merge-conflict-content">
+            <h2 className="v-merge-conflict-title">
+              Wykryto różnicę między katalogiem bazowym a zapisem lokalnym
+            </h2>
+            <p className="v-merge-conflict-desc">
+              {currentVaccine.mergeConflict.summary} (status lokalny:{' '}
+              <code>{currentVaccine.mergeConflict.localVerificationStatus}</code>, status bazowy:{' '}
+              <code>{currentVaccine.mergeConflict.baseVerificationStatus}</code>).
+            </p>
+          </div>
+        </section>
+      )}
+
       {/* Mandatory Clinical Safety Banner */}
       <section className="v-detail-safety-alert" aria-label="Komunikat bezpieczeństwa">
         <div className="v-safety-icon-wrapper">
@@ -926,20 +974,28 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
       <div className="chpl-points-container">
         {/* PUNKT 1: Nazwa produktu leczniczego */}
         <section className="chpl-main-card" id="chpl-point-1">
-          <header className="chpl-card-header" onClick={() => toggleSection('sec1')}>
-            <div className="card-header-left">
-              <span className="card-num-circle">1</span>
-              <div>
-                <h3 className="card-header-title">1. Nazwa produktu leczniczego</h3>
-                <span className="card-header-subtitle">Name of the medicinal product</span>
-              </div>
-            </div>
-            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 1">
-              {expandedSections.sec1 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          <h3 className="chpl-card-heading">
+            <button
+              type="button"
+              className="chpl-card-header"
+              onClick={() => toggleSection('sec1')}
+              aria-expanded={expandedSections.sec1}
+              aria-controls="chpl-body-sec1"
+            >
+              <span className="card-header-left">
+                <span className="card-num-circle" aria-hidden="true">1</span>
+                <span className="card-header-titles">
+                  <span className="card-header-title">1. Nazwa produktu leczniczego</span>
+                  <span className="card-header-subtitle">Name of the medicinal product</span>
+                </span>
+              </span>
+              <span className="card-collapse-icon" aria-hidden="true">
+                {expandedSections.sec1 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </span>
             </button>
-          </header>
+          </h3>
           {expandedSections.sec1 && (
-            <div className="chpl-card-body">
+            <div className="chpl-card-body" id="chpl-body-sec1">
               {renderSectionBox(chpl.name, <Info size={17} />)}
             </div>
           )}
@@ -947,20 +1003,28 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
 
         {/* PUNKT 2: Skład jakościowy i ilościowy */}
         <section className="chpl-main-card" id="chpl-point-2">
-          <header className="chpl-card-header" onClick={() => toggleSection('sec2')}>
-            <div className="card-header-left">
-              <span className="card-num-circle">2</span>
-              <div>
-                <h3 className="card-header-title">2. Skład jakościowy i ilościowy</h3>
-                <span className="card-header-subtitle">Qualitative and quantitative composition</span>
-              </div>
-            </div>
-            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 2">
-              {expandedSections.sec2 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          <h3 className="chpl-card-heading">
+            <button
+              type="button"
+              className="chpl-card-header"
+              onClick={() => toggleSection('sec2')}
+              aria-expanded={expandedSections.sec2}
+              aria-controls="chpl-body-sec2"
+            >
+              <span className="card-header-left">
+                <span className="card-num-circle" aria-hidden="true">2</span>
+                <span className="card-header-titles">
+                  <span className="card-header-title">2. Skład jakościowy i ilościowy</span>
+                  <span className="card-header-subtitle">Qualitative and quantitative composition</span>
+                </span>
+              </span>
+              <span className="card-collapse-icon" aria-hidden="true">
+                {expandedSections.sec2 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </span>
             </button>
-          </header>
+          </h3>
           {expandedSections.sec2 && (
-            <div className="chpl-card-body">
+            <div className="chpl-card-body" id="chpl-body-sec2">
               {renderSectionBox(chpl.composition, <Layers size={17} />)}
             </div>
           )}
@@ -968,20 +1032,28 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
 
         {/* PUNKT 3: Postać farmaceutyczna */}
         <section className="chpl-main-card" id="chpl-point-3">
-          <header className="chpl-card-header" onClick={() => toggleSection('sec3')}>
-            <div className="card-header-left">
-              <span className="card-num-circle">3</span>
-              <div>
-                <h3 className="card-header-title">3. Postać farmaceutyczna</h3>
-                <span className="card-header-subtitle">Pharmaceutical form</span>
-              </div>
-            </div>
-            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 3">
-              {expandedSections.sec3 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          <h3 className="chpl-card-heading">
+            <button
+              type="button"
+              className="chpl-card-header"
+              onClick={() => toggleSection('sec3')}
+              aria-expanded={expandedSections.sec3}
+              aria-controls="chpl-body-sec3"
+            >
+              <span className="card-header-left">
+                <span className="card-num-circle" aria-hidden="true">3</span>
+                <span className="card-header-titles">
+                  <span className="card-header-title">3. Postać farmaceutyczna</span>
+                  <span className="card-header-subtitle">Pharmaceutical form</span>
+                </span>
+              </span>
+              <span className="card-collapse-icon" aria-hidden="true">
+                {expandedSections.sec3 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </span>
             </button>
-          </header>
+          </h3>
           {expandedSections.sec3 && (
-            <div className="chpl-card-body">
+            <div className="chpl-card-body" id="chpl-body-sec3">
               {renderSectionBox(chpl.pharmaceuticalForm, <FileText size={17} />)}
             </div>
           )}
@@ -989,20 +1061,28 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
 
         {/* PUNKT 4: Szczegółowe dane kliniczne (4.1 – 4.9) */}
         <section className="chpl-main-card clinical-highlight" id="chpl-point-4">
-          <header className="chpl-card-header" onClick={() => toggleSection('sec4')}>
-            <div className="card-header-left">
-              <span className="card-num-circle highlight">4</span>
-              <div>
-                <h3 className="card-header-title">4. Szczegółowe dane kliniczne</h3>
-                <span className="card-header-subtitle">Clinical particulars (podpunkty 4.1 – 4.9)</span>
-              </div>
-            </div>
-            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 4">
-              {expandedSections.sec4 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          <h3 className="chpl-card-heading">
+            <button
+              type="button"
+              className="chpl-card-header"
+              onClick={() => toggleSection('sec4')}
+              aria-expanded={expandedSections.sec4}
+              aria-controls="chpl-body-sec4"
+            >
+              <span className="card-header-left">
+                <span className="card-num-circle highlight" aria-hidden="true">4</span>
+                <span className="card-header-titles">
+                  <span className="card-header-title">4. Szczegółowe dane kliniczne</span>
+                  <span className="card-header-subtitle">Clinical particulars (podpunkty 4.1 – 4.9)</span>
+                </span>
+              </span>
+              <span className="card-collapse-icon" aria-hidden="true">
+                {expandedSections.sec4 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </span>
             </button>
-          </header>
+          </h3>
           {expandedSections.sec4 && (
-            <div className="chpl-card-body">
+            <div className="chpl-card-body" id="chpl-body-sec4">
               <div className="subsections-stack">
                 {renderSectionBox(chpl.clinicalParticulars.indications, <Activity size={16} />, true)}
                 {renderSectionBox(chpl.clinicalParticulars.dosageAndAdministration, <Clock size={16} />, true)}
@@ -1020,20 +1100,28 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
 
         {/* PUNKT 5: Właściwości farmakologiczne (5.1 – 5.3) */}
         <section className="chpl-main-card" id="chpl-point-5">
-          <header className="chpl-card-header" onClick={() => toggleSection('sec5')}>
-            <div className="card-header-left">
-              <span className="card-num-circle">5</span>
-              <div>
-                <h3 className="card-header-title">5. Właściwości farmakologiczne</h3>
-                <span className="card-header-subtitle">Pharmacological properties (podpunkty 5.1 – 5.3)</span>
-              </div>
-            </div>
-            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 5">
-              {expandedSections.sec5 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          <h3 className="chpl-card-heading">
+            <button
+              type="button"
+              className="chpl-card-header"
+              onClick={() => toggleSection('sec5')}
+              aria-expanded={expandedSections.sec5}
+              aria-controls="chpl-body-sec5"
+            >
+              <span className="card-header-left">
+                <span className="card-num-circle" aria-hidden="true">5</span>
+                <span className="card-header-titles">
+                  <span className="card-header-title">5. Właściwości farmakologiczne</span>
+                  <span className="card-header-subtitle">Pharmacological properties (podpunkty 5.1 – 5.3)</span>
+                </span>
+              </span>
+              <span className="card-collapse-icon" aria-hidden="true">
+                {expandedSections.sec5 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </span>
             </button>
-          </header>
+          </h3>
           {expandedSections.sec5 && (
-            <div className="chpl-card-body">
+            <div className="chpl-card-body" id="chpl-body-sec5">
               <div className="subsections-stack">
                 {renderSectionBox(chpl.pharmacologicalProperties.pharmacodynamics, <FlaskConical size={16} />, true)}
                 {renderSectionBox(chpl.pharmacologicalProperties.pharmacokinetics, <Activity size={16} />, true)}
@@ -1045,20 +1133,28 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
 
         {/* PUNKT 6: Dane farmaceutyczne (6.1 – 6.6) */}
         <section className="chpl-main-card" id="chpl-point-6">
-          <header className="chpl-card-header" onClick={() => toggleSection('sec6')}>
-            <div className="card-header-left">
-              <span className="card-num-circle">6</span>
-              <div>
-                <h3 className="card-header-title">6. Dane farmaceutyczne</h3>
-                <span className="card-header-subtitle">Pharmaceutical particulars (podpunkty 6.1 – 6.6)</span>
-              </div>
-            </div>
-            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 6">
-              {expandedSections.sec6 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          <h3 className="chpl-card-heading">
+            <button
+              type="button"
+              className="chpl-card-header"
+              onClick={() => toggleSection('sec6')}
+              aria-expanded={expandedSections.sec6}
+              aria-controls="chpl-body-sec6"
+            >
+              <span className="card-header-left">
+                <span className="card-num-circle" aria-hidden="true">6</span>
+                <span className="card-header-titles">
+                  <span className="card-header-title">6. Dane farmaceutyczne</span>
+                  <span className="card-header-subtitle">Pharmaceutical particulars (podpunkty 6.1 – 6.6)</span>
+                </span>
+              </span>
+              <span className="card-collapse-icon" aria-hidden="true">
+                {expandedSections.sec6 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </span>
             </button>
-          </header>
+          </h3>
           {expandedSections.sec6 && (
-            <div className="chpl-card-body">
+            <div className="chpl-card-body" id="chpl-body-sec6">
               <div className="subsections-stack">
                 {renderSectionBox(chpl.pharmaceuticalParticulars.excipients, <Layers size={16} />, true)}
                 {renderSectionBox(chpl.pharmaceuticalParticulars.incompatibilities, <AlertTriangle size={16} />, true)}
@@ -1073,20 +1169,28 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
 
         {/* PUNKT 7: Podmiot odpowiedzialny */}
         <section className="chpl-main-card" id="chpl-point-7">
-          <header className="chpl-card-header" onClick={() => toggleSection('sec7')}>
-            <div className="card-header-left">
-              <span className="card-num-circle">7</span>
-              <div>
-                <h3 className="card-header-title">7. Podmiot odpowiedzialny posiadający pozwolenie na dopuszczenie do obrotu</h3>
-                <span className="card-header-subtitle">Marketing authorisation holder</span>
-              </div>
-            </div>
-            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 7">
-              {expandedSections.sec7 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          <h3 className="chpl-card-heading">
+            <button
+              type="button"
+              className="chpl-card-header"
+              onClick={() => toggleSection('sec7')}
+              aria-expanded={expandedSections.sec7}
+              aria-controls="chpl-body-sec7"
+            >
+              <span className="card-header-left">
+                <span className="card-num-circle" aria-hidden="true">7</span>
+                <span className="card-header-titles">
+                  <span className="card-header-title">7. Podmiot odpowiedzialny posiadający pozwolenie na dopuszczenie do obrotu</span>
+                  <span className="card-header-subtitle">Marketing authorisation holder</span>
+                </span>
+              </span>
+              <span className="card-collapse-icon" aria-hidden="true">
+                {expandedSections.sec7 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </span>
             </button>
-          </header>
+          </h3>
           {expandedSections.sec7 && (
-            <div className="chpl-card-body">
+            <div className="chpl-card-body" id="chpl-body-sec7">
               {renderSectionBox(chpl.marketingAuthorisationHolder, <Building2 size={17} />)}
             </div>
           )}
@@ -1094,20 +1198,28 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
 
         {/* PUNKT 8: Numer(-y) pozwolenia */}
         <section className="chpl-main-card" id="chpl-point-8">
-          <header className="chpl-card-header" onClick={() => toggleSection('sec8')}>
-            <div className="card-header-left">
-              <span className="card-num-circle">8</span>
-              <div>
-                <h3 className="card-header-title">8. Numer(-y) pozwolenia na dopuszczenie do obrotu</h3>
-                <span className="card-header-subtitle">Marketing authorisation number(s)</span>
-              </div>
-            </div>
-            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 8">
-              {expandedSections.sec8 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          <h3 className="chpl-card-heading">
+            <button
+              type="button"
+              className="chpl-card-header"
+              onClick={() => toggleSection('sec8')}
+              aria-expanded={expandedSections.sec8}
+              aria-controls="chpl-body-sec8"
+            >
+              <span className="card-header-left">
+                <span className="card-num-circle" aria-hidden="true">8</span>
+                <span className="card-header-titles">
+                  <span className="card-header-title">8. Numer(-y) pozwolenia na dopuszczenie do obrotu</span>
+                  <span className="card-header-subtitle">Marketing authorisation number(s)</span>
+                </span>
+              </span>
+              <span className="card-collapse-icon" aria-hidden="true">
+                {expandedSections.sec8 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </span>
             </button>
-          </header>
+          </h3>
           {expandedSections.sec8 && (
-            <div className="chpl-card-body">
+            <div className="chpl-card-body" id="chpl-body-sec8">
               {renderSectionBox(chpl.marketingAuthorisationNumber, <FileCheck size={17} />)}
             </div>
           )}
@@ -1115,20 +1227,28 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
 
         {/* PUNKT 9: Data pierwszego pozwolenia / przedłużenia */}
         <section className="chpl-main-card" id="chpl-point-9">
-          <header className="chpl-card-header" onClick={() => toggleSection('sec9')}>
-            <div className="card-header-left">
-              <span className="card-num-circle">9</span>
-              <div>
-                <h3 className="card-header-title">9. Data wydania pierwszego pozwolenia i data przedłużenia pozwolenia</h3>
-                <span className="card-header-subtitle">Date of first authorisation / renewal of the authorisation</span>
-              </div>
-            </div>
-            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 9">
-              {expandedSections.sec9 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          <h3 className="chpl-card-heading">
+            <button
+              type="button"
+              className="chpl-card-header"
+              onClick={() => toggleSection('sec9')}
+              aria-expanded={expandedSections.sec9}
+              aria-controls="chpl-body-sec9"
+            >
+              <span className="card-header-left">
+                <span className="card-num-circle" aria-hidden="true">9</span>
+                <span className="card-header-titles">
+                  <span className="card-header-title">9. Data wydania pierwszego pozwolenia i data przedłużenia pozwolenia</span>
+                  <span className="card-header-subtitle">Date of first authorisation / renewal of the authorisation</span>
+                </span>
+              </span>
+              <span className="card-collapse-icon" aria-hidden="true">
+                {expandedSections.sec9 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </span>
             </button>
-          </header>
+          </h3>
           {expandedSections.sec9 && (
-            <div className="chpl-card-body">
+            <div className="chpl-card-body" id="chpl-body-sec9">
               {renderSectionBox(chpl.firstAuthorisationAndRenewal, <Calendar size={17} />)}
             </div>
           )}
@@ -1136,20 +1256,28 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
 
         {/* PUNKT 10: Data zatwierdzenia tekstu lub jego zmiany */}
         <section className="chpl-main-card" id="chpl-point-10">
-          <header className="chpl-card-header" onClick={() => toggleSection('sec10')}>
-            <div className="card-header-left">
-              <span className="card-num-circle">10</span>
-              <div>
-                <h3 className="card-header-title">10. Data zatwierdzenia lub częściowej zmiany tekstu ChPL</h3>
-                <span className="card-header-subtitle">Date of revision of the text</span>
-              </div>
-            </div>
-            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń punkt 10">
-              {expandedSections.sec10 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          <h3 className="chpl-card-heading">
+            <button
+              type="button"
+              className="chpl-card-header"
+              onClick={() => toggleSection('sec10')}
+              aria-expanded={expandedSections.sec10}
+              aria-controls="chpl-body-sec10"
+            >
+              <span className="card-header-left">
+                <span className="card-num-circle" aria-hidden="true">10</span>
+                <span className="card-header-titles">
+                  <span className="card-header-title">10. Data zatwierdzenia lub częściowej zmiany tekstu ChPL</span>
+                  <span className="card-header-subtitle">Date of revision of the text</span>
+                </span>
+              </span>
+              <span className="card-collapse-icon" aria-hidden="true">
+                {expandedSections.sec10 ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </span>
             </button>
-          </header>
+          </h3>
           {expandedSections.sec10 && (
-            <div className="chpl-card-body">
+            <div className="chpl-card-body" id="chpl-body-sec10">
               {renderSectionBox(chpl.revisionDate, <Clock size={17} />)}
             </div>
           )}
@@ -1157,20 +1285,28 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
 
         {/* OPCJONALNA SEKCJA: Punkty 11 i 12 EMA QRD (Radiofarmaceutyki) */}
         <section className="chpl-main-card optional-card" id="chpl-point-optional">
-          <header className="chpl-card-header" onClick={() => toggleSection('secOptional')}>
-            <div className="card-header-left">
-              <span className="card-num-circle muted">11-12</span>
-              <div>
-                <h3 className="card-header-title">Punkty 11 i 12 szablonu EMA QRD (Opcjonalne)</h3>
-                <span className="card-header-subtitle">Dawkometria i instrukcje dla radiofarmaceutyków</span>
-              </div>
-            </div>
-            <button type="button" className="card-collapse-icon" aria-label="Zwiń / rozwiń informację o punktach 11 i 12">
-              {expandedSections.secOptional ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          <h3 className="chpl-card-heading">
+            <button
+              type="button"
+              className="chpl-card-header"
+              onClick={() => toggleSection('secOptional')}
+              aria-expanded={expandedSections.secOptional}
+              aria-controls="chpl-body-secOptional"
+            >
+              <span className="card-header-left">
+                <span className="card-num-circle muted" aria-hidden="true">11-12</span>
+                <span className="card-header-titles">
+                  <span className="card-header-title">Punkty 11 i 12 szablonu EMA QRD (Opcjonalne)</span>
+                  <span className="card-header-subtitle">Dawkometria i instrukcje dla radiofarmaceutyków</span>
+                </span>
+              </span>
+              <span className="card-collapse-icon" aria-hidden="true">
+                {expandedSections.secOptional ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </span>
             </button>
-          </header>
+          </h3>
           {expandedSections.secOptional && (
-            <div className="chpl-card-body">
+            <div className="chpl-card-body" id="chpl-body-secOptional">
               <div className="chpl-optional-notice">
                 <Info size={18} className="optional-info-icon" />
                 <p>

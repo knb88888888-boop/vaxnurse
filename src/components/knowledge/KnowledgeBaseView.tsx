@@ -16,13 +16,15 @@ import { KnowledgeCard } from './KnowledgeCard';
 interface KnowledgeBaseViewProps {
   module: ModuleDefinition;
   onBackToDashboard: () => void;
+  initialSearchQuery?: string | null;
 }
 
 export const KnowledgeBaseView: React.FC<KnowledgeBaseViewProps> = ({
   module,
-  onBackToDashboard
+  onBackToDashboard,
+  initialSearchQuery
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
   const [selectedCategory, setSelectedCategory] = useState<KnowledgeCategory | 'all'>('all');
   const [selectedPublisher, setSelectedPublisher] = useState<string | 'all'>('all');
 

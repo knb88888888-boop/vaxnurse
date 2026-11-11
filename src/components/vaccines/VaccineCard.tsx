@@ -116,11 +116,39 @@ export const VaccineCard: React.FC<VaccineCardProps> = ({ vaccine, onOpenDetails
             </span>
           </div>
         )
-      ) : !statusMeta.isVerified && (
+      ) : !statusMeta.isVerified && !vaccine.importedVerificationClaim && (
         <div className="v-card-unverified-warning">
           <AlertTriangle size={15} className="warning-icon" />
           <span>
             <strong>Oczekuje na weryfikację personelu:</strong> Treści punktów 1–10 odwzorowano z oficjalnego druku ChPL (wersja {vaccine.chplRevisionDate || 'do weryfikacji'}).
+          </span>
+        </div>
+      )}
+
+      {vaccine.importedVerificationClaim && (
+        <div className="v-card-import-claim-notice" role="status">
+          <AlertTriangle size={15} className="claim-notice-icon" />
+          <span>
+            <strong>Deklaracja z importu JSON vs status lokalny:</strong>{' '}
+            Plik kopii deklarował status «
+            {new Map<string, { label: string }>(
+              Object.entries(VERIFICATION_STATUS_META)
+            ).get(vaccine.importedVerificationClaim.claimedStatus)?.label ||
+              vaccine.importedVerificationClaim.claimedStatus}
+            »
+            {vaccine.importedVerificationClaim.declaredAt
+              ? ` (${vaccine.importedVerificationClaim.declaredAt})`
+              : ''}
+            , lecz obecny status lokalny to «{statusMeta.label}». Wymaga ręcznej weryfikacji na tym stanowisku.
+          </span>
+        </div>
+      )}
+
+      {vaccine.mergeConflict && (
+        <div className="v-card-conflict-notice" role="status">
+          <AlertTriangle size={15} className="conflict-notice-icon" />
+          <span>
+            <strong>Wykryto konflikt wersji katalogu:</strong> {vaccine.mergeConflict.summary}
           </span>
         </div>
       )}

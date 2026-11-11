@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, Suspense } from 'react';
 import {
   ArrowLeft,
   Syringe,
@@ -30,7 +30,14 @@ import {
   resetCatalogPreservingHistory
 } from '../../utils/vaccineVerification';
 import { VaccineCard } from './VaccineCard';
-import { VaccineDetailView } from './VaccineDetailView';
+import { ModuleLoadingFallback } from '../common/ModuleLoadingFallback';
+import { ModuleErrorBoundary } from '../common/ModuleErrorBoundary';
+
+const LazyVaccineDetailView = React.lazy(() =>
+  import('./VaccineDetailView').then(mod => ({
+    default: mod.VaccineDetailView
+  }))
+);
 
 interface VaccinesDatabaseViewProps {
   module: ModuleDefinition;
@@ -51,10 +58,30 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
   onBackToDashboard,
   initialSelectedVaccineId
 }) => {
-  const initialLoad = useMemo(
-    () => loadVaccinesFromStorage(getBrowserStorage(), VACCINES_CATALOG),
-    []
-  );
+  const [initialLoad] = useState(() => {
+    const loaded = loadVaccinesFromStorage(getBrowserStorage(), VACCINES_CATALOG);
+    let persistError: string | null = loaded.error;
+
+    if (
+      !loaded.error &&
+      loaded.loadedFromStorage &&
+      loaded.mergeResult &&
+      loaded.mergeResult.addedIds.length > 0
+    ) {
+      const saveResult = saveVaccinesToStorage(
+        getBrowserStorage(),
+        loaded.vaccines
+      );
+      if (!saveResult.success) {
+        persistError = saveResult.error;
+      }
+    }
+
+    return {
+      vaccines: loaded.vaccines,
+      error: persistError
+    };
+  });
 
   const [vaccines, setVaccines] = useState<VaccineProduct[]>(initialLoad.vaccines);
   const [searchQuery, setSearchQuery] = useState('');
@@ -63,6 +90,7 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
   const [selectedStatus, setSelectedStatus] = useState<VaccineVerificationStatus | 'all'>('all');
   const [storageError, setStorageError] = useState<string | null>(initialLoad.error);
   const [showResetCatalogConfirm, setShowResetCatalogConfirm] = useState(false);
+  const [detailRetryKey, setDetailRetryKey] = useState(0);
 
   const [activeVaccineDetail, setActiveVaccineDetail] = useState<VaccineProduct | null>(() => {
     try {
@@ -181,16 +209,28 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
     setSelectedStatus('all');
   };
 
-  // If a vaccine detail is selected, show detail view
+  // If a vaccine detail is selected, show detail view (lazy-loaded)
   if (activeVaccineDetail) {
     return (
-      <VaccineDetailView
-        vaccine={activeVaccineDetail}
-        onBackToList={handleBackToList}
-        onUpdateVaccine={handleUpdateVaccine}
-        storageError={storageError}
-        onDismissStorageError={() => setStorageError(null)}
-      />
+      <ModuleErrorBoundary
+        resetKey={`vaccine-detail-${activeVaccineDetail.id}-${detailRetryKey}`}
+        onRetry={() => setDetailRetryKey(prev => prev + 1)}
+        onBackToDashboard={onBackToDashboard}
+      >
+        <Suspense
+          fallback={
+            <ModuleLoadingFallback label={`Wczytywanie karty ChPL: ${activeVaccineDetail.tradeName}…`} />
+          }
+        >
+          <LazyVaccineDetailView
+            vaccine={activeVaccineDetail}
+            onBackToList={handleBackToList}
+            onUpdateVaccine={handleUpdateVaccine}
+            storageError={storageError}
+            onDismissStorageError={() => setStorageError(null)}
+          />
+        </Suspense>
+      </ModuleErrorBoundary>
     );
   }
 

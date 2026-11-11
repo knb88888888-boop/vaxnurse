@@ -12,15 +12,16 @@ import type { ModuleDefinition, ModuleId, QuickAccessItem } from '../../types/na
 import { QuickAccess } from './QuickAccess';
 import { ModuleCard } from './ModuleCard';
 import { RecentModules } from './RecentModules';
-import type { RecentVisit } from './RecentModules';
+import type { RecentVisitRecord } from '../../utils/recentModules';
 
 interface DashboardViewProps {
   modules: ModuleDefinition[];
   quickAccessItems: QuickAccessItem[];
-  recentVisits: RecentVisit[];
+  recentVisits: RecentVisitRecord[];
   searchQuery: string;
   onSearchChange: (q: string) => void;
   onSelectModule: (id: ModuleId) => void;
+  onClearRecentVisits?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -29,7 +30,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   recentVisits,
   searchQuery,
   onSearchChange,
-  onSelectModule
+  onSelectModule,
+  onClearRecentVisits
 }) => {
   // Modules excluding 'dashboard'
   const operationalModules = modules.filter(m => m.id !== 'dashboard');
@@ -53,7 +55,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="hero-content">
           <div className="hero-pill">
             <Shield size={14} className="hero-pill-icon" />
-            <span>Narzędzie wsparcia pielęgniarki • Wersja demonstracyjna</span>
+            <span>Narzędzie referencyjne pielęgniarki • Tryb lokalny</span>
           </div>
 
           <h1 className="hero-title">
@@ -61,15 +63,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </h1>
 
           <p className="hero-description">
-            Nowoczesne środowisko wspomagające codzienną pracę w punkcie szczepień dzieci i dorosłych.
-            Szybki dostęp do referencyjnych procedur, oficjalnego Programu Szczepień Ochronnych (PSO 2027) i nadzoru łańcucha chłodniczego.
+            Środowisko wspomagające organizację pracy w punkcie szczepień dzieci i dorosłych:
+            referencyjne procedury, odnośniki do PSO 2027, baza ChPL i lokalna kontrola zmian.
           </p>
 
           {/* Honest status bar */}
           <div className="hero-indicators">
             <div className="indicator-chip chip-success">
               <CheckCircle size={15} />
-              <span>Wersja demonstracyjna – procedury do weryfikacji</span>
+              <span>Narzędzie referencyjne – treści wymagają weryfikacji z ChPL</span>
             </div>
             <div className="indicator-chip chip-info">
               <Activity size={15} />
@@ -108,13 +110,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Embedded Search on Dashboard if user focuses here */}
       <div className="dashboard-search-wrapper">
         <div className="dashboard-search-box">
-          <Search size={19} className="dashboard-search-icon" />
+          <Search size={19} className="dashboard-search-icon" aria-hidden="true" />
           <input
             type="text"
             className="dashboard-search-input"
-            placeholder="Szukaj procedury, preparatu, wytycznych PSO lub kalkulatora..."
+            placeholder="Szukaj modułów i sekcji VaxNurse (np. szczepienia, ChPL, PSO)..."
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
+            aria-label="Szukaj modułów i sekcji VaxNurse"
           />
           {searchQuery && (
             <button
@@ -132,7 +135,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {searchQuery.trim() ? (
         <div className="search-results-banner">
           <span className="results-count">
-            Wyniki wyszukiwania dla „<strong>{searchQuery}</strong>”: ({filteredModules.length})
+            Wyniki wyszukiwania na Pulpicie dla „<strong>{searchQuery}</strong>”: ({filteredModules.length})
           </span>
           {filteredModules.length === 0 && (
             <div className="empty-search-state">
@@ -164,6 +167,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             recentVisits={recentVisits}
             allModules={modules}
             onSelectModule={onSelectModule}
+            onClearHistory={onClearRecentVisits}
           />
         </>
       )}
@@ -176,7 +180,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {searchQuery.trim() ? 'Pasujące moduły aplikacji' : 'Główne moduły punktu szczepień'}
             </h2>
             <p className="section-subtitle">
-              Zintegrowany zestaw narzędzi do obsługi procesu szczepień ochronnych (wersja demonstracyjna)
+              Aktywne moduły referencyjne oraz zapowiedzi kolejnych sekcji w przygotowaniu
             </p>
           </div>
           <span className="modules-count-badge">

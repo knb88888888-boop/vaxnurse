@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   FileText,
+  RotateCcw,
   X
 } from 'lucide-react';
 import type { ModuleDefinition } from '../../types/navigation';
@@ -21,12 +22,20 @@ import {
   VAX_LAST_BACKUP_KEY,
   createBackupPayload,
   validateBackupPayload,
-  enforceClinicalIntegrityOnImport,
+  mergeImportedBackupWithLocalCatalog,
   triggerJsonDownload,
   getStoredVaccines,
   storeVaccinesSafely,
   formatPolishDateTime
 } from '../../utils/backup';
+import {
+  loadPreferences,
+  savePreferences,
+  resetPreferences,
+  applyPreferencesToDocument,
+  type UiDensity,
+  type UiFontSize
+} from '../../utils/preferences';
 
 interface SettingsViewProps {
   module: ModuleDefinition;
@@ -43,8 +52,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   module,
   onBackToDashboard
 }) => {
-  const [density, setDensity] = useState<'comfortable' | 'compact'>('comfortable');
-  const [fontSize, setFontSize] = useState<'normal' | 'large'>('normal');
+  const [initialPrefResult] = useState(() => loadPreferences());
+  const [density, setDensity] = useState<UiDensity>(
+    initialPrefResult.preferences.density
+  );
+  const [fontSize, setFontSize] = useState<UiFontSize>(
+    initialPrefResult.preferences.fontSize
+  );
+  const [preferencesFeedback, setPreferencesFeedback] = useState<{
+    type: 'success' | 'error' | 'info';
+    message: string;
+  } | null>(() =>
+    initialPrefResult.error
+      ? { type: 'info', message: initialPrefResult.error }
+      : null
+  );
 
   // Stan modułu kopii bezpieczeństwa
   const [lastBackupDate, setLastBackupDate] = useState<string | null>(() => {
@@ -57,8 +79,75 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [feedbackMessage, setFeedbackMessage] = useState<FeedbackState | null>(null);
   const [stagedBackup, setStagedBackup] = useState<VaxNurseBackupPayload | null>(null);
   const [stagedSummary, setStagedSummary] = useState<BackupSummary | null>(null);
+  const [stagedWarnings, setStagedWarnings] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const persistAndApplyPreferences = (
+    nextDensity: UiDensity,
+    nextFontSize: UiFontSize,
+    customSuccessText?: string
+  ) => {
+    const nextPrefs = applyPreferencesToDocument({
+      density: nextDensity,
+      fontSize: nextFontSize
+    });
+    setDensity(nextPrefs.density);
+    setFontSize(nextPrefs.fontSize);
+
+    const storage =
+      typeof localStorage !== 'undefined' ? localStorage : null;
+    const saved = savePreferences(storage, nextPrefs);
+    if (!saved.success) {
+      setPreferencesFeedback({
+        type: 'error',
+        message:
+          saved.error ||
+          'Nie udało się zapisać ustawień widoku w pamięci przeglądarki.'
+      });
+      return;
+    }
+
+    setPreferencesFeedback({
+      type: 'success',
+      message:
+        customSuccessText ||
+        `Zapisano preferencje widoku (${nextPrefs.density === 'compact' ? 'gęstość zwięzła' : 'gęstość komfortowa'}, tekst ${nextPrefs.fontSize === 'large' ? 'powiększony' : 'standardowy'}).`
+    });
+  };
+
+  const handleDensityChange = (nextDensity: UiDensity) => {
+    persistAndApplyPreferences(nextDensity, fontSize);
+  };
+
+  const handleFontSizeChange = (nextFontSize: UiFontSize) => {
+    persistAndApplyPreferences(density, nextFontSize);
+  };
+
+  const handleResetPreferences = () => {
+    const storage =
+      typeof localStorage !== 'undefined' ? localStorage : null;
+    const resetResult = resetPreferences(storage);
+    const applied = applyPreferencesToDocument(resetResult.preferences);
+    setDensity(applied.density);
+    setFontSize(applied.fontSize);
+
+    if (!resetResult.success) {
+      setPreferencesFeedback({
+        type: 'error',
+        message:
+          resetResult.error ||
+          'Zastosowano domyślny widok w bieżącej sesji, ale nie udało się zapisać go w localStorage.'
+      });
+      return;
+    }
+
+    setPreferencesFeedback({
+      type: 'info',
+      message:
+        'Przywrócono domyślne preferencje widoku (Komfortowa, Standardowy rozmiar tekstu).'
+    });
+  };
 
   // 1. EKSPORT DANYCH (Pobierz kopię bezpieczeństwa)
   const handleExportBackup = () => {
@@ -120,12 +209,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         return;
       }
 
-      // Rygorystyczna walidacja pliku kopii (format, schemat, pola, statusy)
-      const validation = validateBackupPayload(content);
+      // Rygorystyczna walidacja pliku kopii (format, schemat, pola, statusy, porównanie z katalogiem lokalnym)
+      const currentLocalVaccines = getStoredVaccines();
+      const validation = validateBackupPayload(content, currentLocalVaccines);
 
       if (!validation.isValid) {
         setStagedBackup(null);
         setStagedSummary(null);
+        setStagedWarnings([]);
         setFeedbackMessage({
           type: 'error',
           title: 'Odrzucono nieprawidłowy plik kopii',
@@ -134,10 +225,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         return;
       }
 
-      // Plik poprawny – ustaw stan oczekujący na potwierdzenie (podsumowanie)
+      // Plik poprawny – ustaw stan oczekujący na potwierdzenie (podsumowanie + ostrzeżenia)
       if (validation.payload && validation.summary) {
         setStagedBackup(validation.payload);
         setStagedSummary(validation.summary);
+        setStagedWarnings(validation.warnings || []);
         setFeedbackMessage(null);
       }
     };
@@ -157,6 +249,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const handleCancelRestore = () => {
     setStagedBackup(null);
     setStagedSummary(null);
+    setStagedWarnings([]);
     setFeedbackMessage({
       type: 'info',
       title: 'Anulowano przywracanie',
@@ -181,13 +274,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       const confirmMessage =
         'Czy na pewno chcesz przywrócić dane z wybranej kopii bezpieczeństwa?\n\n' +
         '• Aktualny stan bazy został automatycznie pobrany do pliku zabezpieczającego na Twój dysk.\n' +
-        '• Poprzednia historia lokalna w przeglądarce zostanie zastąpiona danymi z kopii.\n' +
-        '• Wymuszone zostaną reguły integralności klinicznej (ochrona nierozwiązanych niezgodności).\n\n' +
+        '• Dane zostaną bezpiecznie scalone z aktualnym katalogiem bazowym preparatów.\n' +
+        '• Deklaracje pełnego zatwierdzenia z niepodpisanego pliku JSON zostaną oznaczone do ponownej kontroli lokalnej, a nierozwiązane niezgodności ChPL pozostaną chronione.\n\n' +
         'Kliknij OK, aby potwierdzić przywrócenie danych.';
 
       if (!window.confirm(confirmMessage)) {
         setStagedBackup(null);
         setStagedSummary(null);
+        setStagedWarnings([]);
         setFeedbackMessage({
           type: 'info',
           title: 'Anulowano przywracanie',
@@ -196,14 +290,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         return;
       }
 
-      // KROK 3: Zastosuj reguły integralności klinicznej (Wymóg 4)
-      const sanitizedVaccines = enforceClinicalIntegrityOnImport(
+      // KROK 3: Zastosuj reguły integralności klinicznej oraz bezstratne scalenie z katalogiem bazowym
+      const mergeResult = mergeImportedBackupWithLocalCatalog(
         stagedBackup.vaccines,
         currentVaccines
       );
 
-      // KROK 4: Bezpieczny zapis do localStorage (Wymóg 5)
-      const saveResult = storeVaccinesSafely(sanitizedVaccines);
+      if (mergeResult.errors.length > 0 || mergeResult.duplicateIds.length > 0) {
+        setFeedbackMessage({
+          type: 'error',
+          title: 'Przerwano przywracanie z powodów spójności danych',
+          description: [
+            ...mergeResult.errors,
+            ...(mergeResult.duplicateIds.length > 0
+              ? [`Wykryto zduplikowane identyfikatory: ${mergeResult.duplicateIds.join(', ')}`]
+              : [])
+          ].join(' ')
+        });
+        return;
+      }
+
+      // KROK 4: Bezpieczny zapis do localStorage
+      const saveResult = storeVaccinesSafely(mergeResult.vaccines);
 
       if (!saveResult.success) {
         setFeedbackMessage({
@@ -223,11 +331,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       setStagedBackup(null);
       setStagedSummary(null);
+      setStagedWarnings([]);
+
+      const claimsRecheckCount = mergeResult.vaccines.filter(
+        v => Boolean(v.importedVerificationClaim)
+      ).length;
 
       setFeedbackMessage({
         type: 'success',
-        title: 'Kopia bezpieczeństwa przywrócona pomyślnie',
-        description: `Baza preparatów została zaktualizowana na podstawie kopii (${sanitizedVaccines.length} preparatów). Wszystkie statusy ChPL, zarejestrowane wyjaśnienia oraz historia zmian zostały zaimportowane z zachowaniem integralności klinicznej.`
+        title: 'Kopia bezpieczeństwa przywrócona i scalona pomyślnie',
+        description:
+          `Baza preparatów została zaktualizowana (${mergeResult.vaccines.length} preparatów łącznie; ` +
+          `zachowano lub dodano ${mergeResult.addedIds.length} nowych pozycji z katalogu bazowego). ` +
+          (claimsRecheckCount > 0
+            ? `${claimsRecheckCount} preparat(y) z zadeklarowanym zatwierdzeniem oznaczono do ponownej kontroli lokalnej z zachowaniem historii zmian.`
+            : 'Wszystkie statusy ChPL, zarejestrowane wyjaśnienia oraz historia zmian zostały zaimportowane z zachowaniem integralności klinicznej.')
       });
     } catch (e) {
       console.error('Błąd podczas przywracania kopii bezpieczeństwa:', e);
@@ -391,25 +509,65 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </button>
               </div>
 
-              {/* Siatka wskaźników podsumowania (Wymóg 2) */}
+              {/* Rozszerzona siatka wskaźników podsumowania przed importem */}
               <div className="staged-summary-grid">
                 <div className="staged-tile">
                   <span className="staged-tile-label">Data utworzenia kopii:</span>
                   <strong className="staged-tile-val">{stagedSummary.exportedAtFormatted}</strong>
                 </div>
                 <div className="staged-tile">
-                  <span className="staged-tile-label">Liczba preparatów:</span>
-                  <strong className="staged-tile-val">{stagedSummary.totalVaccines}</strong>
+                  <span className="staged-tile-label">Preparaty (nowe / aktualizacje):</span>
+                  <strong className="staged-tile-val">
+                    {stagedSummary.totalVaccines} ({stagedSummary.productsToAdd} nowych / {stagedSummary.productsToUpdate} aktual.)
+                  </strong>
                 </div>
                 <div className="staged-tile">
-                  <span className="staged-tile-label">Liczba niezgodności:</span>
+                  <span className="staged-tile-label">Liczba niezgodności ChPL:</span>
                   <strong className="staged-tile-val text-amber">{stagedSummary.totalDiscrepancies}</strong>
                 </div>
                 <div className="staged-tile">
                   <span className="staged-tile-label">Zapisane wyjaśnienia:</span>
                   <strong className="staged-tile-val text-blue">{stagedSummary.totalClarifications}</strong>
                 </div>
+                <div className="staged-tile">
+                  <span className="staged-tile-label">Wykryte konflikty / różnice:</span>
+                  <strong
+                    className={`staged-tile-val ${stagedSummary.conflictCount > 0 ? 'text-amber' : ''}`}
+                  >
+                    {stagedSummary.conflictCount}
+                  </strong>
+                </div>
+                <div className="staged-tile">
+                  <span className="staged-tile-label">Deklaracje verified_chpl / do kontroli:</span>
+                  <strong
+                    className={`staged-tile-val ${stagedSummary.claimsRequiringRecheckCount > 0 ? 'text-amber' : ''}`}
+                  >
+                    {stagedSummary.verifiedChplClaimsCount} ({stagedSummary.claimsRequiringRecheckCount} do kontroli)
+                  </strong>
+                </div>
+                <div className="staged-tile">
+                  <span className="staged-tile-label">Niepoprawne lub niekompletne rekordy:</span>
+                  <strong
+                    className={`staged-tile-val ${stagedSummary.invalidRecordsCount > 0 ? 'text-amber' : ''}`}
+                  >
+                    {stagedSummary.invalidRecordsCount}
+                  </strong>
+                </div>
               </div>
+
+              {(stagedWarnings.length > 0 || stagedSummary.invalidRecordDetails.length > 0) && (
+                <div className="staged-integrity-notes" role="status">
+                  <strong>Informacje z audytu integralności pliku przed scaleniem:</strong>
+                  <ul>
+                    {stagedWarnings.map((warning, idx) => (
+                      <li key={`warn-${idx}`}>{warning}</li>
+                    ))}
+                    {stagedSummary.invalidRecordDetails.map((detail, idx) => (
+                      <li key={`rec-${idx}`}>{detail}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <div className="staged-vaccines-chips">
                 <span className="chips-label">Preparaty w pliku kopii:</span>
@@ -426,10 +584,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <div className="staged-warning-box">
                 <AlertTriangle size={18} className="staged-warn-icon" />
                 <div className="staged-warn-content">
-                  <strong>Procedura ochrony przed utratą danych:</strong>
+                  <strong>Procedura ochrony przed utratą danych i weryfikacji ChPL:</strong>
                   <p>
-                    Przed przywróceniem danych z kopii aplikacja automatycznie pobierze kopię bezpieczeństwa aktualnego stanu bazy na Twój dysk.
-                    Następnie zostaniesz poproszony o ostateczne potwierdzenie operacji. Poprzednia historia zmian w przeglądarce zostanie zastąpiona danymi z wybranego pliku.
+                    Przed zastosowaniem kopii aplikacja automatycznie pobierze kopię zabezpieczającą aktualnego stanu na Twój dysk.
+                    Dane zostaną bezpiecznie scalone z katalogiem bazowym aplikacji, a deklaracje zatwierdzenia ChPL z niepodpisanego pliku JSON otrzymają status ponownej kontroli lokalnej.
                   </p>
                 </div>
               </div>
@@ -467,18 +625,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           <div className="setting-control-group">
             <label className="setting-label">Gęstość układu elementów:</label>
-            <div className="setting-options-row">
+            <div className="setting-options-row" role="group" aria-label="Gęstość układu elementów">
               <button
                 type="button"
                 className={`setting-chip ${density === 'comfortable' ? 'active' : ''}`}
-                onClick={() => setDensity('comfortable')}
+                aria-pressed={density === 'comfortable'}
+                onClick={() => handleDensityChange('comfortable')}
               >
                 Komfortowa (standardowa)
               </button>
               <button
                 type="button"
                 className={`setting-chip ${density === 'compact' ? 'active' : ''}`}
-                onClick={() => setDensity('compact')}
+                aria-pressed={density === 'compact'}
+                onClick={() => handleDensityChange('compact')}
               >
                 Zwięzła (dla mniejszych ekranów)
               </button>
@@ -487,23 +647,45 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           <div className="setting-control-group">
             <label className="setting-label">Rozmiar tekstu:</label>
-            <div className="setting-options-row">
+            <div className="setting-options-row" role="group" aria-label="Rozmiar tekstu">
               <button
                 type="button"
                 className={`setting-chip ${fontSize === 'normal' ? 'active' : ''}`}
-                onClick={() => setFontSize('normal')}
+                aria-pressed={fontSize === 'normal'}
+                onClick={() => handleFontSizeChange('normal')}
               >
                 Standardowy
               </button>
               <button
                 type="button"
                 className={`setting-chip ${fontSize === 'large' ? 'active' : ''}`}
-                onClick={() => setFontSize('large')}
+                aria-pressed={fontSize === 'large'}
+                onClick={() => handleFontSizeChange('large')}
               >
                 Wyraźny / powiększony
               </button>
             </div>
           </div>
+
+          <div className="setting-reset-row">
+            <button
+              type="button"
+              className="btn-reset-preferences"
+              onClick={handleResetPreferences}
+            >
+              <RotateCcw size={15} />
+              <span>Przywróć domyślne preferencje</span>
+            </button>
+          </div>
+
+          {preferencesFeedback && (
+            <div
+              className={`preferences-feedback preferences-feedback--${preferencesFeedback.type}`}
+              role="status"
+            >
+              {preferencesFeedback.message}
+            </div>
+          )}
         </div>
 
         {/* Privacy & Security architecture */}
@@ -549,11 +731,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="system-specs-grid">
             <div className="spec-card">
               <span className="spec-label">Aplikacja</span>
-              <span className="spec-value">VaxNurse 1.0 (Fundament)</span>
+              <span className="spec-value">VaxNurse — Etap A</span>
             </div>
             <div className="spec-card">
               <span className="spec-label">Silnik</span>
-              <span className="spec-value">React + TypeScript + Vite</span>
+              <span className="spec-value">React 19 + TypeScript + Vite 8</span>
             </div>
             <div className="spec-card">
               <span className="spec-label">Schemat kopii</span>
@@ -561,7 +743,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
             <div className="spec-card">
               <span className="spec-label">Architektura</span>
-              <span className="spec-value">Klient lokalny (Prywatny)</span>
+              <span className="spec-value">Klient lokalny (Local-First)</span>
             </div>
           </div>
         </div>

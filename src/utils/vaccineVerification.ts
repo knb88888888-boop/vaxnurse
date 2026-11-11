@@ -8,6 +8,20 @@ import type {
   VaccineProduct,
   VaccineVerificationStatus
 } from '../types/vaccines.ts';
+import {
+  ALLOWED_VERIFICATION_STATUSES,
+  CATALOG_DATA_VERSION,
+  SUPPORTED_STORAGE_FORMAT_VERSION,
+  VAX_CATALOG_META_KEY,
+  findDuplicateVaccineIds,
+  hasPrototypePollutionKey,
+  isPlainRecord,
+  isValidStoredVaccineRecord,
+  mergeVaccineCatalogWithStorage,
+  type MergeCatalogResult
+} from './catalogMerge.ts';
+
+export { CATALOG_DATA_VERSION, VAX_CATALOG_META_KEY, mergeVaccineCatalogWithStorage };
 
 export const VAX_STORAGE_KEY = 'vaxnurse_vaccines_catalog_state_v1';
 export const VAX_ACTIVE_ID_KEY = 'vaxnurse_active_vaccine_id_v1';
@@ -54,6 +68,8 @@ export interface LoadVaccinesResult {
   vaccines: VaccineProduct[];
   error: string | null;
   loadedFromStorage: boolean;
+  mergeResult?: MergeCatalogResult;
+  catalogDataVersion: string;
 }
 
 export interface SaveVaccinesResult {
@@ -316,12 +332,12 @@ export const applyClarificationRegistration = (
     return { success: false, errors: validation.errors };
   }
 
-  const trimmedDocId = fields.documentId!.trim();
-  const trimmedIssuer = fields.issuer!.trim();
-  const trimmedDocDate = fields.documentDate!.trim();
-  const trimmedReceivedDate = fields.receivedDate!.trim();
-  const trimmedLocation = fields.documentUrlOrLocation!.trim();
-  const trimmedJustification = fields.verifierJustification!.trim();
+  const trimmedDocId = (fields.documentId ?? '').trim();
+  const trimmedIssuer = (fields.issuer ?? '').trim();
+  const trimmedDocDate = (fields.documentDate ?? '').trim();
+  const trimmedReceivedDate = (fields.receivedDate ?? '').trim();
+  const trimmedLocation = (fields.documentUrlOrLocation ?? '').trim();
+  const trimmedJustification = (fields.verifierJustification ?? '').trim();
 
   const formattedTimestamp = formatVerificationTimestamp(now);
   const primaryDiscrepancy = vaccine.sourceDiscrepancies?.[0];
@@ -414,9 +430,9 @@ export const applyDocumentCheckConfirmation = (
   }
 
   const formattedTimestamp = formatVerificationTimestamp(now);
-  const trimmedDate = fields.docCheckDate!.trim();
-  const trimmedChecker = fields.checkerNameAndRole!.trim();
-  const trimmedJustification = fields.checkerJustification!.trim();
+  const trimmedDate = (fields.docCheckDate ?? '').trim();
+  const trimmedChecker = (fields.checkerNameAndRole ?? '').trim();
+  const trimmedJustification = (fields.checkerJustification ?? '').trim();
 
   const documentCheck: DocumentVerificationCheck = {
     sourceDocumentOpenedOrIndicated: true,
@@ -489,8 +505,8 @@ export const applyFinalChplApproval = (
   }
 
   const formattedTimestamp = formatVerificationTimestamp(now);
-  const trimmedVerifier = fields.verifierName!.trim();
-  const trimmedNotes = fields.verificationNotes!.trim();
+  const trimmedVerifier = (fields.verifierName ?? '').trim();
+  const trimmedNotes = (fields.verificationNotes ?? '').trim();
 
   const updatedChpl = mapAllChplSections(vaccine.chpl, sec => ({
     ...sec,
@@ -513,6 +529,8 @@ export const applyFinalChplApproval = (
     verificationStatus: 'verified_chpl',
     userVerificationDate: formattedTimestamp,
     userVerificationNotes: trimmedNotes,
+    importedVerificationClaim: undefined,
+    mergeConflict: undefined,
     statusHistory: [historyEntry, ...(vaccine.statusHistory || [])],
     chpl: updatedChpl
   };
@@ -725,31 +743,56 @@ export const resetCatalogPreservingHistory = (
   });
 };
 
-const isValidStoredVaccine = (item: unknown): item is VaccineProduct => {
-  if (!item || typeof item !== 'object' || Array.isArray(item)) {
-    return false;
+const readStoredCatalogMeta = (
+  storage: StorageReader | null | undefined
+): {
+  storageFormatVersion?: number;
+  catalogDataVersion?: string;
+  baselineSnapshotById?: Record<string, VaccineProduct>;
+} => {
+  if (!storage) {
+    return {};
   }
-  const obj = item as Record<string, unknown>;
-  return (
-    typeof obj.id === 'string' &&
-    obj.id.length > 0 &&
-    typeof obj.tradeName === 'string' &&
-    obj.tradeName.length > 0 &&
-    typeof obj.verificationStatus === 'string' &&
-    Boolean(obj.chpl && typeof obj.chpl === 'object')
-  );
+  try {
+    const rawMeta = storage.getItem(VAX_CATALOG_META_KEY);
+    if (!rawMeta) {
+      return {};
+    }
+    const parsed: unknown = JSON.parse(rawMeta);
+    if (!isPlainRecord(parsed)) {
+      return {};
+    }
+    return {
+      storageFormatVersion:
+        typeof parsed.storageFormatVersion === 'number'
+          ? parsed.storageFormatVersion
+          : undefined,
+      catalogDataVersion:
+        typeof parsed.catalogDataVersion === 'string'
+          ? parsed.catalogDataVersion
+          : undefined,
+      baselineSnapshotById: isPlainRecord(parsed.baselineSnapshotById)
+        ? (parsed.baselineSnapshotById as Record<string, VaccineProduct>)
+        : undefined
+    };
+  } catch {
+    return {};
+  }
 };
 
 export const loadVaccinesFromStorage = (
   storage: StorageReader | null | undefined,
-  fallbackCatalog: VaccineProduct[]
+  fallbackCatalog: readonly VaccineProduct[]
 ): LoadVaccinesResult => {
   if (!storage) {
+    const defaultMerge = mergeVaccineCatalogWithStorage(fallbackCatalog, []);
     return {
-      vaccines: fallbackCatalog,
+      vaccines: defaultMerge.vaccines,
       error:
         'Pamięć podręczna przeglądarki (localStorage) jest niedostępna. Załadowano domyślny katalog referencyjny (zmiany nie zostaną zapisane lokalnie).',
-      loadedFromStorage: false
+      loadedFromStorage: false,
+      mergeResult: defaultMerge,
+      catalogDataVersion: CATALOG_DATA_VERSION
     };
   }
 
@@ -758,51 +801,229 @@ export const loadVaccinesFromStorage = (
     raw = storage.getItem(VAX_STORAGE_KEY);
   } catch (e) {
     console.warn('Błąd odczytu bazy szczepionek z localStorage:', e);
+    const defaultMerge = mergeVaccineCatalogWithStorage(fallbackCatalog, []);
     return {
-      vaccines: fallbackCatalog,
+      vaccines: defaultMerge.vaccines,
       error:
         'Błąd odczytu pamięci podręcznej przeglądarki (localStorage): Brak dostępu do zapisanego stanu. Załadowano domyślny katalog referencyjny.',
-      loadedFromStorage: false
+      loadedFromStorage: false,
+      mergeResult: defaultMerge,
+      catalogDataVersion: CATALOG_DATA_VERSION
     };
   }
 
   if (!raw) {
+    const defaultMerge = mergeVaccineCatalogWithStorage(fallbackCatalog, []);
     return {
-      vaccines: fallbackCatalog,
+      vaccines: defaultMerge.vaccines,
       error: null,
-      loadedFromStorage: false
+      loadedFromStorage: false,
+      mergeResult: defaultMerge,
+      catalogDataVersion: CATALOG_DATA_VERSION
     };
   }
 
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (
-      !Array.isArray(parsed) ||
-      parsed.length === 0 ||
-      !parsed.every(isValidStoredVaccine)
-    ) {
+
+    if (hasPrototypePollutionKey(parsed)) {
+      const defaultMerge = mergeVaccineCatalogWithStorage(fallbackCatalog, []);
       return {
-        vaccines: fallbackCatalog,
+        vaccines: defaultMerge.vaccines,
         error:
-          'Błąd odczytu pamięci podręcznej przeglądarki (localStorage): Zapisane dane mają nieprawidłową strukturę. Załadowano domyślny katalog referencyjny bez usuwania zawartości pamięci.',
-        loadedFromStorage: false
+          'Błąd odczytu pamięci podręcznej przeglądarki (localStorage): Wykryto niedozwolone klucze obiektu w zapisanych danych. Załadowano domyślny katalog referencyjny bez nadpisywania pamięci.',
+        loadedFromStorage: false,
+        mergeResult: defaultMerge,
+        catalogDataVersion: CATALOG_DATA_VERSION
       };
     }
 
+    const meta = readStoredCatalogMeta(storage);
+    if (
+      typeof meta.storageFormatVersion === 'number' &&
+      meta.storageFormatVersion > SUPPORTED_STORAGE_FORMAT_VERSION
+    ) {
+      const defaultMerge = mergeVaccineCatalogWithStorage(fallbackCatalog, []);
+      return {
+        vaccines: defaultMerge.vaccines,
+        error: `Błąd odczytu pamięci podręcznej przeglądarki (localStorage): Zapisany stan używa nowszej wersji formatu (v${meta.storageFormatVersion}) nieobsługiwanej przez tę wersję aplikacji. Istniejące dane w pamięci pozostawiono nienaruszone.`,
+        loadedFromStorage: false,
+        mergeResult: defaultMerge,
+        catalogDataVersion: CATALOG_DATA_VERSION
+      };
+    }
+
+    let storedVaccinesInput: unknown = null;
+    let storedCatalogVersion: string | null = null;
+
+    if (Array.isArray(parsed)) {
+      storedVaccinesInput = parsed;
+    } else if (isPlainRecord(parsed)) {
+      const versionCandidate = parsed.storageFormatVersion;
+      if (
+        typeof versionCandidate === 'number' &&
+        versionCandidate > SUPPORTED_STORAGE_FORMAT_VERSION
+      ) {
+        const defaultMerge = mergeVaccineCatalogWithStorage(fallbackCatalog, []);
+        return {
+          vaccines: defaultMerge.vaccines,
+          error: `Błąd odczytu pamięci podręcznej przeglądarki (localStorage): Zapisany stan używa nowszego formatu (v${versionCandidate}) nieobsługiwanego przez tę wersję aplikacji. Istniejące dane w pamięci pozostawiono nienaruszone.`,
+          loadedFromStorage: false,
+          mergeResult: defaultMerge,
+          catalogDataVersion: CATALOG_DATA_VERSION
+        };
+      }
+      if (
+        typeof versionCandidate === 'number' &&
+        versionCandidate <= SUPPORTED_STORAGE_FORMAT_VERSION &&
+        Array.isArray(parsed.vaccines)
+      ) {
+        storedVaccinesInput = parsed.vaccines;
+        storedCatalogVersion =
+          typeof parsed.catalogDataVersion === 'string'
+            ? parsed.catalogDataVersion
+            : null;
+      }
+    }
+
+    if (!Array.isArray(storedVaccinesInput)) {
+      const defaultMerge = mergeVaccineCatalogWithStorage(fallbackCatalog, []);
+      return {
+        vaccines: defaultMerge.vaccines,
+        error:
+          'Błąd odczytu pamięci podręcznej przeglądarki (localStorage): Zapisane dane mają nieprawidłową strukturę. Załadowano domyślny katalog referencyjny bez usuwania zawartości pamięci.',
+        loadedFromStorage: false,
+        mergeResult: defaultMerge,
+        catalogDataVersion: CATALOG_DATA_VERSION
+      };
+    }
+
+    const duplicateIdsInRaw = findDuplicateVaccineIds(
+      storedVaccinesInput as { id?: unknown }[]
+    );
+
+    // Migracja stanu z niekompletnymi polami dla znanych kanonicznych ID bazy
+    const baseById = new Map(fallbackCatalog.map(b => [b.id, b]));
+    const normalizedItems: VaccineProduct[] = [];
+    for (const rawItem of storedVaccinesInput) {
+      if (isValidStoredVaccineRecord(rawItem)) {
+        normalizedItems.push(rawItem);
+        continue;
+      }
+      if (isPlainRecord(rawItem) && typeof rawItem.id === 'string') {
+        const baseFallback = baseById.get(rawItem.id);
+        if (baseFallback) {
+          const statusCandidate = rawItem.verificationStatus;
+          if (
+            statusCandidate === undefined ||
+            (typeof statusCandidate === 'string' &&
+              (ALLOWED_VERIFICATION_STATUSES as readonly string[]).includes(
+                statusCandidate
+              ))
+          ) {
+            normalizedItems.push({
+              ...structuredClone(baseFallback),
+              ...(rawItem as Partial<VaccineProduct>),
+              id: baseFallback.id,
+              tradeName:
+                typeof rawItem.tradeName === 'string' && rawItem.tradeName.trim()
+                  ? rawItem.tradeName
+                  : baseFallback.tradeName,
+              verificationStatus:
+                (statusCandidate as VaccineVerificationStatus | undefined) ??
+                baseFallback.verificationStatus,
+              chpl: isPlainRecord(rawItem.chpl)
+                ? (rawItem.chpl as unknown as ChPLStructure)
+                : structuredClone(baseFallback.chpl)
+            });
+          }
+        }
+      }
+    }
+
+    if (normalizedItems.length === 0) {
+      const defaultMerge = mergeVaccineCatalogWithStorage(fallbackCatalog, []);
+      return {
+        vaccines: defaultMerge.vaccines,
+        error:
+          'Błąd odczytu pamięci podręcznej przeglądarki (localStorage): Brak poprawnych rekordów preparatów w pamięci. Załadowano domyślny katalog referencyjny bez nadpisywania pamięci.',
+        loadedFromStorage: false,
+        mergeResult: defaultMerge,
+        catalogDataVersion: CATALOG_DATA_VERSION
+      };
+    }
+
+    const mergeResult = mergeVaccineCatalogWithStorage(
+      fallbackCatalog,
+      normalizedItems,
+      {
+        baselineSnapshotById: meta.baselineSnapshotById,
+        baseCatalogVersion: CATALOG_DATA_VERSION,
+        storedCatalogVersion: storedCatalogVersion ?? meta.catalogDataVersion ?? null
+      }
+    );
+
+    const errorParts: string[] = [];
+    if (duplicateIdsInRaw.length > 0) {
+      errorParts.push(
+        `Wykryto zduplikowane identyfikatory preparatów (ID) w localStorage: ${duplicateIdsInRaw.join(', ')}. Zachowano pierwsze poprawne wystąpienie każdego rekordu bez nadpisywania pamięci.`
+      );
+    }
+    if (normalizedItems.length < storedVaccinesInput.length) {
+      errorParts.push(
+        `Pominięto ${storedVaccinesInput.length - normalizedItems.length} uszkodzonych lub niekompletnych wpisów z pamięci lokalnej.`
+      );
+    }
+
     return {
-      vaccines: parsed,
-      error: null,
-      loadedFromStorage: true
+      vaccines: mergeResult.vaccines,
+      error: errorParts.length > 0 ? errorParts.join(' ') : null,
+      loadedFromStorage: true,
+      mergeResult,
+      catalogDataVersion: CATALOG_DATA_VERSION
     };
   } catch (e) {
     console.warn('Błąd parsowania danych bazy szczepionek z localStorage:', e);
+    const defaultMerge = mergeVaccineCatalogWithStorage(fallbackCatalog, []);
     return {
-      vaccines: fallbackCatalog,
+      vaccines: defaultMerge.vaccines,
       error:
         'Błąd odczytu pamięci podręcznej przeglądarki (localStorage): Zapisany stan JSON jest uszkodzony. Załadowano domyślny katalog referencyjny bez automatycznego czyszczenia pamięci.',
-      loadedFromStorage: false
+      loadedFromStorage: false,
+      mergeResult: defaultMerge,
+      catalogDataVersion: CATALOG_DATA_VERSION
     };
   }
+};
+
+export const validateCatalogBeforeSave = (
+  vaccines: readonly VaccineProduct[]
+): { isValid: boolean; error: string | null } => {
+  if (!Array.isArray(vaccines) || vaccines.length === 0) {
+    return {
+      isValid: false,
+      error: 'Błąd walidacji przed zapisem: katalog preparatów nie może być pusty.'
+    };
+  }
+
+  const duplicateIds = findDuplicateVaccineIds(vaccines);
+  if (duplicateIds.length > 0) {
+    return {
+      isValid: false,
+      error: `Błąd walidacji przed zapisem: wykryto zduplikowane identyfikatory preparatów (ID): ${duplicateIds.join(', ')}. Poprzedni stan w pamięci pozostał nietknięty.`
+    };
+  }
+
+  for (let i = 0; i < vaccines.length; i++) {
+    if (!isValidStoredVaccineRecord(vaccines[i])) {
+      return {
+        isValid: false,
+        error: `Błąd walidacji przed zapisem: rekord nr ${i + 1} ma nieprawidłową strukturę lub brakujące wymagane pola. Poprzedni stan w pamięci pozostał nietknięty.`
+      };
+    }
+  }
+
+  return { isValid: true, error: null };
 };
 
 export const saveVaccinesToStorage = (
@@ -817,8 +1038,29 @@ export const saveVaccinesToStorage = (
     };
   }
 
+  const validation = validateCatalogBeforeSave(vaccines);
+  if (!validation.isValid) {
+    return {
+      success: false,
+      error: validation.error
+    };
+  }
+
   try {
-    storage.setItem(VAX_STORAGE_KEY, JSON.stringify(vaccines));
+    const serialized = JSON.stringify(vaccines);
+    storage.setItem(VAX_STORAGE_KEY, serialized);
+
+    try {
+      const meta = {
+        storageFormatVersion: SUPPORTED_STORAGE_FORMAT_VERSION,
+        catalogDataVersion: CATALOG_DATA_VERSION,
+        updatedAt: new Date().toISOString()
+      };
+      storage.setItem(VAX_CATALOG_META_KEY, JSON.stringify(meta));
+    } catch {
+      // Nie unieważniaj głównego zapisu katalogu, jeśli meta nie zmieściło się w limicie
+    }
+
     return { success: true, error: null };
   } catch (e) {
     console.warn('Błąd zapisu bazy szczepionek do localStorage:', e);

@@ -7,7 +7,8 @@ import {
   CalendarDays,
   ExternalLink,
   AlertTriangle,
-  ThermometerSnowflake
+  ThermometerSnowflake,
+  Clock
 } from 'lucide-react';
 import type { ModuleDefinition, ModuleId } from '../../types/navigation';
 
@@ -36,7 +37,9 @@ export const ModulePlaceholder: React.FC<ModulePlaceholderProps> = ({
           <ArrowLeft size={16} />
           <span>Powrót do Pulpitu</span>
         </button>
-        <span className="view-mode-pill">Ekran demonstracyjny fundamentu</span>
+        <span className="view-mode-pill view-mode-pill--placeholder">
+          Moduł nieaktywny • W przygotowaniu
+        </span>
       </div>
 
       {/* Module Header Card */}
@@ -53,14 +56,32 @@ export const ModulePlaceholder: React.FC<ModulePlaceholderProps> = ({
                 {module.category === 'system' && 'Moduł systemowy'}
                 {module.category === 'main' && 'Widok główny'}
               </span>
-              {module.badge && <span className="module-custom-badge">{module.badge}</span>}
-              <span className="status-badge-ready">Wersja demonstracyjna</span>
+              <span className="status-badge-placeholder">
+                <Clock size={12} aria-hidden="true" />
+                <span>W przygotowaniu • Moduł nieaktywny</span>
+              </span>
             </div>
             <h1 className="module-view-title">{module.label}</h1>
             <p className="module-view-lead">{module.description}</p>
           </div>
         </div>
       </div>
+
+      {/* Honest placeholder notice specifically for Special Situations / Emergency preview */}
+      {module.id === 'special-situations' && (
+        <div className="module-special-banner cold-chain-banner" role="note">
+          <div className="special-banner-icon-box">
+            <AlertTriangle size={24} className="banner-icon-amber" />
+          </div>
+          <div className="special-banner-content">
+            <div className="special-banner-badge amber">Moduł w przygotowaniu — brak aktywnych algorytmów</div>
+            <h3 className="special-banner-title">Sytuacje szczególne i bezpieczeństwo (sekcja nieaktywna)</h3>
+            <p className="special-banner-desc">
+              Ten ekran przedstawia wyłącznie planowany zakres przyszłego modułu. <strong>Nie stanowi aktywnego protokołu postępowania nagłego ani narzędzia kwalifikacji.</strong> W sytuacjach nagłych należy kierować się wyłącznie obowiązującymi procedurami placówki, aktualną ChPL oraz dokumentacją medyczną.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Special Notice for Vaccination Calendar (PSO 2027 GIS Link) */}
       {module.id === 'vaccination-calendar' && (
@@ -116,7 +137,7 @@ export const ModulePlaceholder: React.FC<ModulePlaceholderProps> = ({
           <h2 className="panel-heading">Przeznaczenie i zakres roboczy</h2>
           <p className="panel-text">{module.purposeNote}</p>
 
-          <h3 className="panel-subheading">Kluczowe funkcjonalności przewidziane w standardzie:</h3>
+          <h3 className="panel-subheading">Planowane funkcjonalności (moduł nieaktywny):</h3>
           <ul className="features-list">
             {module.keyFeatures.map((feature, idx) => (
               <li key={idx} className="feature-item">
@@ -148,7 +169,7 @@ export const ModulePlaceholder: React.FC<ModulePlaceholderProps> = ({
             </div>
             <div className="safety-rule">
               <span className="rule-bullet">•</span>
-              <p><strong>Wersja demonstracyjna:</strong> Procedury i narzędzia wymagają każdorazowej weryfikacji z aktualnym komunikatem GIS oraz Charakterystyką Produktu Leczniczego (ChPL).</p>
+              <p><strong>Moduł w przygotowaniu (nieaktywny):</strong> Sekcja prezentuje planowany zakres i nie udostępnia jeszcze funkcji operacyjnych; korzystaj z oficjalnego komunikatu GIS, ChPL oraz aktywnych modułów VaxNurse.</p>
             </div>
           </div>
 
@@ -168,7 +189,7 @@ export const ModulePlaceholder: React.FC<ModulePlaceholderProps> = ({
       {/* Action footer */}
       <div className="module-view-footer">
         <p className="footer-status-note">
-          Fundament interfejsu modułu został wdrożony zgodnie z architekturą VaxNurse (wersja demonstracyjna).
+          Ten moduł znajduje się w przygotowaniu (moduł nieaktywny — brak funkcji operacyjnych w bieżącym etapie).
         </p>
         <button
           type="button"

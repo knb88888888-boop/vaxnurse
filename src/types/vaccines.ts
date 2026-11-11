@@ -158,6 +158,34 @@ export interface StatusHistoryEntry {
 }
 
 /**
+ * Niezweryfikowana deklaracja statusu z zewnętrznego importu JSON (brak podpisu kryptograficznego).
+ */
+export interface ImportedVerificationClaim {
+  claimedStatus: string;
+  declaredBy?: string | null;
+  declaredAt?: string | null;
+  declaredNotes?: string | null;
+  importedAt: string;
+  requiresReverification: true;
+  hasCompleteChplAudit: boolean;
+  hasOriginProvenance: boolean;
+  suspiciousHistoryDetected?: boolean;
+  reason: string;
+}
+
+/**
+ * Informacja o wykrytym konflikcie podczas scalania katalogu bazowego z lokalnym stanem użytkownika.
+ */
+export interface CatalogMergeConflict {
+  hasBaseUpdateConflict: true;
+  baseCatalogVersion: string;
+  conflictFields: string[];
+  localVerificationStatus: VaccineVerificationStatus;
+  baseVerificationStatus: VaccineVerificationStatus;
+  summary: string;
+}
+
+/**
  * Model preparatu szczepionkowego w systemie VaxNurse.
  */
 export interface VaccineProduct {
@@ -183,6 +211,9 @@ export interface VaccineProduct {
   clarificationDate?: string | null;            // Data otrzymania wyjaśnienia
   clarificationSource?: string | null;          // Źródło wyjaśnienia (np. GSK Polska / URPL / EMA)
   statusHistory?: StatusHistoryEntry[];         // Historia zmian statusów i decyzji personelu
+  catalogDataVersion?: string;                  // Wersja danych katalogu bazowego (odrębna od wersji schematu backupu i ChPL)
+  importedVerificationClaim?: ImportedVerificationClaim | null; // Deklaracja z niepodpisanego JSON wymagająca ponownej kontroli
+  mergeConflict?: CatalogMergeConflict | null;  // Konflikt scalania wymagający świadomej decyzji personelu
 
   // Oficjalna struktura ChPL (punkty 1–10 EMA QRD v10.4)
   chpl: ChPLStructure;

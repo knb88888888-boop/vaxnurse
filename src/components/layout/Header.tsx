@@ -1,19 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Menu,
   Search,
   X,
   Calendar,
-  ShieldAlert
+  ShieldAlert,
+  ArrowRight,
+  Clock
 } from 'lucide-react';
 import type { ModuleDefinition, ModuleId } from '../../types/navigation';
+import {
+  searchVaxNurseNavigation,
+  type GlobalSearchResult
+} from '../../utils/globalSearch';
 
 interface HeaderProps {
   currentModule: ModuleDefinition;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   onOpenMobileMenu: () => void;
+  isOpenMobileMenu: boolean;
   onNavigateToModule: (id: ModuleId) => void;
+  onSelectSearchResult: (result: GlobalSearchResult) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -21,7 +29,9 @@ export const Header: React.FC<HeaderProps> = ({
   searchQuery,
   onSearchChange,
   onOpenMobileMenu,
-  onNavigateToModule
+  isOpenMobileMenu,
+  onNavigateToModule,
+  onSelectSearchResult
 }) => {
   const [todayFormatted] = useState(() =>
     new Intl.DateTimeFormat('pl-PL', {
@@ -31,74 +41,268 @@ export const Header: React.FC<HeaderProps> = ({
       year: 'numeric'
     }).format(new Date())
   );
+  const [isDesktopSearchOpen, setIsDesktopSearchOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+
+  const desktopSearchRef = useRef<HTMLDivElement>(null);
+  const mobileInputRef = useRef<HTMLInputElement>(null);
+
+  const searchResults = useMemo(
+    () => searchVaxNurseNavigation(searchQuery),
+    [searchQuery]
+  );
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        desktopSearchRef.current &&
+        event.target instanceof Node &&
+        !desktopSearchRef.current.contains(event.target)
+      ) {
+        setIsDesktopSearchOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (isMobileSearchOpen) {
+      mobileInputRef.current?.focus();
+    }
+  }, [isMobileSearchOpen]);
+
+  const handlePickResult = (result: GlobalSearchResult) => {
+    setIsDesktopSearchOpen(false);
+    setIsMobileSearchOpen(false);
+    onSelectSearchResult(result);
+  };
+
+  const renderSearchResultsPanel = (panelId: string, isMobile: boolean) => {
+    const hasQuery = searchQuery.trim().length > 0;
+    if (!hasQuery && !isMobile) {
+      return null;
+    }
+
+    return (
+      <div
+        id={panelId}
+        className={`global-search-dropdown ${isMobile ? 'mobile' : 'desktop'}`}
+        role="region"
+        aria-label="Wyniki wyszukiwania modułów i sekcji VaxNurse"
+      >
+        <div className="global-search-scope-note">
+          Zakres wyszukiwania: moduły aplikacji, skróty i Biblioteka Wiedzy (nie zawiera danych pacjentów)
+        </div>
+
+        {!hasQuery ? (
+          <p className="global-search-hint">
+            Wpisz nazwę modułu, skrótu lub dokumentu z Bazy wiedzy, np. „szczepienia dzieci”, „ChPL”, „PSO” lub „kopia”.
+          </p>
+        ) : searchResults.length === 0 ? (
+          <div className="global-search-empty">
+            <p className="global-search-empty-title">
+              Brak pasujących modułów lub sekcji dla „{searchQuery.trim()}”
+            </p>
+            <button
+              type="button"
+              className="global-search-clear-cta"
+              onClick={() => onSearchChange('')}
+            >
+              Wyczyść zapytanie
+            </button>
+          </div>
+        ) : (
+          <ul className="global-search-results-list" aria-label="Lista wyników">
+            {searchResults.map(result => (
+              <li key={result.id}>
+                <button
+                  type="button"
+                  className="global-search-result-btn"
+                  onClick={() => handlePickResult(result)}
+                >
+                  <span className="global-result-main">
+                    <span className="global-result-title-row">
+                      <span className="global-result-title">{result.title}</span>
+                      <span
+                        className={`global-result-badge ${result.isPlaceholder ? 'is-placeholder' : ''}`}
+                      >
+                        {result.categoryLabel}
+                      </span>
+                    </span>
+                    <span className="global-result-subtitle">{result.subtitle}</span>
+                  </span>
+                  <ArrowRight size={15} className="global-result-arrow" aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  };
 
   return (
     <header className="app-header">
-      <div className="header-left">
-        <button
-          type="button"
-          className="mobile-menu-trigger"
-          onClick={onOpenMobileMenu}
-          aria-label="Otwórz menu nawigacji"
-        >
-          <Menu size={22} />
-        </button>
+      <div className="header-top-row">
+        <div className="header-left">
+          <button
+            type="button"
+            className="mobile-menu-trigger"
+            onClick={onOpenMobileMenu}
+            aria-label="Otwórz menu nawigacji"
+            aria-expanded={isOpenMobileMenu}
+            aria-controls="app-sidebar-nav"
+          >
+            <Menu size={22} />
+          </button>
 
-        <div className="header-breadcrumb">
-          <span className="breadcrumb-root" onClick={() => onNavigateToModule('dashboard')}>
-            VaxNurse
-          </span>
-          <span className="breadcrumb-separator">/</span>
-          <span className="breadcrumb-current">{currentModule.label}</span>
-        </div>
-      </div>
-
-      <div className="header-center">
-        <div className="header-search-bar">
-          <Search className="search-icon" size={17} />
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Szukaj w modułach, procedurach lub PSO..."
-            value={searchQuery}
-            onChange={e => onSearchChange(e.target.value)}
-            aria-label="Szukaj w aplikacji VaxNurse"
-          />
-          {searchQuery && (
+          <div className="header-breadcrumb">
             <button
               type="button"
-              className="search-clear-btn"
-              onClick={() => onSearchChange('')}
-              aria-label="Wyczyść wyszukiwanie"
+              className="breadcrumb-root"
+              onClick={() => onNavigateToModule('dashboard')}
             >
-              <X size={15} />
+              VaxNurse
             </button>
-          )}
+            <span className="breadcrumb-separator" aria-hidden="true">/</span>
+            <span className="breadcrumb-current">{currentModule.label}</span>
+          </div>
+        </div>
+
+        <div className="header-center" ref={desktopSearchRef}>
+          <div className="header-search-bar">
+            <Search className="search-icon" size={17} aria-hidden="true" />
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Szukaj modułów i sekcji VaxNurse"
+              value={searchQuery}
+              onFocus={() => setIsDesktopSearchOpen(true)}
+              onChange={e => {
+                onSearchChange(e.target.value);
+                setIsDesktopSearchOpen(true);
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Escape') {
+                  if (isDesktopSearchOpen) {
+                    setIsDesktopSearchOpen(false);
+                  } else if (searchQuery) {
+                    onSearchChange('');
+                  }
+                }
+              }}
+              aria-label="Szukaj modułów i sekcji VaxNurse"
+              aria-expanded={isDesktopSearchOpen && searchQuery.trim().length > 0}
+              aria-controls="desktop-global-search-results"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className="search-clear-btn"
+                onClick={() => onSearchChange('')}
+                aria-label="Wyczyść wyszukiwanie"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+
+          {isDesktopSearchOpen &&
+            searchQuery.trim().length > 0 &&
+            renderSearchResultsPanel('desktop-global-search-results', false)}
+        </div>
+
+        <div className="header-right">
+          <button
+            type="button"
+            className="mobile-search-trigger"
+            onClick={() => setIsMobileSearchOpen(prev => !prev)}
+            aria-expanded={isMobileSearchOpen}
+            aria-controls="mobile-global-search-panel"
+            aria-label={
+              isMobileSearchOpen
+                ? 'Zamknij wyszukiwarkę modułów'
+                : 'Otwórz wyszukiwarkę modułów'
+            }
+            title="Szukaj modułów i sekcji VaxNurse"
+          >
+            {isMobileSearchOpen ? <X size={19} /> : <Search size={19} />}
+          </button>
+
+          <div
+            className="header-status-badge"
+            title="Narzędzie referencyjne działające lokalnie w przeglądarce"
+          >
+            <span className="status-indicator-dot" aria-hidden="true"></span>
+            <span className="status-text">Tryb lokalny</span>
+          </div>
+
+          <div className="header-date">
+            <Calendar size={15} className="header-date-icon" aria-hidden="true" />
+            <span className="date-text">{todayFormatted}</span>
+          </div>
+
+          <button
+            type="button"
+            className="header-quick-btn is-placeholder-link"
+            title="Podgląd zakresu planowanego modułu: Sytuacje szczególne (w przygotowaniu)"
+            onClick={() => onNavigateToModule('special-situations')}
+            aria-label="Sytuacje szczególne (w przygotowaniu)"
+          >
+            <ShieldAlert size={16} className="quick-btn-icon" aria-hidden="true" />
+            <span className="quick-btn-text">Sytuacje szczeg. (w przygotowaniu)</span>
+            <Clock size={12} className="quick-btn-clock" aria-hidden="true" />
+          </button>
         </div>
       </div>
 
-      <div className="header-right">
-        <div className="header-status-badge" title="Aplikacja w wersji demonstracyjnej">
-          <span className="status-indicator-dot"></span>
-          <span className="status-text">Wersja demonstracyjna</span>
-        </div>
-
-        <div className="header-date">
-          <Calendar size={15} className="header-date-icon" />
-          <span className="date-text">{todayFormatted}</span>
-        </div>
-
-        <button
-          type="button"
-          className="header-quick-btn"
-          title="Procedury bezpieczeństwa i zgłaszanie sytuacji szczególnych"
-          onClick={() => onNavigateToModule('special-situations')}
-          aria-label="Sytuacje szczególne"
+      {isMobileSearchOpen && (
+        <div
+          id="mobile-global-search-panel"
+          className="mobile-search-overlay"
+          role="region"
+          aria-label="Mobilna wyszukiwarka modułów i sekcji VaxNurse"
         >
-          <ShieldAlert size={18} className="quick-btn-icon" />
-          <span className="quick-btn-text">Awaryjne</span>
-        </button>
-      </div>
+          <div className="header-search-bar mobile-search-bar">
+            <Search className="search-icon" size={17} aria-hidden="true" />
+            <input
+              ref={mobileInputRef}
+              type="text"
+              className="search-input"
+              placeholder="Szukaj modułów i sekcji VaxNurse"
+              value={searchQuery}
+              onChange={e => onSearchChange(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Escape') {
+                  setIsMobileSearchOpen(false);
+                }
+              }}
+              aria-label="Szukaj modułów i sekcji VaxNurse"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className="search-clear-btn"
+                onClick={() => onSearchChange('')}
+                aria-label="Wyczyść frazę wyszukiwania"
+              >
+                <X size={15} />
+              </button>
+            )}
+            <button
+              type="button"
+              className="mobile-search-close-btn"
+              onClick={() => setIsMobileSearchOpen(false)}
+              aria-label="Zamknij panel wyszukiwania"
+            >
+              Zamknij
+            </button>
+          </div>
+          {renderSearchResultsPanel('mobile-global-search-results', true)}
+        </div>
+      )}
     </header>
   );
 };

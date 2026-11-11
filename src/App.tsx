@@ -1,51 +1,108 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { Layout } from './components/layout/Layout';
 import { DashboardView } from './components/dashboard/DashboardView';
-import { ModulePlaceholder } from './components/modules/ModulePlaceholder';
-import { SettingsView } from './components/settings/SettingsView';
-import { KnowledgeBaseView } from './components/knowledge/KnowledgeBaseView';
-import { VaccinesDatabaseView } from './components/vaccines/VaccinesDatabaseView';
-import { ChildVaccinationsView } from './components/childVaccinations/ChildVaccinationsView';
+import { ModuleLoadingFallback } from './components/common/ModuleLoadingFallback';
+import { ModuleErrorBoundary } from './components/common/ModuleErrorBoundary';
 import { APP_MODULES, QUICK_ACCESS_ITEMS } from './data/navigationData';
 import type { ModuleId } from './types/navigation';
-import type { RecentVisit } from './components/dashboard/RecentModules';
+import type { GlobalSearchResult } from './utils/globalSearch';
+import {
+  loadRecentModuleVisits,
+  recordModuleVisit,
+  clearRecentModuleVisits,
+  type RecentVisitRecord
+} from './utils/recentModules';
+
+const LazyModulePlaceholder = React.lazy(() =>
+  import('./components/modules/ModulePlaceholder').then(mod => ({
+    default: mod.ModulePlaceholder
+  }))
+);
+
+const LazySettingsView = React.lazy(() =>
+  import('./components/settings/SettingsView').then(mod => ({
+    default: mod.SettingsView
+  }))
+);
+
+const LazyKnowledgeBaseView = React.lazy(() =>
+  import('./components/knowledge/KnowledgeBaseView').then(mod => ({
+    default: mod.KnowledgeBaseView
+  }))
+);
+
+const LazyVaccinesDatabaseView = React.lazy(() =>
+  import('./components/vaccines/VaccinesDatabaseView').then(mod => ({
+    default: mod.VaccinesDatabaseView
+  }))
+);
+
+const LazyChildVaccinationsView = React.lazy(() =>
+  import('./components/childVaccinations/ChildVaccinationsView').then(mod => ({
+    default: mod.ChildVaccinationsView
+  }))
+);
+
+const getBrowserStorage = (): Storage | null => {
+  try {
+    return typeof window !== 'undefined' ? window.localStorage : null;
+  } catch {
+    return null;
+  }
+};
 
 export const App: React.FC = () => {
   const [activeModuleId, setActiveModuleId] = useState<ModuleId>('dashboard');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedVaccineIdForDatabase, setSelectedVaccineIdForDatabase] = useState<string | null>(null);
+  const [knowledgePrefillQuery, setKnowledgePrefillQuery] = useState<string | null>(null);
+  const [knowledgePrefillSeq, setKnowledgePrefillSeq] = useState<number>(0);
+  const [moduleRetryKey, setModuleRetryKey] = useState<number>(0);
 
-  // Initial recent visits for demonstration of the recent modules section
-  const [recentVisits, setRecentVisits] = useState<RecentVisit[]>([
-    { moduleId: 'cold-chain', timestamp: 'Dzisiaj, 07:45' },
-    { moduleId: 'vaccination-calendar', timestamp: 'Dzisiaj, 08:15' },
-    { moduleId: 'procedures-checklists', timestamp: 'Wczoraj' },
-    { moduleId: 'vaccines-database', timestamp: 'Wczoraj' }
-  ]);
+  // Rzeczywista lokalna historia odwiedzonych modułów (pusta przy pierwszym uruchomieniu)
+  const [recentVisits, setRecentVisits] = useState<RecentVisitRecord[]>(() => {
+    const loaded = loadRecentModuleVisits(getBrowserStorage());
+    return loaded.visits;
+  });
 
-  const handleSelectModule = (id: ModuleId) => {
+  const handleSelectModule = (id: ModuleId, preservePrefill: boolean = false) => {
     setActiveModuleId(id);
 
-    // If navigating away from vaccines-database without direct selection, clear selected ID
+    // Przy zwykłym opuszczeniu Bazy preparatów wyczyść wybrane ID preparatu
     if (id !== 'vaccines-database') {
       setSelectedVaccineIdForDatabase(null);
     }
 
-    // If navigating to an operational module, update the recent visits list
-    if (id !== 'dashboard') {
-      const nowFormatted = new Intl.DateTimeFormat('pl-PL', {
-        hour: '2-digit',
-        minute: '2-digit'
-      }).format(new Date());
+    if (!preservePrefill && id !== 'knowledge-base') {
+      setKnowledgePrefillQuery(null);
+    }
 
+    // Zapisz rzeczywiste otwarcie modułu w localStorage
+    if (id !== 'dashboard') {
       setRecentVisits(prev => {
-        const filtered = prev.filter(item => item.moduleId !== id);
-        return [{ moduleId: id, timestamp: `Dzisiaj, ${nowFormatted}` }, ...filtered].slice(0, 6);
+        const res = recordModuleVisit(getBrowserStorage(), prev, id);
+        return res.visits;
       });
     }
 
-    // Scroll to top of content smoothly on module change
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSelectSearchResult = (result: GlobalSearchResult) => {
+    setSearchQuery('');
+    if (result.targetModule === 'knowledge-base') {
+      setKnowledgePrefillQuery(result.knowledgePrefillQuery || null);
+      setKnowledgePrefillSeq(prev => prev + 1);
+      handleSelectModule('knowledge-base', true);
+      return;
+    }
+    setKnowledgePrefillQuery(null);
+    handleSelectModule(result.targetModule);
+  };
+
+  const handleClearRecentVisits = () => {
+    const empty = clearRecentModuleVisits(getBrowserStorage());
+    setRecentVisits(empty);
   };
 
   const handleSelectVaccineProduct = (vaccineId: string) => {
@@ -63,9 +120,10 @@ export const App: React.FC = () => {
     <Layout
       modules={APP_MODULES}
       activeModuleId={activeModuleId}
-      onSelectModule={handleSelectModule}
+      onSelectModule={id => handleSelectModule(id)}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
+      onSelectSearchResult={handleSelectSearchResult}
     >
       {activeModuleId === 'dashboard' ? (
         <DashboardView
@@ -74,37 +132,50 @@ export const App: React.FC = () => {
           recentVisits={recentVisits}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          onSelectModule={handleSelectModule}
-        />
-      ) : activeModuleId === 'child-vaccinations' ? (
-        <ChildVaccinationsView
-          module={currentModule}
-          onBackToDashboard={() => handleSelectModule('dashboard')}
-          onNavigateToModule={handleSelectModule}
-          onSelectVaccineProduct={handleSelectVaccineProduct}
-        />
-      ) : activeModuleId === 'settings' ? (
-        <SettingsView
-          module={currentModule}
-          onBackToDashboard={() => handleSelectModule('dashboard')}
-        />
-      ) : activeModuleId === 'knowledge-base' ? (
-        <KnowledgeBaseView
-          module={currentModule}
-          onBackToDashboard={() => handleSelectModule('dashboard')}
-        />
-      ) : activeModuleId === 'vaccines-database' ? (
-        <VaccinesDatabaseView
-          module={currentModule}
-          onBackToDashboard={() => handleSelectModule('dashboard')}
-          initialSelectedVaccineId={selectedVaccineIdForDatabase}
+          onSelectModule={id => handleSelectModule(id)}
+          onClearRecentVisits={handleClearRecentVisits}
         />
       ) : (
-        <ModulePlaceholder
-          module={currentModule}
+        <ModuleErrorBoundary
+          resetKey={`${activeModuleId}-${moduleRetryKey}`}
+          onRetry={() => setModuleRetryKey(prev => prev + 1)}
           onBackToDashboard={() => handleSelectModule('dashboard')}
-          onNavigateToModule={handleSelectModule}
-        />
+        >
+          <Suspense fallback={<ModuleLoadingFallback label={`Wczytywanie modułu: ${currentModule.label}…`} />}>
+            {activeModuleId === 'child-vaccinations' ? (
+              <LazyChildVaccinationsView
+                module={currentModule}
+                onBackToDashboard={() => handleSelectModule('dashboard')}
+                onNavigateToModule={id => handleSelectModule(id)}
+                onSelectVaccineProduct={handleSelectVaccineProduct}
+              />
+            ) : activeModuleId === 'settings' ? (
+              <LazySettingsView
+                module={currentModule}
+                onBackToDashboard={() => handleSelectModule('dashboard')}
+              />
+            ) : activeModuleId === 'knowledge-base' ? (
+              <LazyKnowledgeBaseView
+                key={`kb-${knowledgePrefillSeq}`}
+                module={currentModule}
+                onBackToDashboard={() => handleSelectModule('dashboard')}
+                initialSearchQuery={knowledgePrefillQuery}
+              />
+            ) : activeModuleId === 'vaccines-database' ? (
+              <LazyVaccinesDatabaseView
+                module={currentModule}
+                onBackToDashboard={() => handleSelectModule('dashboard')}
+                initialSelectedVaccineId={selectedVaccineIdForDatabase}
+              />
+            ) : (
+              <LazyModulePlaceholder
+                module={currentModule}
+                onBackToDashboard={() => handleSelectModule('dashboard')}
+                onNavigateToModule={id => handleSelectModule(id)}
+              />
+            )}
+          </Suspense>
+        </ModuleErrorBoundary>
       )}
     </Layout>
   );
