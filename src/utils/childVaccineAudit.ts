@@ -5,6 +5,7 @@ import type {
   ChplContentAuditRecord,
   ChplContentVerificationStatus,
   ChplReferenceStatus,
+  ChplSectionAuditEntry,
   ChplVerificationStatus,
   FundingScopeBreakdown,
   ProcedureProductAdequacyStatus,
@@ -24,6 +25,18 @@ export const REQUIRED_CHPL_SECTION_NUMBERS: ChplAuditSectionNumber[] = [
   '10',
 ];
 
+export const REQUIRED_SECTION_4_SUBPOINTS: string[] = [
+  '4.1',
+  '4.2',
+  '4.3',
+  '4.4',
+  '4.5',
+  '4.6',
+  '4.7',
+  '4.8',
+  '4.9',
+];
+
 /**
  * Procedury PSO 2027, w których finansowanie zależy od odrębnych przepisów refundacyjnych
  * lub wyboru produktu handlowego i nie pozwala na nadanie jednego statusu procedury.
@@ -35,11 +48,93 @@ export const EXTERNAL_FUNDING_PENDING_IDS = new Set<string>([
 ]);
 
 const PLACEHOLDER_VALUE_REGEX = /^(brak(\s+danych)?|n\/?d|tbd|none|null|undefined|-+|nieznan[ae]?|brak informacji.*)$/i;
+const GENERIC_RUBBER_STAMP_REGEX = /^(ok|tak|zweryfikowano|sprawdzono|zgodne?|brak uwag|bez uwag|zaliczono|passed)\.?$/i;
 const CALENDAR_DATE_REGEX = /^(\d{2}\.\d{2}\.\d{4}|\d{4}-\d{2}-\d{2})$/;
 
 function isPlaceholderValue(value: string | null | undefined): boolean {
   if (!value || !value.trim()) return true;
   return PLACEHOLDER_VALUE_REGEX.test(value.trim());
+}
+
+function isSubstantiveVerificationNote(value: string | null | undefined, minLength = 15): boolean {
+  if (!value) return false;
+  const trimmed = value.trim();
+  if (trimmed.length < minLength) return false;
+  if (isPlaceholderValue(trimmed)) return false;
+  if (GENERIC_RUBBER_STAMP_REGEX.test(trimmed)) return false;
+  return true;
+}
+
+function isValidPageRef(value: string | null | undefined): boolean {
+  if (!value) return false;
+  const trimmed = value.trim();
+  if (trimmed.length < 3 || isPlaceholderValue(trimmed)) return false;
+  return true;
+}
+
+function validateSectionSubpoints(
+  entry: ChplSectionAuditEntry,
+  issues: string[]
+): void {
+  const subpoints = entry.subpoints ?? [];
+
+  if (entry.sectionNumber === '4') {
+    if (subpoints.length === 0) {
+      issues.push(
+        'Punkt 4 ChPL (Dane kliniczne) wymaga jawnej analizy wszystkich podpunktów 4.1–4.9 w polu subpoints (samo odhaczenie sekcji 4 nie wystarcza).'
+      );
+      return;
+    }
+
+    for (const requiredId of REQUIRED_SECTION_4_SUBPOINTS) {
+      const matches = subpoints.filter(sp => sp.subpointId === requiredId);
+      if (matches.length === 0) {
+        issues.push(`Brak wymaganego podpunktu ${requiredId} w analizie sekcji 4 ChPL (subpoints).`);
+      } else if (matches.length > 1) {
+        issues.push(`Zduplikowany wpis podpunktu ${requiredId} w analizie sekcji 4 ChPL.`);
+      }
+    }
+  }
+
+  const seenIds = new Set<string>();
+  for (const sp of subpoints) {
+    if (seenIds.has(sp.subpointId)) {
+      if (entry.sectionNumber !== '4') {
+        issues.push(`Zduplikowany wpis podpunktu ${sp.subpointId} w sekcji ${entry.sectionNumber} ChPL.`);
+      }
+      continue;
+    }
+    seenIds.add(sp.subpointId);
+
+    if (sp.discrepancyNote && sp.discrepancyNote.trim().length > 0) {
+      issues.push(
+        `Podpunkt ${sp.subpointId} ChPL zawiera otwartą niezgodność/uwagę wymagającą wyjaśnienia: ${sp.discrepancyNote.trim()}`
+      );
+    }
+
+    if (sp.status === 'not_present_in_document' || sp.status === 'not_applicable') {
+      const justif = sp.justification?.trim() ?? '';
+      if (isPlaceholderValue(justif) || GENERIC_RUBBER_STAMP_REGEX.test(justif) || justif.length < 10) {
+        issues.push(
+          `Podpunkt ${sp.subpointId} ChPL oznaczony jako '${sp.status}' wymaga konkretnego, jawnego uzasadnienia (min. 10 znaków).`
+        );
+      }
+    } else if (sp.status === 'verified') {
+      const effectivePageRef = sp.pageRef ?? entry.pageRef;
+      if (!isValidPageRef(effectivePageRef)) {
+        issues.push(
+          `Podpunkt ${sp.subpointId} ChPL oznaczony jako 'verified' wymaga wskazania odniesienia do strony dokumentu (pageRef).`
+        );
+      }
+      if (!isSubstantiveVerificationNote(sp.verificationNote, 12)) {
+        issues.push(
+          `Podpunkt ${sp.subpointId} ChPL oznaczony jako 'verified' wymaga merytorycznej notatki weryfikacyjnej (min. 12 znaków, bez ogólników).`
+        );
+      }
+    } else {
+      issues.push(`Nieprawidłowy status podpunktu ${sp.subpointId} w sekcji ${entry.sectionNumber} ChPL.`);
+    }
+  }
 }
 
 /**
@@ -109,7 +204,7 @@ function isValidChplAuditRecord(
     issues.push('Brak listy konkretnych punktów ChPL poddanych analizie w chplAudit.');
   }
 
-  // Zadanie 1 (PROMPT 21): Wymagana pełna, jawna kontrola wszystkich właściwych punktów ChPL 1–10.
+  // Zadanie 1 (PROMPT 21 + 22): Wymagana pełna, dowodowa kontrola wszystkich właściwych punktów ChPL 1–10.
   const sectionReviews = audit.sectionReviews ?? [];
   if (sectionReviews.length === 0) {
     issues.push(
@@ -127,14 +222,33 @@ function isValidChplAuditRecord(
         continue;
       }
       const entry = matches[0];
+      if (entry.discrepancyNote && entry.discrepancyNote.trim().length > 0) {
+        issues.push(`Punkt ${sec} ChPL zawiera otwartą niezgodność w sekcji: ${entry.discrepancyNote.trim()}`);
+      }
+      if (entry.outcome && entry.outcome !== 'compliant') {
+        issues.push(`Punkt ${sec} ChPL ma wynik kontroli '${entry.outcome}' zamiast 'compliant'.`);
+      }
+
       if (entry.status === 'not_present_in_document' || entry.status === 'not_applicable') {
         const justif = entry.justification?.trim() ?? '';
-        if (isPlaceholderValue(justif) || justif.length < 10) {
+        if (isPlaceholderValue(justif) || GENERIC_RUBBER_STAMP_REGEX.test(justif) || justif.length < 10) {
           issues.push(
             `Punkt ${sec} ChPL oznaczony jako '${entry.status}' wymaga konkretnego, jawnego uzasadnienia (min. 10 znaków).`
           );
         }
-      } else if (entry.status !== 'verified') {
+      } else if (entry.status === 'verified') {
+        if (!isValidPageRef(entry.pageRef)) {
+          issues.push(
+            `Punkt ${sec} ChPL oznaczony jako 'verified' wymaga odniesienia do strony oficjalnego dokumentu (pageRef).`
+          );
+        }
+        if (!isSubstantiveVerificationNote(entry.verificationNote, 15)) {
+          issues.push(
+            `Punkt ${sec} ChPL oznaczony jako 'verified' wymaga merytorycznej notatki weryfikacyjnej (min. 15 znaków), samo oznaczenie statusu nie stanowi dowodu audytu.`
+          );
+        }
+        validateSectionSubpoints(entry, issues);
+      } else {
         issues.push(`Nieprawidłowy status kontroli dla punktu ${sec} ChPL.`);
       }
     }
@@ -237,12 +351,27 @@ export function deriveProcedureProductAdequacyStatus(
 }
 
 /**
- * Zwraca wyłącznie zakresy dopuszczalne w kontekście decyzji pediatrycznej (wyklucza preparaty dla dorosłych, np. Efluelda).
+ * Zwraca wyłącznie zakresy dopuszczalne i dostępne w kontekście decyzji pediatrycznej
+ * (wyklucza preparaty dla dorosłych, np. Efluelda >=60, oraz preparaty bez potwierdzonej dostępności sezonowej, np. Fluenz).
  */
 export function getPediatricSelectableFundingScopes(item: ChildVaccineItem): FundingScopeBreakdown[] {
   return (item.fundingAuditDetails?.fundingScopes ?? []).filter(
-    scope => scope.isPediatricSelectable !== false
+    scope =>
+      scope.isPediatricSelectable !== false &&
+      scope.seasonalAvailabilityStatus !== 'unconfirmed_for_season' &&
+      scope.seasonalAvailabilityStatus !== 'excluded_from_pediatric'
   );
+}
+
+/**
+ * Zwraca zakresy pediatryczne o niepotwierdzonej/wycofanej dostępności sezonowej w Polsce (np. Fluenz w 2026/2027),
+ * utrzymane wyłącznie jako bezpieczna informacja ostrzegawcza poza listą wyboru.
+ */
+export function getUnconfirmedSeasonalScopes(item: ChildVaccineItem): FundingScopeBreakdown[] {
+  return [
+    ...(item.fundingAuditDetails?.fundingScopes ?? []),
+    ...(item.fundingAuditDetails?.adultAndSpecialReferenceScopes ?? []),
+  ].filter(scope => scope.seasonalAvailabilityStatus === 'unconfirmed_for_season');
 }
 
 /**
@@ -251,7 +380,10 @@ export function getPediatricSelectableFundingScopes(item: ChildVaccineItem): Fun
 export function getAdultAndSpecialReferenceScopes(item: ChildVaccineItem): FundingScopeBreakdown[] {
   return [
     ...(item.fundingAuditDetails?.fundingScopes ?? []).filter(
-      scope => scope.isPediatricSelectable === false
+      scope =>
+        scope.isPediatricSelectable === false &&
+        scope.audienceContext !== 'pediatric' &&
+        scope.seasonalAvailabilityStatus !== 'unconfirmed_for_season'
     ),
     ...(item.fundingAuditDetails?.adultAndSpecialReferenceScopes ?? []),
   ];
@@ -420,14 +552,47 @@ export function validateChildVaccineStatusInvariants(
     );
   }
 
-  // Zadanie 4 (PROMPT 21): Zakaz umieszczania preparatu Efluelda lub zakresów >=60 lat w liście wybieralnej pediatrycznej
-  for (const scope of item.fundingAuditDetails?.fundingScopes ?? []) {
+  // Zadanie 4 (PROMPT 21) + Zadania 3, 4, 6 (PROMPT 22): Bezpieczeństwo wyboru pediatrycznego, granice wieku oraz dostępność sezonowa
+  const allScopes = [
+    ...(item.fundingAuditDetails?.fundingScopes ?? []),
+    ...(item.fundingAuditDetails?.adultAndSpecialReferenceScopes ?? []),
+  ];
+  for (const scope of allScopes) {
     const isSelectable = scope.isPediatricSelectable !== false;
     const textCheck = `${scope.label} ${scope.productScope} ${scope.ageGroup}`.toLowerCase();
     if (isSelectable && (textCheck.includes('efluelda') || textCheck.includes('>=60') || textCheck.includes('≥60'))) {
       errors.push(
         `[${item.id}] Zakres '${scope.scopeId}' zawiera preparat/wskazanie dla dorosłych (Efluelda / >=60), ale nie jest wyłączony z wyboru pediatrycznego (isPediatricSelectable=false).`
       );
+    }
+    if (
+      (scope.seasonalAvailabilityStatus === 'unconfirmed_for_season' ||
+        scope.seasonalAvailabilityStatus === 'excluded_from_pediatric') &&
+      isSelectable
+    ) {
+      errors.push(
+        `[${item.id}] Zakres '${scope.scopeId}' ma status dostępności '${scope.seasonalAvailabilityStatus}', więc musi mieć isPediatricSelectable=false.`
+      );
+    }
+    if (textCheck.includes('fluenz') || textCheck.includes('laiv')) {
+      if (isSelectable || scope.seasonalAvailabilityStatus !== 'unconfirmed_for_season') {
+        errors.push(
+          `[${item.id}] Zakres '${scope.scopeId}' dotyczy niedostępnego w sezonie 2026/2027 preparatu Fluenz/LAIV i musi mieć isPediatricSelectable=false oraz seasonalAvailabilityStatus='unconfirmed_for_season'.`
+        );
+      }
+      if (scope.fundingStatus === 'verified_self_funded') {
+        errors.push(
+          `[${item.id}] Zakres '${scope.scopeId}' nie może prezentować niedostępnego w Polsce preparatu Fluenz jako aktywnej opcji 'verified_self_funded' (100% odpłatny).`
+        );
+      }
+    }
+    if (scope.scopeId === 'hpv-under18-cervarix-d1') {
+      const lowerCheck = `${scope.ageGroup} ${scope.minAgeDescription ?? ''}`.toLowerCase();
+      if (!/(\bod\s+(?:ukończenia\s+)?9\.?\b)/.test(lowerCheck)) {
+        errors.push(
+          `[${item.id}] Zakres '${scope.scopeId}' musi jawnie określać dolną granicę wieku Cervarix (od ukończenia 9. r.ż.), zamiast luźnego zakresu bez minimum.`
+        );
+      }
     }
   }
   for (const excluded of item.fundingAuditDetails?.excludedPediatricProducts ?? []) {
@@ -436,14 +601,30 @@ export function validateChildVaccineStatusInvariants(
     }
   }
 
-  // Zadanie 5 (PROMPT 21): Walidacja identyfikowalnych źródeł GTIN
+  // Zadanie 5 (PROMPT 21) + Zadanie 2 (PROMPT 22): Walidacja identyfikowalnych źródeł GTIN i rozdzielenie RARS vs RPL/EMA
   for (const g of item.fundingAuditDetails?.gtinReferences ?? []) {
     if (!g.gtin.trim() || !g.sourceDocumentTitle.trim() || !g.sourceDocumentUrl.startsWith('https://')) {
       errors.push(`[${item.id}] Wpis GTIN '${g.gtin}' musi posiadać identyfikowalne źródło dokumentowe i adres URL.`);
     }
-    if (!g.crossCheckedWithEparOrRpl && g.verificationStatus === 'confirmed_in_official_guideline_and_product_doc') {
+    if (g.confirmedByRars && (!g.rarsSourceTitle?.trim() || !g.rarsSourceUrl?.startsWith('https://www.gov.pl/web/rars'))) {
       errors.push(
-        `[${item.id}] Wpis GTIN '${g.gtin}' bez potwierdzenia w EPAR/RPL/RARS nie może mieć statusu pełnego potwierdzenia dokumentowego produktu.`
+        `[${item.id}] Wpis GTIN '${g.gtin}' z confirmedByRars=true musi wskazywać oficjalne źródło i URL RARS (https://www.gov.pl/web/rars/...).`
+      );
+    }
+    if (
+      g.verificationStatus === 'confirmed_in_official_guideline_and_product_doc' &&
+      (!g.crossCheckedWithEparOrRpl || (!g.confirmedByRpl && !g.confirmedByEma))
+    ) {
+      errors.push(
+        `[${item.id}] Wpis GTIN '${g.gtin}' bez potwierdzenia w EPAR/RPL nie może mieć statusu 'confirmed_in_official_guideline_and_product_doc' (samo potwierdzenie RARS nie wystarcza).`
+      );
+    }
+    if (
+      g.verificationStatus === 'confirmed_mz_guideline_and_rars_pending_rpl_ema' &&
+      (!g.confirmedByMzGuidelines || !g.confirmedByRars || g.crossCheckedWithEparOrRpl || g.confirmedByRpl || g.confirmedByEma)
+    ) {
+      errors.push(
+        `[${item.id}] Wpis GTIN '${g.gtin}' ze statusem 'confirmed_mz_guideline_and_rars_pending_rpl_ema' wymaga confirmedByMzGuidelines=true, confirmedByRars=true oraz false dla RPL/EMA.`
       );
     }
   }

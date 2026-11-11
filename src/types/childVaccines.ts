@@ -37,9 +37,37 @@ export type ProcedureProductAdequacyStatus =
 export type ChplAuditSectionNumber = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10';
 export type ChplSectionReviewStatus = 'verified' | 'not_present_in_document' | 'not_applicable';
 
+/**
+ * Granularny wpis kontroli podpunktu ChPL (np. 4.1–4.9 w sekcji 4, 5.1–5.3 w sekcji 5).
+ */
+export interface ChplSubpointAuditEntry {
+  subpointId: string;
+  label?: string;
+  status: ChplSectionReviewStatus;
+  /** Odwołanie do numeru strony w oficjalnym pliku PDF ChPL */
+  pageRef?: string;
+  /** Merytoryczny opis zweryfikowanej treści podpunktu (wymagany przy statusie 'verified') */
+  verificationNote?: string;
+  /** Obowiązkowe uzasadnienie przy statusie 'not_present_in_document' lub 'not_applicable' */
+  justification?: string;
+  /** Zidentyfikowana rozbieżność lub uwaga wymagająca wyjaśnienia */
+  discrepancyNote?: string;
+}
+
 export interface ChplSectionAuditEntry {
   sectionNumber: ChplAuditSectionNumber;
+  sectionTitle?: string;
   status: ChplSectionReviewStatus;
+  /** Odwołanie do numeru strony w oficjalnym dokumencie PDF ChPL */
+  pageRef?: string;
+  /** Merytoryczna notatka potwierdzająca zakres wykonanej analizy sekcji */
+  verificationNote?: string;
+  /** Wynik oceny tej konkretnej sekcji ChPL */
+  outcome?: 'compliant' | 'discrepancy_detected' | 'pending_review';
+  /** Opis niezgodności wykrytej w obrębie tej sekcji */
+  discrepancyNote?: string;
+  /** Szczegółowa kontrola podpunktów sekcji (obowiązkowa dla sekcji 4: 4.1–4.9) */
+  subpoints?: ChplSubpointAuditEntry[];
   /** Obowiązkowe uzasadnienie przy statusie 'not_present_in_document' lub 'not_applicable' */
   justification?: string;
 }
@@ -116,6 +144,11 @@ export interface FundingMechanismBreakdown {
   localPointAvailabilityConfirmed: boolean;
 }
 
+export type SeasonalAvailabilityStatus =
+  | 'confirmed_for_season'
+  | 'unconfirmed_for_season'
+  | 'excluded_from_pediatric';
+
 /**
  * Odrębny zakres finansowania dla konkretnej grupy wiekowej, produktu lub regionu
  * (bez duplikowania samej procedury klinicznej w katalogu).
@@ -124,6 +157,16 @@ export interface FundingScopeBreakdown {
   scopeId: string;
   label: string;
   ageGroup: string;
+  /** Ustrukturyzowana dolna granica wieku (np. 'Od ukończenia 9. r.ż. wg ChPL pkt 4.1') */
+  minAgeDescription?: string;
+  /** Ustrukturyzowana górna granica wieku (np. 'Do dnia poprzedzającego 18. urodziny') */
+  maxAgeDescription?: string;
+  /** Jawne reguły granicy włączenia/wyłączenia i kontynuacji po zmianie progu wieku */
+  boundaryInclusivity?: string;
+  /** Stan potwierdzenia dostępności preparatu w sezonie 2026/2027 w Polsce */
+  seasonalAvailabilityStatus?: SeasonalAvailabilityStatus;
+  /** Wyjaśnienie powodu braku potwierdzenia lub wycofania dostępności w sezonie */
+  unconfirmedAvailabilityNote?: string;
   productScope: string;
   fundingStatus: FundingVerificationStatus | 'regional_pool_closed';
   /** Określa, czy preparat/zakres dotyczy wyboru pediatrycznego w module dziecięcym (false = wyłącznie referencja dorosłych/wykluczenie) */
@@ -151,6 +194,7 @@ export interface ExcludedPediatricProductRecord {
 
 export type GtinVerificationStatus =
   | 'confirmed_in_official_guideline_and_product_doc'
+  | 'confirmed_mz_guideline_and_rars_pending_rpl_ema'
   | 'confirmed_operational_guideline_pending_rpl_rars_cross_check'
   | 'pending_gtin_verification';
 
@@ -165,6 +209,15 @@ export interface GtinSourceRecord {
   sourceDocumentTitle: string;
   sourceDocumentUrl: string;
   sourceSectionOrPage: string;
+  /** Oficjalne źródło RARS potwierdzające GTIN w dystrybucji sezonowej */
+  rarsSourceTitle?: string;
+  rarsSourceUrl?: string;
+  rarsPresentationText?: string;
+  /** Jawne rozdzielenie potwierdzenia wg typu źródła (bez automatycznego zrównywania RARS z RPL/EMA) */
+  confirmedByMzGuidelines?: boolean;
+  confirmedByRars?: boolean;
+  confirmedByRpl?: boolean;
+  confirmedByEma?: boolean;
   crossCheckedWithEparOrRpl: boolean;
   verificationStatus: GtinVerificationStatus;
   notes: string;

@@ -22,6 +22,7 @@ import {
   deriveProcedureProductAdequacyStatus,
   getAdultAndSpecialReferenceScopes,
   getPediatricSelectableFundingScopes,
+  getUnconfirmedSeasonalScopes,
 } from '../../utils/childVaccineAudit';
 
 interface ChildVaccineCardProps {
@@ -46,6 +47,7 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
   const variantOrDirectLinkages = linkages.filter(l => l.relationType !== 'conditional_alternative');
   const pediatricScopes = getPediatricSelectableFundingScopes(item);
   const adultReferenceScopes = getAdultAndSpecialReferenceScopes(item);
+  const unconfirmedSeasonalScopes = getUnconfirmedSeasonalScopes(item);
   const catalogCardCompleteness = deriveCatalogCardCompletenessStatus(item, catalogVaccines);
   const procedureProductAdequacy = deriveProcedureProductAdequacyStatus(item, catalogVaccines);
   const reviewedSectionsCount = item.chplAudit?.sectionReviews?.length ?? 0;
@@ -75,6 +77,19 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
         </span>
       </div>
       <div><strong>Grupa wiekowa:</strong> {scope.ageGroup}</div>
+      {(scope.minAgeDescription || scope.maxAgeDescription || scope.boundaryInclusivity) && (
+        <div className="scope-age-bounds">
+          {scope.minAgeDescription && (
+            <div><strong>Dolna granica wieku:</strong> {scope.minAgeDescription}</div>
+          )}
+          {scope.maxAgeDescription && (
+            <div><strong>Górna granica wieku:</strong> {scope.maxAgeDescription}</div>
+          )}
+          {scope.boundaryInclusivity && (
+            <div><strong>Granice i wyjątki wieku:</strong> {scope.boundaryInclusivity}</div>
+          )}
+        </div>
+      )}
       <div><strong>Zakres preparatów:</strong> {scope.productScope}</div>
       <div><strong>Okres obowiązywania:</strong> {scope.validityPeriod}</div>
       <div>
@@ -426,6 +441,20 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                     | <strong>Kontrola sekcji 1–10 ChPL:</strong> {reviewedSectionsCount}/10 sprawdzonych sekcji{' '}
                     | <strong>Data audytu:</strong> {item.chplAudit.auditDate} ({item.chplAudit.auditor})
                   </div>
+                  {item.chplAudit.sectionReviews && item.chplAudit.sectionReviews.length > 0 && (
+                    <div className="chpl-section-reviews-list">
+                      {item.chplAudit.sectionReviews.map(sec => (
+                        <div key={sec.sectionNumber}>
+                          <strong>Pkt {sec.sectionNumber}{sec.sectionTitle ? ` (${sec.sectionTitle})` : ''}:</strong>{' '}
+                          {sec.status === 'verified' ? 'sprawdzono' : sec.status === 'not_present_in_document' ? 'brak w dokumencie' : 'nie dotyczy'}
+                          {sec.pageRef ? ` [${sec.pageRef}]` : ''}
+                          {sec.subpoints && sec.subpoints.length > 0 ? ` — podpunkty: ${sec.subpoints.map(sp => sp.subpointId).join(', ')}` : ''}
+                          {sec.discrepancyNote ? ` — ROZBIEŻNOŚĆ: ${sec.discrepancyNote}` : ''}
+                          {sec.justification ? ` — ${sec.justification}` : ''}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div>
                     <strong>Wynik kontroli:</strong>{' '}
                     {item.chplAudit.auditOutcome === 'compliant' && 'Zgodna'}
@@ -504,6 +533,18 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                     </div>
                   )}
 
+                  {unconfirmedSeasonalScopes.length > 0 && (
+                    <div className="unconfirmed-seasonal-notice">
+                      <div><strong>Preparaty wyłączone z wyboru pediatrycznego (brak potwierdzonej dostępności w sezonie 2026/2027 — {unconfirmedSeasonalScopes.length}):</strong></div>
+                      {unconfirmedSeasonalScopes.map(scope => (
+                        <div key={scope.scopeId} className="unconfirmed-seasonal-item">
+                          <div><strong>{scope.productScope}</strong></div>
+                          <div>{scope.unconfirmedAvailabilityNote || scope.conditionsAndExceptions}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {item.populationScope === 'cross_age' && adultReferenceScopes.length > 0 && (
                     <div className="funding-scopes-container funding-scopes-adult-boundary">
                       <div><strong>Zakresy dla osób ≥18. roku życia (brak prawa do DZ) i komunikaty regionalne ({adultReferenceScopes.length}):</strong></div>
@@ -521,13 +562,35 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                         <div key={g.gtin} className="gtin-reference-item">
                           <div><strong>GTIN {g.gtin}</strong> – {g.productPresentation} ({g.targetAgeGroup}, dawka {g.dose})</div>
                           <div>
-                            <strong>Dokument źródłowy:</strong>{' '}
+                            <strong>Wytyczne MZ:</strong>{' '}
                             <a href={g.sourceDocumentUrl} target="_blank" rel="noopener noreferrer">{g.sourceDocumentTitle}</a>{' '}
                             ({g.sourceSectionOrPage})
                           </div>
-                          <div><strong>Kontrola krzyżowa EPAR/RPL/RARS:</strong> {g.notes}</div>
+                          {g.rarsSourceUrl && (
+                            <div>
+                              <strong>RARS:</strong>{' '}
+                              <a href={g.rarsSourceUrl} target="_blank" rel="noopener noreferrer">{g.rarsSourceTitle || 'Strona RARS'}</a>{' '}
+                              {g.rarsPresentationText ? `— „${g.rarsPresentationText}”` : ''}
+                            </div>
+                          )}
+                          <div className="gtin-sources-matrix">
+                            <span className={g.confirmedByMzGuidelines ? 'gtin-source-pill-ok' : 'gtin-source-pill-muted'}>
+                              Wytyczne MZ: {g.confirmedByMzGuidelines ? 'TAK' : 'NIE'}
+                            </span>
+                            <span className={g.confirmedByRars ? 'gtin-source-pill-ok' : 'gtin-source-pill-muted'}>
+                              RARS: {g.confirmedByRars ? 'TAK' : 'NIE'}
+                            </span>
+                            <span className={g.confirmedByRpl ? 'gtin-source-pill-ok' : 'gtin-source-pill-muted'}>
+                              RPL: {g.confirmedByRpl ? 'TAK' : 'NIE (brak GTIN w RPL)'}
+                            </span>
+                            <span className={g.confirmedByEma ? 'gtin-source-pill-ok' : 'gtin-source-pill-muted'}>
+                              EPAR EMA: {g.confirmedByEma ? 'TAK' : 'NIE (EMA nie publikuje GTIN)'}
+                            </span>
+                          </div>
+                          <div><strong>Kontrola krzyżowa źródeł:</strong> {g.notes}</div>
                           <span className="gtin-status-tag">
-                            {g.verificationStatus === 'confirmed_in_official_guideline_and_product_doc' && 'Potwierdzono w wytycznych i dokumentacji produktu'}
+                            {g.verificationStatus === 'confirmed_in_official_guideline_and_product_doc' && 'Potwierdzono w wytycznych i dokumentacji rejestracyjnej produktu (RPL/EMA)'}
+                            {g.verificationStatus === 'confirmed_mz_guideline_and_rars_pending_rpl_ema' && 'Potwierdzono w Wytycznych MZ i na stronie RARS (brak potwierdzenia GTIN w RPL / EPAR EMA)'}
                             {g.verificationStatus === 'confirmed_operational_guideline_pending_rpl_rars_cross_check' && 'Potwierdzono w wytycznych MZ – kontrola krzyżowa z RPL/RARS w toku'}
                             {g.verificationStatus === 'pending_gtin_verification' && 'Oczekuje na potwierdzenie źródła GTIN'}
                           </span>
