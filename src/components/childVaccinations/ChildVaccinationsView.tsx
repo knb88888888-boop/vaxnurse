@@ -824,12 +824,12 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
               <h3>Warianty szczepionek wysoce skojarzonych 5w1 i 6w1 (Część I.A i Część III.M PSO 2027)</h3>
             </div>
             <p className="intro-text">
-              Szczegółowe rozróżnienie wariantów realizowanych ze środków własnych rodziców lub w ramach programów samorządowych na podstawie Części I.A.1, I.A.2 oraz Części III.M komunikatu GIS (strony 3, 4, 21–22).
+              Szczegółowe rozróżnienie wariantów realizowanych ze środków własnych rodziców lub w ramach programów samorządowych na podstawie Części I.A.1, I.A.2 oraz Części III.M pkt 2 komunikatu GIS (PSO 2027, akt.pdf, str. 4–12 oraz str. 42). Podstawowym schematem dla 6w1 jest schemat 3+1; wariant 2+1 dotyczy wyłącznie indywidualnej kontynuacji wcześniej rozpoczętego szczepienia.
             </p>
             <div className="interchangeability-warning-box">
               <AlertTriangle size={18} className="warn-icon" />
               <div>
-                <strong>BEZWZGLĘDNE ZASTRZEŻENIE MEDYCZNE:</strong> Szczepionki 5w1 i 6w1 oraz ich schematy (3+1 vs 2+1) <strong>NIE SĄ AUTOMATYCZNIE ZAMIENNE</strong>. Wybór schematu zależy od Charakterystyki Produktu Leczniczego (ChPL), podania dawki WZW B w 1. dobie życia oraz każdorazowej pisemnej decyzji lekarza kwalifikującego.
+                <strong>BEZWZGLĘDNE ZASTRZEŻENIE MEDYCZNE:</strong> Szczepionki 5w1 i 6w1 oraz ich schematy (podstawowy 3+1 vs indywidualna kontynuacja 2+1) <strong>NIE SĄ AUTOMATYCZNIE ZAMIENNE</strong>. Zgodnie z Częścią III.M pkt 2 PSO 2027 (str. 42) schemat 2+1 <strong>nie stanowi standardowego schematu dla ogółu dzieci</strong>, lecz służy wyłącznie jako indywidualna kontynuacja wcześniej rozpoczętego szczepienia zgodnie z ChPL i każdorazową pisemną decyzją lekarza kwalifikującego (po uwzględnieniu podania WZW B w 1. dobie życia).
               </div>
             </div>
           </div>
@@ -840,8 +840,8 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                 <div className="variant-card-header">
                   <span className="variant-type-tag">
                     {variant.variantType === '5w1' && 'Wariant 5w1'}
-                    {variant.variantType === '6w1_3plus1' && 'Wariant 6w1 (schemat 3+1)'}
-                    {variant.variantType === '6w1_2plus1' && 'Wariant 6w1 (schemat 2+1)'}
+                    {variant.variantType === '6w1_3plus1' && 'Wariant 6w1 (schemat podstawowy 3+1)'}
+                    {variant.variantType === '6w1_2plus1' && 'Schemat 2+1 – indywidualna kontynuacja wcześniej rozpoczętego szczepienia, zgodnie z ChPL i decyzją lekarza'}
                   </span>
                   <h4 className="variant-name">{variant.name}</h4>
                   <span className="variant-source">{variant.psoPartAndSection} (strona {variant.psoPdfPage} PDF)</span>

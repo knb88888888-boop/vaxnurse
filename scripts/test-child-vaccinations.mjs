@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   CHILD_AGE_BRACKETS,
   CHILD_VACCINES_CATALOG,
@@ -546,16 +548,16 @@ assert.equal(bcg.alternativeProductDetails?.marketAvailabilityStatus, 'unconfirm
 const flu = findChildVaccine('pso-rec-influenza-1');
 const covid = findChildVaccine('pso-rec-covid-pediatric');
 const hpv9 = findChildVaccine('pso-rec-hpv-9');
-assert.equal(flu?.fundingVerificationStatus, 'pending_clarification', 'Grypa bez zweryfikowanego wykazu MZ 2027/produktu musi mieć pending_clarification');
-assert.equal(hpvCatchup?.fundingVerificationStatus, 'pending_clarification', 'HPV 15-18 (odrębne przepisy refundacyjne) musi mieć pending_clarification');
-assert.equal(covid?.fundingVerificationStatus, 'pending_clarification', 'COVID-19 (odrębne komunikaty MZ) musi mieć pending_clarification');
+assert.equal(flu?.fundingVerificationStatus, 'pending_clarification', 'Grypa po rozdzieleniu produktów 84W vs Fluenz vs realizacja POZ pozostaje na poziomie procedury pending_clarification');
+assert.equal(hpvCatchup?.fundingVerificationStatus, 'pending_clarification', 'HPV 15-18 i 19-26 (podział Cervarix 84W vs Gardasil 9 pełnopłatny vs program 19-26) pozostaje pending_clarification na poziomie całej procedury');
+assert.equal(covid?.fundingVerificationStatus, 'verified_public_free', 'COVID-19 sezon 2026/2027 (Komunikat nr 39 MZ i Ogólne wytyczne 04.09.2026) musi mieć verified_public_free');
 assert.equal(hpv9?.fundingVerificationStatus, 'verified_public_free', 'HPV 9-14 musi mieć potwierdzone finansowanie (Obwieszczenie MZ poz. 71 + PSO II.A)');
 assert.ok(hpv9?.officialFundingSourceRef?.includes('Dz. Urz. Min. Zdrow. poz. 71'), 'HPV 9-14 musi wskazywać Obwieszczenie MZ poz. 71');
 assert.deepEqual(catalogSummary.fundingCounts, {
-  verified_public_free: 35,
+  verified_public_free: 36,
   verified_reimbursement: 0,
   verified_self_funded: 5,
-  pending_clarification: 3,
+  pending_clarification: 2,
 });
 
 // 13.6 Nienaruszalność karty Infanrix hexa w bazie preparatów
@@ -566,6 +568,189 @@ assert.equal(infanrixProduct?.sourceDiscrepancies?.[0]?.status, 'requires_clarif
 
 console.log('   ✓ SCENARIUSZ 13 ZALICZONY: Niezmienniki (0 błędów), bramka verified_full, IPV w A.2, BCG/AJVaccines oraz audyt finansowania zweryfikowane.\n');
 
+// -------------------------------------------------------------
+// Test 14: Testy końcowe PROMPT 20 (10 testów z Zadania 8)
+// -------------------------------------------------------------
+console.log('Test 14: Testy końcowe PROMPT 20 – bramka ChPL, COVID-19 2026/2027, HPV, grypa 84W, 6w1 2+1 i statusy self-funded');
+
+const bcgBase = findChildVaccine('pso-bcg-0');
+assert.ok(bcgBase && bcgBase.chplAudit, 'Rekord pso-bcg-0 musi posiadać obiekt chplAudit');
+assert.equal(bcgBase.chplAudit.documentDateStatus, 'missing_in_document', 'BCG 10 musi jawnie oznaczać brak daty w dokumencie ChPL');
+
+// 14.1 Próba ustawienia verified_full bez auditor (puste lub placeholder) -> blokada
+const bcgNoAuditor = {
+  ...bcgBase,
+  chplAudit: {
+    ...bcgBase.chplAudit,
+    auditor: '',
+    auditDate: '10.11.2026',
+    verifiedSectionsScope: ['4.1', '4.2'],
+    auditOutcome: 'compliant',
+    unresolvedDiscrepanciesCount: 0,
+  },
+};
+const bcgPlaceholderAuditor = {
+  ...bcgNoAuditor,
+  chplAudit: {
+    ...bcgNoAuditor.chplAudit,
+    auditor: 'brak',
+  },
+};
+assert.equal(canPromoteToVerifiedFull(bcgNoAuditor, VACCINES_CATALOG).allowed, false, '14.1: Brak audytora musi blokować verified_full');
+assert.equal(canPromoteToVerifiedFull(bcgPlaceholderAuditor, VACCINES_CATALOG).allowed, false, '14.1: Placeholder w polu auditor musi blokować verified_full');
+
+// 14.2 Próba ustawienia verified_full bez konkretnej auditDate lub z 'Brak informacji w dokumencie' -> blokada
+//     oraz akceptacja 'Brak informacji w dokumencie' dla documentVersionOrDate przy pełnych pozostałych danych
+const bcgMissingAuditDate = {
+  ...bcgBase,
+  chplAudit: {
+    ...bcgBase.chplAudit,
+    auditor: 'Zespół Kliniczny VaxNurse',
+    auditDate: 'Brak informacji w dokumencie',
+    verifiedSectionsScope: ['4.1', '4.2'],
+    auditOutcome: 'compliant',
+    unresolvedDiscrepanciesCount: 0,
+  },
+};
+const bcgEmptyAuditDate = {
+  ...bcgMissingAuditDate,
+  chplAudit: {
+    ...bcgMissingAuditDate.chplAudit,
+    auditDate: '',
+  },
+};
+assert.equal(canPromoteToVerifiedFull(bcgMissingAuditDate, VACCINES_CATALOG).allowed, false, '14.2: auditDate="Brak informacji w dokumencie" musi blokować verified_full');
+assert.equal(canPromoteToVerifiedFull(bcgEmptyAuditDate, VACCINES_CATALOG).allowed, false, '14.2: Pusta auditDate musi blokować verified_full');
+
+const bcgValidAuditCheck = {
+  ...bcgBase,
+  chplAudit: {
+    ...bcgBase.chplAudit,
+    documentVersionOrDate: 'Brak informacji w dokumencie',
+    documentDateStatus: 'missing_in_document',
+    auditor: 'Zespół Kliniczny VaxNurse',
+    auditDate: '10.11.2026',
+    verifiedSectionsScope: ['4.1', '4.2'],
+    auditOutcome: 'compliant',
+    unresolvedDiscrepanciesCount: 0,
+  },
+};
+assert.equal(
+  canPromoteToVerifiedFull(bcgValidAuditCheck, VACCINES_CATALOG).allowed,
+  true,
+  '14.2: documentVersionOrDate="Brak informacji w dokumencie" przy pełnym konkretnym audycie może spełniać warunek dokumentowy'
+);
+
+// 14.3 Próba ustawienia verified_full bez verifiedSectionsScope -> blokada; oraz zero rekordów produkcyjnych na verified_full
+const bcgEmptySections = {
+  ...bcgValidAuditCheck,
+  chplAudit: {
+    ...bcgValidAuditCheck.chplAudit,
+    verifiedSectionsScope: [],
+  },
+};
+assert.equal(canPromoteToVerifiedFull(bcgEmptySections, VACCINES_CATALOG).allowed, false, '14.3: Puste verifiedSectionsScope musi blokować verified_full');
+assert.equal(catalogSummary.verifiedFull, 0, '14.3: Katalog produkcyjny nie może mieć rekordów w statusie verified_full bez ukończonego audytu');
+
+// 14.4 COVID-19 2026/2027 jako verified_public_free z podziałem wieku i niepotwierdzoną dostępnością punktową
+assert.equal(covid?.fundingVerificationStatus, 'verified_public_free');
+assert.ok(covid?.fundingAuditDetails?.validityPeriod.includes('2026/2027'));
+assert.ok(covid?.fundingAuditDetails?.productType.includes('Spikevax'));
+assert.equal(covid?.fundingAuditDetails?.fundingScopes?.length, 4, '14.4: COVID-19 musi rozdzielać 4 zakresy (6m-4l naive, 6m-4l primed, 5-11l, 12+l)');
+assert.equal(covid?.fundingAuditDetails?.mechanismBreakdown.localPointAvailabilityConfirmed, false, '14.4: Punktowa dostępność fiolki COVID-19 nie może być domyślnie potwierdzona');
+assert.ok(
+  covid?.fundingAuditDetails?.fundingScopes?.every(s => s.mechanismBreakdown.localPointAvailabilityConfirmed === false),
+  '14.4: Każdy zakres COVID-19 musi jawnie zachowywać localPointAvailabilityConfirmed=false'
+);
+
+// 14.5 Rozdzielenie HPV: 9-14 (Cervarix+Gardasil 9), 15-18 (Cervarix 84W vs Gardasil 9 pełnopłatny), 19-26 (Cervarix <25 do 31.05.2027)
+assert.equal(hpv9?.fundingVerificationStatus, 'verified_public_free');
+assert.equal(hpv9?.fundingAuditDetails?.fundingScopes?.length, 2, '14.5: HPV 9-14 musi rozdzielać zakresy Cervarix i Gardasil 9 w programie MZ');
+assert.equal(hpvCatchup?.fundingVerificationStatus, 'pending_clarification');
+const hpvScopes = hpvCatchup?.fundingAuditDetails?.fundingScopes ?? [];
+assert.equal(hpvScopes.length, 4, '14.5: pso-rec-hpv-catchup musi zawierać 4 zakresy (15-18 Cervarix 84W, 15-18 Gardasil 9 poza 84W, 19-26 Cervarix program, WSSE Wrocław)');
+const hpvCervarix1518 = hpvScopes.find(s => s.productScope.includes('Cervarix') && s.ageGroup.includes('15'));
+const hpvGardasil1518 = hpvScopes.find(s => s.productScope.includes('Gardasil 9'));
+const hpvProgram1926 = hpvScopes.find(s => s.scopeId !== 'hpv-19-26-wsse-wroclaw-closure' && s.ageGroup.includes('19'));
+assert.ok(
+  hpvCervarix1518?.sourceRef.includes('84W') &&
+    hpvCervarix1518.mechanismBreakdown.pharmacyReimbursement.includes('D1') &&
+    hpvCervarix1518.mechanismBreakdown.partialReimbursementDetail.includes('50%'),
+  '14.5: Cervarix 15-18 musi wskazywać wykaz 84W A1 50% / D1 18- DZ'
+);
+assert.ok(hpvGardasil1518 && hpvGardasil1518.fundingStatus === 'verified_self_funded', '14.5: Gardasil 9 poza programem 9-14 i poza 84W musi być oznaczony jako pełnopłatny');
+assert.ok(hpvProgram1926 && hpvProgram1926.fundingStatus === 'verified_public_free' && hpvProgram1926.validityPeriod.includes('31.05.2027'), '14.5: HPV 19-26 musi wskazywać Cervarix i termin do 31.05.2027');
+
+// 14.6 Komunikat WSSE Wrocław 05.11.2026 oznaczony wyłącznie regionalnie (bez zamknięcia ogólnopolskiego)
+const wsseWroclawScope = hpvScopes.find(s => s.scopeId === 'hpv-19-26-wsse-wroclaw-closure');
+assert.ok(wsseWroclawScope, '14.6: Musi istnieć osobny zakres dla komunikatu WSSE Wrocław');
+assert.equal(wsseWroclawScope.fundingStatus, 'regional_pool_closed', '14.6: Komunikat WSSE Wrocław musi mieć status regional_pool_closed');
+assert.ok(wsseWroclawScope.sourceRef.includes('05.11.2026') || wsseWroclawScope.conditionsAndExceptions.includes('05.11.2026'), '14.6: Musi wskazywać datę 05.11.2026');
+assert.equal(hpv9?.fundingVerificationStatus, 'verified_public_free', '14.6: Zamknięcie puli regionalnej WSSE Wrocław NIE może zamykać programu 9-14 lat');
+assert.notEqual(hpvCervarix1518?.fundingStatus, 'regional_pool_closed', '14.6: Zamknięcie puli regionalnej 19-26 NIE może zamykać refundacji Cervarix 84W');
+
+// 14.7 Rozdzielenie refundacji aptecznej preparatu od wykonania usługi przy grypie
+assert.equal(flu?.fundingVerificationStatus, 'pending_clarification');
+const fluMech = flu?.fundingAuditDetails?.mechanismBreakdown;
+assert.ok(fluMech, '14.7: Grypa musi posiadać rozdzielenie mechanizmów finansowania');
+assert.ok(fluMech.pharmacyReimbursement.includes('Influvac') && fluMech.pharmacyReimbursement.includes('Vaxigrip'), '14.7: Grypa musi wymieniać Influvac i Vaxigrip w 84W');
+assert.ok(fluMech.pharmacyReimbursement.includes('Fluenz') && fluMech.partialReimbursementDetail.includes('Efluelda'), '14.7: Grypa musi rozróżniać Fluenz (poza 84W) i Efluelda (>=60 lat, brak D1)');
+assert.ok(fluMech.serviceExecutionFunding.includes('POZ') && fluMech.serviceExecutionFunding.includes('aptek'), '14.7: Grypa musi rozdzielać wykonanie usługi w POZ (<18 r.ż.) i aptekach (>=18 r.ż.)');
+
+// 14.8 Schemat 2+1 dla 6w1 wyłącznie jako indywidualna kontynuacja (bez zmiany PCV)
+const variant6w1_2plus1 = COMBINED_VACCINES_VARIANTS_PART_III_M.find(v => v.id === 'variant-6w1-2plus1');
+const variant6w1_3plus1 = COMBINED_VACCINES_VARIANTS_PART_III_M.find(v => v.id === 'variant-6w1-3plus1');
+assert.ok(variant6w1_2plus1 && variant6w1_3plus1, '14.8: Warianty 6w1 3+1 i 2+1 muszą istnieć w COMBINED_VACCINES_VARIANTS_PART_III_M');
+assert.ok(
+  variant6w1_2plus1.name.includes('Schemat 2+1 – indywidualna kontynuacja wcześniej rozpoczętego szczepienia, zgodnie z ChPL i decyzją lekarza'),
+  '14.8: Wariant 6w1 2+1 musi używać ścisłego sformułowania o indywidualnej kontynuacji'
+);
+const viewTsx = fs.readFileSync(path.resolve(process.cwd(), 'src/components/childVaccinations/ChildVaccinationsView.tsx'), 'utf8');
+assert.ok(
+  viewTsx.includes('Schemat 2+1 – indywidualna kontynuacja wcześniej rozpoczętego szczepienia, zgodnie z ChPL i decyzją lekarza'),
+  '14.8: ChildVaccinationsView.tsx musi wyświetlać dokładny opis kontynuacyjny dla 6w1 2+1'
+);
+const pcv1 = findChildVaccine('pso-pcv-1');
+assert.ok(
+  pcv1 &&
+    pcv1.totalDosesInStandardSeries === 3 &&
+    pcv1.clinicalNotes.includes('w schemacie 2+1') &&
+    !pcv1.clinicalNotes.includes('indywidualna kontynuacja'),
+  '14.8: Standardowy schemat PCV 2+1 w Cz. I.A.1 nie może zostać zniekształcony'
+);
+
+// 14.9 Zachowanie i doprecyzowanie 5 statusów verified_self_funded
+const selfFundedIds = [
+  'pso-rec-menb-1',
+  'pso-rec-menacwy-1',
+  'pso-rec-vzv-1',
+  'pso-rec-kzm-1',
+  'pso-rec-hava-1',
+];
+for (const sfId of selfFundedIds) {
+  const sfItem = findChildVaccine(sfId);
+  assert.equal(sfItem?.fundingVerificationStatus, 'verified_self_funded', `14.9: ${sfId} po sprawdzeniu wykazu 84W zachowuje verified_self_funded`);
+  assert.ok(sfItem?.fundingAuditDetails?.mechanismBreakdown, `14.9: ${sfId} musi posiadać mechanismBreakdown`);
+  assert.ok(sfItem?.fundingAuditDetails?.conditions.length > 20, `14.9: ${sfId} musi jawnie dokumentować wyjątki ustawowe / grup ryzyka`);
+}
+const vzvRec = findChildVaccine('pso-rec-vzv-1');
+assert.equal(vzvRec?.fundingAuditDetails?.fundingScopes?.length, 2, '14.9: Ospa wietrzna (pso-rec-vzv-1) musi rozdzielać ścieżkę zalecaną oraz Cz. I.B bezpłatną dla grup ryzyka');
+const cardTsx = fs.readFileSync(path.resolve(process.cwd(), 'src/components/childVaccinations/ChildVaccineCard.tsx'), 'utf8');
+assert.ok(
+  cardTsx.includes('Co do zasady odpłatne w populacji ogólnej (z wyjątkami ustawowymi / grup ryzyka)') &&
+    !cardTsx.includes('Potwierdzone: odpłatne (środki pacjenta/rodziców)'),
+  '14.9: ChildVaccineCard.tsx nie może prezentować verified_self_funded jako bezwarunkowo odpłatnego dla każdego'
+);
+
+// 14.10 Integralność niezgodności, nienaruszalność vac-infanrix-hexa i systemu backupu
+assert.equal(CHILD_VACCINES_CATALOG.length, 43);
+assert.equal(catalogSummary.invariantViolations.length, 0);
+assert.equal(infanrixProduct?.sourceDiscrepancies?.[0]?.id, 'disc-phenylalanine-content-01');
+assert.equal(infanrixProduct?.sourceDiscrepancies?.[0]?.status, 'requires_clarification');
+assert.equal(fs.existsSync(path.resolve(process.cwd(), 'src/utils/backup.ts')), true, '14.10: Moduł kopii bezpieczeństwa src/utils/backup.ts musi pozostać nienaruszony');
+
+console.log('   ✓ SCENARIUSZ 14 ZALICZONY: Wszystkie 10 testów końcowych PROMPT 20 zaliczone bez błędów.\n');
+
 console.log('================================================================');
-console.log(' WYNIK KOŃCOWY: 13/13 SCENARIUSZY AUDYTU ZALICZONYCH (100%)    ');
+console.log(' WYNIK KOŃCOWY: 14/14 SCENARIUSZY AUDYTU ZALICZONYCH (100%)    ');
 console.log('================================================================\n');

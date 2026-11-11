@@ -9,13 +9,21 @@ import type { VaccineProduct } from '../types/vaccines.ts';
 
 /**
  * Procedury PSO 2027, w których finansowanie zależy od odrębnych przepisów refundacyjnych
- * lub odrębnych komunikatów Ministra Zdrowia niewystępujących w tekście PSO 2027.
+ * lub wyboru produktu handlowego i nie pozwala na nadanie jednego statusu procedury.
+ * (COVID-19 sezon 2026/2027 ma potwierdzony Komunikat nr 39 MZ z 04/07.09.2026 r., więc nie znajduje się na tej liście).
  */
 export const EXTERNAL_FUNDING_PENDING_IDS = new Set<string>([
   'pso-rec-influenza-1',
   'pso-rec-hpv-catchup',
-  'pso-rec-covid-pediatric',
 ]);
+
+const PLACEHOLDER_VALUE_REGEX = /^(brak(\s+danych)?|n\/?d|tbd|none|null|undefined|-+|nieznan[ae]?|brak informacji.*)$/i;
+const CALENDAR_DATE_REGEX = /^(\d{2}\.\d{2}\.\d{4}|\d{4}-\d{2}-\d{2})$/;
+
+function isPlaceholderValue(value: string | null | undefined): boolean {
+  if (!value || !value.trim()) return true;
+  return PLACEHOLDER_VALUE_REGEX.test(value.trim());
+}
 
 /**
  * Deterministyczne mapowanie stanu dokumentu ChPL i statusu weryfikacji jego treści
@@ -37,36 +45,62 @@ export function deriveChplVerificationStatus(
   return 'pending_chpl_verification';
 }
 
-function isValidChplAuditRecord(audit: ChplContentAuditRecord | null | undefined): string[] {
+function isValidChplAuditRecord(
+  audit: ChplContentAuditRecord | null | undefined,
+  item?: ChildVaccineItem
+): string[] {
   const issues: string[] = [];
   if (!audit) {
     return ['Brak obiektu audytu treści ChPL (chplAudit).'];
   }
-  if (!audit.productName.trim()) {
-    issues.push('Brak nazwy produktu w chplAudit.');
+  if (isPlaceholderValue(audit.productName)) {
+    issues.push('Brak dokładnej nazwy produktu w chplAudit.');
+  } else if (item?.chplProductName && audit.productName.trim() !== item.chplProductName.trim()) {
+    issues.push(`Niespójność nazwy produktu: '${audit.productName}' vs '${item.chplProductName}'.`);
   }
-  if (!audit.officialSourceUrl.startsWith('https://')) {
-    issues.push('Brak oficjalnego URL źródłowego ChPL w chplAudit.');
+  if (!audit.officialSourceUrl || !audit.officialSourceUrl.startsWith('https://')) {
+    issues.push('Brak bezpośredniego oficjalnego URL źródłowego ChPL w chplAudit.');
+  } else if (item?.chplOfficialSourceUrl && audit.officialSourceUrl.trim() !== item.chplOfficialSourceUrl.trim()) {
+    issues.push('Niespójność oficjalnego URL ChPL między procedurą a chplAudit.');
   }
-  if (!audit.documentIdOrAuthorizationNumber.trim()) {
-    issues.push('Brak identyfikatora dokumentu lub numeru pozwolenia w chplAudit.');
+  if (isPlaceholderValue(audit.documentIdOrAuthorizationNumber)) {
+    issues.push('Brak identyfikatora produktu, numeru pozwolenia lub jednoznacznego oznaczenia w chplAudit.');
   }
-  if (!audit.documentVersionOrDate.trim()) {
-    issues.push('Brak informacji o wersji/dacie dokumentu w chplAudit (wymagana data lub jawny zapis "Brak informacji w dokumencie").');
+  const docVersion = audit.documentVersionOrDate?.trim() ?? '';
+  if (!docVersion) {
+    issues.push('Brak informacji o wersji/dacie dokumentu w chplAudit (wymagana data dokumentu lub jawny zapis "Brak informacji w dokumencie").');
+  } else if (
+    /^brak informacji w dokumencie/i.test(docVersion) &&
+    audit.documentDateStatus === 'dated'
+  ) {
+    issues.push('Sprzeczność statusu daty dokumentu z wartością documentVersionOrDate.');
   }
-  if (!audit.auditDate.trim()) {
-    issues.push('Brak daty przeprowadzenia audytu w chplAudit.');
+  const auditDate = audit.auditDate?.trim() ?? '';
+  if (!auditDate) {
+    issues.push('Brak daty wykonania audytu w chplAudit.');
+  } else if (/brak informacji/i.test(auditDate) || isPlaceholderValue(auditDate)) {
+    issues.push('Data audytu nie może być wartością zastępczą („Brak informacji w dokumencie” dotyczy wyłącznie daty dokumentu pkt 10 ChPL, nigdy daty audytu).');
+  } else if (!CALENDAR_DATE_REGEX.test(auditDate)) {
+    issues.push(`Nieprawidłowy format daty wykonania audytu ('${auditDate}' – wymagany format DD.MM.YYYY lub YYYY-MM-DD).`);
   }
-  if (!audit.auditor.trim()) {
-    issues.push('Brak wskazania osoby/podmiotu audytującego w chplAudit.');
+  const auditor = audit.auditor?.trim() ?? '';
+  if (isPlaceholderValue(auditor) || auditor.length < 3) {
+    issues.push('Brak wskazania osoby lub podmiotu dokonującego audytu w chplAudit.');
   }
-  if (audit.verifiedSectionsScope.length === 0) {
-    issues.push('Brak zakresu zweryfikowanych sekcji ChPL w chplAudit.');
+  const validSections = (audit.verifiedSectionsScope ?? []).filter(s => s.trim().length > 0);
+  if (validSections.length === 0) {
+    issues.push('Brak listy konkretnych punktów ChPL poddanych analizie w chplAudit.');
   }
   if (audit.auditOutcome !== 'compliant') {
     issues.push(`Wynik audytu ChPL wynosi '${audit.auditOutcome}', wymagany jest 'compliant'.`);
   }
-  if (audit.unresolvedDiscrepanciesCount > 0) {
+  if (
+    typeof audit.unresolvedDiscrepanciesCount !== 'number' ||
+    !Number.isInteger(audit.unresolvedDiscrepanciesCount) ||
+    audit.unresolvedDiscrepanciesCount < 0
+  ) {
+    issues.push('Brak jawnej liczby nierozstrzygniętych niezgodności (unresolvedDiscrepanciesCount).');
+  } else if (audit.unresolvedDiscrepanciesCount > 0) {
     issues.push(`Istnieją nierozstrzygnięte rozbieżności (${audit.unresolvedDiscrepanciesCount}).`);
   }
   return issues;
@@ -89,7 +123,7 @@ export function canPromoteToVerifiedFull(
     reasons.push('Brak bezpośredniego oficjalnego adresu URL dokumentu ChPL.');
   }
 
-  reasons.push(...isValidChplAuditRecord(item.chplAudit));
+  reasons.push(...isValidChplAuditRecord(item.chplAudit, item));
 
   const referencedIds = new Set<string>([
     ...item.linkedVaccineIds,
@@ -98,7 +132,12 @@ export function canPromoteToVerifiedFull(
 
   for (const vaccineId of referencedIds) {
     const product = catalogVaccines.find(v => v.id === vaccineId);
-    if (!product) continue;
+    if (!product) {
+      if (catalogVaccines.length > 0) {
+        reasons.push(`Brak powiązanej karty katalogowej '${vaccineId}' w bazie preparatów.`);
+      }
+      continue;
+    }
 
     if (product.verificationStatus !== 'verified_chpl') {
       reasons.push(`Powiązany preparat ${product.tradeName} (${product.id}) ma status '${product.verificationStatus}', a nie 'verified_chpl'.`);
@@ -189,9 +228,42 @@ export function validateChildVaccineStatusInvariants(
   if (!item.fundingAuditDetails) {
     errors.push(`[${item.id}] Brak ustrukturyzowanych metadanych fundingAuditDetails.`);
   } else {
-    const { legalBasis, targetGroup, conditions, validityOrVerifiedDate } = item.fundingAuditDetails;
-    if (!legalBasis.trim() || !targetGroup.trim() || !conditions.trim() || !validityOrVerifiedDate.trim()) {
-      errors.push(`[${item.id}] Niekompletne pola fundingAuditDetails.`);
+    const {
+      legalBasis,
+      targetGroup,
+      productType,
+      conditions,
+      validityPeriod,
+      verifiedDate,
+      validityOrVerifiedDate,
+      mechanismBreakdown,
+    } = item.fundingAuditDetails;
+    if (
+      !legalBasis.trim() ||
+      !targetGroup.trim() ||
+      !productType?.trim() ||
+      !conditions.trim() ||
+      !validityPeriod?.trim() ||
+      !verifiedDate?.trim() ||
+      !validityOrVerifiedDate.trim()
+    ) {
+      errors.push(`[${item.id}] Niekompletne wymagane pola fundingAuditDetails (źródło, grupa, rodzaj produktu, okres obowiązywania, data weryfikacji, warunki).`);
+    }
+    if (!mechanismBreakdown) {
+      errors.push(`[${item.id}] Brak rozdzielonego obiektu mechanismBreakdown w fundingAuditDetails.`);
+    } else {
+      const m = mechanismBreakdown;
+      if (
+        !m.stateVaccinePurchase.trim() ||
+        !m.serviceExecutionFunding.trim() ||
+        !m.pharmacyReimbursement.trim() ||
+        !m.partialReimbursementDetail.trim() ||
+        !m.temporaryProgram.trim() ||
+        !m.regionalAvailabilityAndDistribution.trim() ||
+        typeof m.localPointAvailabilityConfirmed !== 'boolean'
+      ) {
+        errors.push(`[${item.id}] Niekompletne pola mechanismBreakdown (rozdzielenie zakupu MZ, wykonania, refundacji, programu i dostępności).`);
+      }
     }
   }
 
@@ -259,7 +331,7 @@ export function auditVariantA2IpvCoverage(catalog: ChildVaccineItem[]): {
       ageBracketId: '5-6-miesiac',
       ageLabel: '5.–6. miesiąc życia (od ukończenia 4. mies.)',
       coveredByProcedureIds: ['pso-dtp-3', 'pso-ipv-2', 'pso-hib-3'],
-      ipvMappingSummary: '3. dawka IPV w składzie 3. dawki 6w1 w schemacie 3+1 (w I.A.1 to pso-ipv-2; w schemacie 2+1 z decyzji lekarza ta wizyta może być pominięta).',
+      ipvMappingSummary: '3. dawka IPV w składzie 3. dawki 6w1 w schemacie podstawowym 3+1 (w I.A.1 to pso-ipv-2; wyłącznie w indywidualnej kontynuacji wcześniej rozpoczętego szczepienia 2+1 z decyzji lekarza ta wizyta nie występuje – cz. III.M pkt 2).',
       isComplete: checkIpvRecord('pso-ipv-2', '3. dawka 6w1'),
     },
     {
@@ -267,7 +339,7 @@ export function auditVariantA2IpvCoverage(catalog: ChildVaccineItem[]): {
       ageBracketId: '16-18-miesiac',
       ageLabel: '16.–18. miesiąc życia (od ukończenia 15. mies.)',
       coveredByProcedureIds: ['pso-dtp-4', 'pso-ipv-3', 'pso-hib-4'],
-      ipvMappingSummary: '4. dawka IPV w składzie dawki uzupełniającej 6w1 (w I.A.1 to pso-ipv-3; w schemacie 2+1 jest to 3. dawka uzupełniająca).',
+      ipvMappingSummary: '4. dawka IPV w składzie dawki uzupełniającej 6w1 w schemacie podstawowym 3+1 (w I.A.1 to pso-ipv-3; w indywidualnym schemacie kontynuacji 2+1 jest to 3. dawka uzupełniająca wg cz. III.M pkt 2).',
       isComplete: checkIpvRecord('pso-ipv-3', '4. dawka 6w1'),
     },
   ];

@@ -28,6 +28,9 @@ export interface ChplContentAuditRecord {
   documentIdOrAuthorizationNumber: string;
   /** Data dokumentu (np. z pkt 10 ChPL) lub jawnie 'Brak informacji w dokumencie' */
   documentVersionOrDate: string;
+  /** Czy w źródle ChPL widnieje data dokumentu czy brak informacji w dokumencie */
+  documentDateStatus?: 'dated' | 'missing_in_document';
+  /** Data wykonania audytu merytorycznego (odrębna od daty pkt 10 ChPL!) */
   auditDate: string;
   auditor: string;
   verifiedSectionsScope: string[];
@@ -72,13 +75,50 @@ export interface AlternativeProductDetails {
 }
 
 /**
+ * Rozdzielenie sześciu odrębnych mechanizmów finansowania i dostępności (Zadanie 7 audytu):
+ * bezpłatny zakup szczepionki przez państwo vs wykonanie usługi vs refundacja apteczna
+ * vs refundacja częściowa vs program czasowy vs dostępność w regionie/punkcie.
+ */
+export interface FundingMechanismBreakdown {
+  stateVaccinePurchase: string;
+  serviceExecutionFunding: string;
+  pharmacyReimbursement: string;
+  partialReimbursementDetail: string;
+  temporaryProgram: string;
+  regionalAvailabilityAndDistribution: string;
+  localPointAvailabilityConfirmed: boolean;
+}
+
+/**
+ * Odrębny zakres finansowania dla konkretnej grupy wiekowej, produktu lub regionu
+ * (bez duplikowania samej procedury klinicznej w katalogu).
+ */
+export interface FundingScopeBreakdown {
+  scopeId: string;
+  label: string;
+  ageGroup: string;
+  productScope: string;
+  fundingStatus: FundingVerificationStatus | 'regional_pool_closed';
+  validityPeriod: string;
+  sourceRef: string;
+  sourceUrl?: string;
+  conditionsAndExceptions: string;
+  mechanismBreakdown: FundingMechanismBreakdown;
+}
+
+/**
  * Osobna dokumentacja źródeł i warunków finansowania (odrębna od samego wpisu do PSO).
  */
 export interface FundingAuditDetails {
   legalBasis: string;
   targetGroup: string;
+  productType: string;
   conditions: string;
+  validityPeriod: string;
+  verifiedDate: string;
   validityOrVerifiedDate: string;
+  mechanismBreakdown: FundingMechanismBreakdown;
+  fundingScopes?: FundingScopeBreakdown[];
 }
 
 export type ChildAgeBracketId =

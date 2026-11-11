@@ -3,6 +3,8 @@ import type {
   ChildVaccineItem,
   ChplContentAuditRecord,
   AgeStageGroup,
+  FundingAuditDetails,
+  FundingMechanismBreakdown,
   StaffQualificationEntry,
   PsoGeneralPrincipleItem,
   CatchUpPrincipleItem,
@@ -153,6 +155,7 @@ const INFANRIX_HEXA_CHPL_AUDIT: ChplContentAuditRecord = {
   officialSourceUrl: 'https://pl.gsk.com/media/b2ip1snt/infanrix-hexa-druki-pl-h-0296-ia-vr-323859-12_02_2026.pdf',
   documentIdOrAuthorizationNumber: 'EU/1/00/152/001, EU/1/00/152/002, EU/1/00/152/005, EU/1/00/152/006, EU/1/00/152/021',
   documentVersionOrDate: 'Brak informacji w dokumencie (pkt 10 ChPL odsyła do EMA bez daty; pkt 9: przedłużenie pozwolenia 31 sierpnia 2010)',
+  documentDateStatus: 'missing_in_document',
   auditDate: '11.11.2026',
   auditor: 'Audyt farmakologiczno-merytoryczny VaxNurse (PROMPT 19)',
   verifiedSectionsScope: ['pkt 1', 'pkt 2 (fenyloalanina)', 'pkt 4.1', 'pkt 4.2 (schematy 2+1 i 3+1)', 'pkt 4.4', 'pkt 8', 'pkt 9', 'pkt 10'],
@@ -166,6 +169,7 @@ const BCG10_CHPL_AUDIT: ChplContentAuditRecord = {
   officialSourceUrl: 'https://rejestrymedyczne.ezdrowie.gov.pl/api/rpl/medicinal-products/19535/characteristic',
   documentIdOrAuthorizationNumber: 'R/0210 (RPL ID 19535, pozwolenie nr 00210)',
   documentVersionOrDate: 'Brak informacji w dokumencie (pkt 10 ChPL pusty; pkt 9: ostatnie przedłużenie 29 maja 2013)',
+  documentDateStatus: 'missing_in_document',
   auditDate: '11.11.2026',
   auditor: 'Audyt rejestracyjny RPL VaxNurse (PROMPT 19)',
   verifiedSectionsScope: ['pkt 1', 'pkt 3', 'pkt 4.2', 'pkt 7', 'pkt 8', 'pkt 9', 'pkt 10'],
@@ -174,7 +178,61 @@ const BCG10_CHPL_AUDIT: ChplContentAuditRecord = {
   notes: 'Zidentyfikowano i pobrano oficjalny dokument ChPL z RPL; karta handlowa produktu nie została jeszcze utworzona w Bazie preparatów VaxNurse.'
 };
 
-export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
+interface LegacyFundingAuditDetails {
+  legalBasis: string;
+  targetGroup: string;
+  conditions: string;
+  validityOrVerifiedDate: string;
+}
+
+type RawChildVaccineItem = Omit<ChildVaccineItem, 'fundingAuditDetails'> & {
+  fundingAuditDetails?: LegacyFundingAuditDetails | FundingAuditDetails;
+};
+
+function enrichMandatoryFundingDetails(item: RawChildVaccineItem): ChildVaccineItem {
+  const details = item.fundingAuditDetails;
+  if (details && 'mechanismBreakdown' in details && 'productType' in details) {
+    return item as ChildVaccineItem;
+  }
+
+  const hasVariantA2 = (item.productLinkages ?? []).some(l => l.relationType === 'variant_a2_6in1');
+  const hasConditionalAlt = item.productLinkageStatus === 'conditional_alternative';
+  const productType = item.chplProductName
+    ? `${item.chplProductName} / preparaty przetargowe MZ właściwe dla procedury PSO`
+    : item.chplReference
+      ? `Preparaty z grupy procedury (${item.chplReference}) z centralnego zakupu MZ; opcjonalnie preparat spoza puli MZ na koszt pacjenta`
+      : `Preparaty z centralnego zakupu MZ dla procedury: ${item.disease}`;
+
+  const mechanismBreakdown: FundingMechanismBreakdown = {
+    stateVaccinePurchase: hasConditionalAlt
+      ? 'Zakup szczepionki przez MZ dotyczy preparatu z puli publicznej (3w1 DTaP wg cz. III.E.2); preparaty 5w1/6w1 w cz. III.E.3 zależą od odrębnych dostaw publicznych lub zakupu przez opiekunów'
+      : 'Tak – centralny zakup szczepionek przez Ministra Zdrowia dla realizacji PSO 2027 (art. 18 ust. 5a ustawy z 5.12.2008 r.)',
+    serviceExecutionFunding: 'Tak – kwalifikacja i wykonanie szczepienia obowiązkowego finansowane przez NFZ (ubezpieczeni) lub budżet państwa (nieubezpieczeni) na podstawie art. 18 ust. 2–5 ustawy',
+    pharmacyReimbursement: hasVariantA2
+      ? 'Nie dotyczy ścieżki podstawowej MZ; opcjonalny wybór preparatu 6w1 (Infanrix hexa) w Wariancie A.2 wymaga co do zasady zakupu pełnopłatnego w aptece (Część IV PSO str. 43; brak produktu na wykazie A1 84W)'
+      : 'Nie dotyczy preparatu z puli MZ; wybranie innego produktu spoza przetargu MZ oznacza pełny koszt szczepionki ponoszony przez pacjenta/opiekunów (Część IV PSO str. 43)',
+    partialReimbursementDetail: 'Brak refundacji częściowej na wykazie aptecznym 84W (01.10.2026 r.) – albo bezpłatna pula MZ w POZ/szpitalu, albo pełny koszt innego wybranego preparatu',
+    temporaryProgram: 'Nie dotyczy – stałe obowiązkowe świadczenie gwarantowane w ramach PSO 2027',
+    regionalAvailabilityAndDistribution: 'Dystrybucja kaskadowa PSSE/WSSE do punktów POZ/oddziałów szpitalnych; bieżąca dostępność magazynowa konkretnego preparatu wymaga weryfikacji w danym punkcie szczepień',
+    localPointAvailabilityConfirmed: false,
+  };
+
+  return {
+    ...item,
+    fundingAuditDetails: {
+      legalBasis: details?.legalBasis ?? 'Art. 17 i art. 18 ustawy z 5.12.2008 r.',
+      targetGroup: details?.targetGroup ?? item.targetGroupDescription,
+      productType,
+      conditions: details?.conditions ?? 'Szczepienie obowiązkowe finansowane z puli MZ i NFZ/budżetu państwa.',
+      validityPeriod: 'Rok kalendarzowy 2027 (PSO 2027, Dz. Urz. Min. Zdrow. 2026 poz. 77 z 30.10.2026 r.)',
+      verifiedDate: '11.11.2026',
+      validityOrVerifiedDate: details?.validityOrVerifiedDate ?? 'PSO 2027 (Dz. Urz. Min. Zdrow. 2026 poz. 77); weryfikacja: 11.11.2026',
+      mechanismBreakdown,
+    },
+  };
+}
+
+const RAW_CHILD_VACCINES_CATALOG: RawChildVaccineItem[] = [
   {
     id: 'pso-bcg-0',
     aliasId: 'child-bcg-birth',
@@ -806,7 +864,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
         isOptionalCombinedVariant: true,
         isVariantPatientFunded: true,
         marketAvailabilityNote: 'W Bazie preparatów VaxNurse karta vac-infanrix-hexa ma status requires_source_clarification (otwarta niezgodność fenyloalaniny); status katalogowy nie zastępuje weryfikacji bieżącej dostępności aptecznej.',
-        clinicalConditionNote: 'Odstęp między 1. a 2. dawką w schemacie 3+1 wynosi min. 1 miesiąc (wg PSO I.A.2 od 12. t.ż.), a w schemacie 2+1 min. 2 miesiące (8 tygodni) wg ChPL pkt 4.2.'
+        clinicalConditionNote: 'Odstęp między 1. a 2. dawką w schemacie podstawowym 3+1 wynosi min. 1 miesiąc (wg PSO I.A.2 od 12. t.ż.), natomiast w indywidualnym schemacie kontynuacji 2+1 min. 2 miesiące (8 tygodni) wg ChPL pkt 4.2 i cz. III.M pkt 2.'
       }
     ],
     chplReference: 'ChPL Infanrix hexa pkt 4.2',
@@ -966,7 +1024,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
         isOptionalCombinedVariant: true,
         isVariantPatientFunded: true,
         marketAvailabilityNote: 'W Bazie preparatów VaxNurse karta vac-infanrix-hexa ma status requires_source_clarification (otwarta niezgodność fenyloalaniny); status katalogowy nie zastępuje weryfikacji bieżącej dostępności aptecznej.',
-        clinicalConditionNote: 'Wymaga zachowania min. odstępów właściwych dla wybranego schematu (3+1 vs 2+1) zgodnie z decyzją lekarza.'
+        clinicalConditionNote: 'Wymaga zachowania min. odstępów właściwych dla schematu podstawowego 3+1 albo – wyłącznie jako indywidualna kontynuacja wcześniej rozpoczętego szczepienia – schematu 2+1 zgodnie z ChPL i decyzją lekarza (cz. III.M pkt 2).'
       }
     ],
     chplReference: 'ChPL Infanrix hexa pkt 4.2',
@@ -1172,11 +1230,11 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
         relationType: 'variant_a2_6in1',
         psoBasis: 'Część I.A.2 PSO 2027 (str. 11–12) oraz Część III.M (str. 42)',
         standardCalendarDose: '3. dawka DTwP w 5.–6. m.ż. (kalendarz podstawowy I.A.1, str. 5)',
-        variantA2Dose: '3. dawka 6w1 w 5.–6. m.ż. w schemacie 3+1 (w opcjonalnym schemacie skróconym 2+1 z decyzji lekarza ta wizyta może być pominięta)',
+        variantA2Dose: '3. dawka 6w1 w 5.–6. m.ż. w schemacie podstawowym 3+1 (w indywidualnym schemacie kontynuacji 2+1 – dla dzieci kontynuujących wcześniej rozpoczęte szczepienie zgodnie z ChPL i decyzją lekarza – dawka w 5.–6. m.ż. nie występuje)',
         isOptionalCombinedVariant: true,
         isVariantPatientFunded: true,
         marketAvailabilityNote: 'W Bazie preparatów VaxNurse karta vac-infanrix-hexa ma status requires_source_clarification (otwarta niezgodność fenyloalaniny); status katalogowy nie zastępuje weryfikacji bieżącej dostępności aptecznej.',
-        clinicalConditionNote: 'Schemat 2+1 i 3+1 nie są automatycznie zamienne; pominięcie dawki w 5.–6. m.ż. dopuszcza się wyłącznie po decyzji lekarza w ramach schematu 2+1 (cz. III.M str. 42, ChPL pkt 4.2).'
+        clinicalConditionNote: 'Schemat 2+1 NIE JEST schematem podstawowym dla ogółu dzieci; zgodnie z cz. III.M pkt 2 (str. 42) dopuszcza się go wyłącznie jako indywidualną kontynuację wcześniej rozpoczętego szczepienia (np. w innym kraju), zgodnie z ChPL i na podstawie decyzji lekarza.'
       }
     ],
     chplReference: 'ChPL Infanrix hexa pkt 4.2',
@@ -1194,7 +1252,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
       conditions: 'Wariant podstawowy (I.A.1) realizowany szczepionką zakupioną przez MZ jest bezpłatny dla pacjenta. Opcjonalny Wariant A.2 (6w1 Infanrix hexa) finansują co do zasady rodzice/opiekunowie na podstawie Części IV PSO 2027 (str. 43), z wyjątkiem ewentualnego przydziału z puli MZ dla grup ryzyka.',
       validityOrVerifiedDate: 'PSO 2027 (Dz. Urz. Min. Zdrow. 2026 poz. 77 z 30.10.2026 r.); weryfikacja: 11.11.2026'
     },
-    linkageAuditNote: 'Wariant A.2 (6w1): 3. dawka Infanrix hexa w 5.–6. m.ż. dotyczy standardowego schematu 3+1 (w schemacie 2+1 z decyzji lekarza dawka jest pomijana).',
+    linkageAuditNote: 'Wariant A.2 (6w1): 3. dawka Infanrix hexa w 5.–6. m.ż. dotyczy schematu podstawowego 3+1. Schemat 2+1 – indywidualna kontynuacja wcześniej rozpoczętego szczepienia, zgodnie z ChPL i decyzją lekarza (cz. III.M pkt 2, str. 42).',
     alternativeCombinedOptions: 'Podanie w składzie preparatu 5w1 lub 6w1.',
     verificationStatus: 'verified_pso',
     lastVerifiedDate: '11.11.2026',
@@ -1252,7 +1310,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
         relationType: 'variant_a2_6in1',
         psoBasis: 'Część I.A.2 PSO 2027 (str. 11–12) oraz Część III.M (str. 42)',
         standardCalendarDose: '2. dawka IPV w 5.–6. m.ż. (kalendarz podstawowy I.A.1, str. 5)',
-        variantA2Dose: '3. dawka 6w1 / 3. dawka IPV w 5.–6. m.ż. w schemacie 3+1 (w schemacie 2+1 pomijana decyzją lekarza)',
+        variantA2Dose: '3. dawka 6w1 / 3. dawka IPV w 5.–6. m.ż. w schemacie podstawowym 3+1 (nie występuje jedynie w indywidualnej kontynuacji 2+1 wg cz. III.M pkt 2 i decyzji lekarza)',
         isOptionalCombinedVariant: true,
         isVariantPatientFunded: true,
         marketAvailabilityNote: 'W Bazie preparatów VaxNurse karta vac-infanrix-hexa ma status requires_source_clarification (otwarta niezgodność fenyloalaniny); status katalogowy nie zastępuje weryfikacji bieżącej dostępności aptecznej.',
@@ -1274,7 +1332,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
       conditions: 'Wariant podstawowy (I.A.1) realizowany szczepionką zakupioną przez MZ jest bezpłatny dla pacjenta. Opcjonalny Wariant A.2 (6w1 Infanrix hexa) finansują co do zasady rodzice/opiekunowie na podstawie Części IV PSO 2027 (str. 43), z wyjątkiem ewentualnego przydziału z puli MZ dla grup ryzyka.',
       validityOrVerifiedDate: 'PSO 2027 (Dz. Urz. Min. Zdrow. 2026 poz. 77 z 30.10.2026 r.); weryfikacja: 11.11.2026'
     },
-    linkageAuditNote: 'Wariant A.2 (6w1): odpowiada 3. dawce IPV podawanej w 5.–6. m.ż. w schemacie 3+1 Infanrix hexa (w schemacie 2+1 z decyzji lekarza dawka w 5.–6. m.ż. nie jest podawana).',
+    linkageAuditNote: 'Wariant A.2 (6w1): odpowiada 3. dawce IPV podawanej w 5.–6. m.ż. w schemacie podstawowym 3+1 Infanrix hexa. Schemat 2+1 – indywidualna kontynuacja wcześniej rozpoczętego szczepienia, zgodnie z ChPL i decyzją lekarza (cz. III.M pkt 2, str. 42).',
     alternativeCombinedOptions: 'Podanie w składzie preparatów 5w1 lub 6w1.',
     verificationStatus: 'verified_pso',
     lastVerifiedDate: '11.11.2026',
@@ -1332,7 +1390,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
         relationType: 'variant_a2_6in1',
         psoBasis: 'Część I.A.2 PSO 2027 (str. 11–12) oraz Część III.M (str. 42)',
         standardCalendarDose: '3. dawka Hib w 5.–6. m.ż. (kalendarz podstawowy I.A.1, str. 5)',
-        variantA2Dose: '3. dawka 6w1 w 5.–6. m.ż. w schemacie 3+1 (w schemacie 2+1 pomijana decyzją lekarza)',
+        variantA2Dose: '3. dawka 6w1 w 5.–6. m.ż. w schemacie podstawowym 3+1 (nie występuje wyłącznie w indywidualnej kontynuacji 2+1 wg cz. III.M pkt 2 i decyzji lekarza)',
         isOptionalCombinedVariant: true,
         isVariantPatientFunded: true,
         marketAvailabilityNote: 'W Bazie preparatów VaxNurse karta vac-infanrix-hexa ma status requires_source_clarification (otwarta niezgodność fenyloalaniny); status katalogowy nie zastępuje weryfikacji bieżącej dostępności aptecznej.',
@@ -1354,7 +1412,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
       conditions: 'Wariant podstawowy (I.A.1) realizowany szczepionką zakupioną przez MZ jest bezpłatny dla pacjenta. Opcjonalny Wariant A.2 (6w1 Infanrix hexa) finansują co do zasady rodzice/opiekunowie na podstawie Części IV PSO 2027 (str. 43), z wyjątkiem ewentualnego przydziału z puli MZ dla grup ryzyka.',
       validityOrVerifiedDate: 'PSO 2027 (Dz. Urz. Min. Zdrow. 2026 poz. 77 z 30.10.2026 r.); weryfikacja: 11.11.2026'
     },
-    linkageAuditNote: 'Wariant A.2 (6w1): 3. dawka Infanrix hexa w 5.–6. m.ż. w schemacie 3+1 (w schemacie 2+1 dawka pomijana po decyzji lekarza).',
+    linkageAuditNote: 'Wariant A.2 (6w1): 3. dawka Infanrix hexa w 5.–6. m.ż. w schemacie podstawowym 3+1. Schemat 2+1 – indywidualna kontynuacja wcześniej rozpoczętego szczepienia, zgodnie z ChPL i decyzją lekarza (cz. III.M pkt 2, str. 42).',
     alternativeCombinedOptions: 'Podanie w składzie preparatów 5w1 lub 6w1.',
     verificationStatus: 'verified_pso',
     lastVerifiedDate: '11.11.2026',
@@ -1607,7 +1665,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
         relationType: 'variant_a2_6in1',
         psoBasis: 'Część I.A.2 PSO 2027 (str. 11–12) oraz Część III.M (str. 42)',
         standardCalendarDose: '4. dawka DTwP w 16.–18. m.ż. (kalendarz podstawowy I.A.1, str. 7)',
-        variantA2Dose: '4. dawka uzupełniająca 6w1 w 16.–18. m.ż. w schemacie 3+1 (w schemacie 2+1 dawka uzupełniająca to 3. dawka podawana >=6 mies. od 2. dawki, np. 11.–13. lub 16.–18. m.ż.)',
+        variantA2Dose: '4. dawka uzupełniająca 6w1 w 16.–18. m.ż. w schemacie podstawowym 3+1 (w indywidualnym schemacie kontynuacji 2+1 – wg cz. III.M pkt 2 – dawka uzupełniająca jest 3. dawką podawaną >=6 mies. od ostatniej dawki pierwotnej, najlepiej między 11. a 18. m.ż.)',
         isOptionalCombinedVariant: true,
         isVariantPatientFunded: true,
         marketAvailabilityNote: 'W Bazie preparatów VaxNurse karta vac-infanrix-hexa ma status requires_source_clarification (otwarta niezgodność fenyloalaniny); status katalogowy nie zastępuje weryfikacji bieżącej dostępności aptecznej.',
@@ -1629,7 +1687,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
       conditions: 'Wariant podstawowy (I.A.1) realizowany szczepionką zakupioną przez MZ jest bezpłatny dla pacjenta. Opcjonalny Wariant A.2 (6w1 Infanrix hexa) finansują co do zasady rodzice/opiekunowie na podstawie Części IV PSO 2027 (str. 43), z wyjątkiem ewentualnego przydziału z puli MZ dla grup ryzyka.',
       validityOrVerifiedDate: 'PSO 2027 (Dz. Urz. Min. Zdrow. 2026 poz. 77 z 30.10.2026 r.); weryfikacja: 11.11.2026'
     },
-    linkageAuditNote: 'Wariant A.2 (6w1): 4. dawka uzupełniająca Infanrix hexa w 16.–18. m.ż. (w schemacie 2+1 stanowi 3. dawkę uzupełniającą).',
+    linkageAuditNote: 'Wariant A.2 (6w1): 4. dawka uzupełniająca Infanrix hexa w 16.–18. m.ż. w schemacie podstawowym 3+1. Schemat 2+1 – indywidualna kontynuacja wcześniej rozpoczętego szczepienia, zgodnie z ChPL i decyzją lekarza (cz. III.M pkt 2, str. 42).',
     alternativeCombinedOptions: 'Podanie w składzie preparatu 5w1 lub 6w1 (np. Infanrix hexa d.4 w schemacie 3+1).',
     verificationStatus: 'verified_pso',
     lastVerifiedDate: '11.11.2026',
@@ -1687,7 +1745,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
         relationType: 'variant_a2_6in1',
         psoBasis: 'Część I.A.2 PSO 2027 (str. 11–12) oraz Część III.M (str. 42)',
         standardCalendarDose: '3. dawka IPV w 16.–18. m.ż. (kalendarz podstawowy I.A.1, str. 7)',
-        variantA2Dose: '4. dawka 6w1 / 4. dawka IPV (uzupełniająca) w 16.–18. m.ż. w schemacie 3+1 (w schemacie 2+1 to 3. dawka uzupełniająca IPV)',
+        variantA2Dose: '4. dawka 6w1 / 4. dawka IPV (uzupełniająca) w 16.–18. m.ż. w schemacie podstawowym 3+1 (w indywidualnym schemacie kontynuacji 2+1 wg cz. III.M pkt 2 to 3. dawka uzupełniająca IPV)',
         isOptionalCombinedVariant: true,
         isVariantPatientFunded: true,
         marketAvailabilityNote: 'W Bazie preparatów VaxNurse karta vac-infanrix-hexa ma status requires_source_clarification (otwarta niezgodność fenyloalaniny); status katalogowy nie zastępuje weryfikacji bieżącej dostępności aptecznej.',
@@ -1709,7 +1767,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
       conditions: 'Wariant podstawowy (I.A.1) realizowany szczepionką zakupioną przez MZ jest bezpłatny dla pacjenta. Opcjonalny Wariant A.2 (6w1 Infanrix hexa) finansują co do zasady rodzice/opiekunowie na podstawie Części IV PSO 2027 (str. 43), z wyjątkiem ewentualnego przydziału z puli MZ dla grup ryzyka.',
       validityOrVerifiedDate: 'PSO 2027 (Dz. Urz. Min. Zdrow. 2026 poz. 77 z 30.10.2026 r.); weryfikacja: 11.11.2026'
     },
-    linkageAuditNote: 'Wariant A.2 (6w1): odpowiada 4. dawce IPV w schemacie 3+1 (w schemacie 2+1 jest to 3. dawka uzupełniająca) podawanej w 16.–18. m.ż. jako Infanrix hexa.',
+    linkageAuditNote: 'Wariant A.2 (6w1): odpowiada 4. dawce IPV w schemacie podstawowym 3+1 (w indywidualnym schemacie kontynuacji 2+1 wg cz. III.M pkt 2 jest to 3. dawka uzupełniająca) podawanej w 16.–18. m.ż. jako Infanrix hexa.',
     alternativeCombinedOptions: 'Podanie w składzie preparatów 5w1 lub 6w1.',
     verificationStatus: 'verified_pso',
     lastVerifiedDate: '11.11.2026',
@@ -1789,7 +1847,7 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
       conditions: 'Wariant podstawowy (I.A.1) realizowany szczepionką zakupioną przez MZ jest bezpłatny dla pacjenta. Opcjonalny Wariant A.2 (6w1 Infanrix hexa) finansują co do zasady rodzice/opiekunowie na podstawie Części IV PSO 2027 (str. 43), z wyjątkiem ewentualnego przydziału z puli MZ dla grup ryzyka.',
       validityOrVerifiedDate: 'PSO 2027 (Dz. Urz. Min. Zdrow. 2026 poz. 77 z 30.10.2026 r.); weryfikacja: 11.11.2026'
     },
-    linkageAuditNote: 'Wariant A.2 (6w1): 4. dawka uzupełniająca Infanrix hexa w 16.–18. m.ż. (w schemacie 2+1 to 3. dawka uzupełniająca).',
+    linkageAuditNote: 'Wariant A.2 (6w1): 4. dawka uzupełniająca Infanrix hexa w 16.–18. m.ż. w schemacie podstawowym 3+1. Schemat 2+1 – indywidualna kontynuacja wcześniej rozpoczętego szczepienia, zgodnie z ChPL i decyzją lekarza (cz. III.M pkt 2, str. 42).',
     alternativeCombinedOptions: 'Podanie w składzie preparatów 5w1 lub 6w1.',
     verificationStatus: 'verified_pso',
     lastVerifiedDate: '11.11.2026',
@@ -2630,9 +2688,9 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     psoPublicationDate: JOURNAL_PUBLICATION_DATE,
     clinicalNotes: 'Szczepienie zalecane niemowlętom od ukończenia 6. tygodnia życia lub 8. tygodnia życia w zależności od rodzaju szczepionki (np. Bexsero od ukończenia 2. m.ż. / 8. tyg., Trumenba od 10. r.ż.). Dokładny wiek rozpoczęcia i liczba dawek wymagają odwołania do ChPL konkretnego preparatu. Przy jednoczesnym podaniu z DTaP zaleca się profilaktykę paracetamolem.',
     contraindicationsOrWarnings: 'Ciężka anafilaksja na substancje czynne lub pomocnicze (np. kanamycynę).',
-    fundingStatus: 'Odpłatne ze środków własnych pacjenta/rodziców (z zastrzeżeniem ewentualnych programów samorządowych lub odrębnych wskazań z cz. I.B)',
+    fundingStatus: 'Co do zasady odpłatne w populacji ogólnej (zakup szczepionki wg art. 19 ustawy; brak w wykazie refundacyjnym MZ 84W z 01.10.2026 r.), z wyjątkami: programy JST, kwalifikacja/podanie w POZ NFZ oraz finansowanie przez pracodawcę w grupach z cz. II.E',
     fundingSource: 'self_funded',
-    officialFundingSourceRef: 'Art. 19 ustawy z 5.12.2008 r. (Dz.U. z 2025 poz. 1675 z późn. zm.) oraz Część II.A PSO 2027 (str. 19–21)',
+    officialFundingSourceRef: 'Art. 19 ustawy z 5.12.2008 r. (Dz.U. z 2025 poz. 1675 z późn. zm.) + Cz. II.A (str. 20) i II.E (str. 30–31) PSO 2027 + kontrola Obwieszczenia MZ 84W (01.10.2026 r.)',
     linkedVaccineIds: [],
     chplReference: 'ChPL Bexsero / Trumenba pkt 4.2',
     chplOfficialSourceUrl: null,
@@ -2643,10 +2701,22 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     alternativeProductLabel: null,
     alternativeProductStatus: 'none',
     fundingAuditDetails: {
-      legalBasis: 'Art. 19 ustawy z dnia 5 grudnia 2008 r. o zapobieganiu oraz zwalczaniu zakażeń i chorób zakaźnych u ludzi (koszt zakupu szczepionki zalecanej nieobjętej wykazem finansowanym z art. 18 ust. 5d ponosi osoba poddająca się szczepieniu); Część II.A PSO 2027 (str. 19–21).',
-      targetGroup: 'Populacja objęta PSO 2027',
-      conditions: 'Brak powszechnego finansowania zakupu szczepionki przez MZ. Koszt preparatu ponoszą rodzice/opiekunowie, z wyjątkiem lokalnych programów polityki zdrowotnej jednostek samorządu terytorialnego lub odrębnych wskazań obowiązkowych (np. cz. I.B dla VZV).',
-      validityOrVerifiedDate: 'PSO 2027 (Dz. Urz. Min. Zdrow. 2026 poz. 77 z 30.10.2026 r.); weryfikacja: 11.11.2026'
+      legalBasis: 'Art. 19 ustawy z dnia 5 grudnia 2008 r. (koszt zakupu szczepionki zalecanej nieobjętej wykazem art. 18 ust. 5d ponosi osoba poddająca się szczepieniu); Część II.A (str. 20) oraz II.D–E (str. 29–31) PSO 2027; Obwieszczenie MZ z 16.09.2026 r. na 01.10.2026 r. (84W – brak Bexsero i Trumenba na A1 i D1).',
+      targetGroup: 'Populacja ogólna dzieci od ukończenia 6./8. tyg. życia oraz grupy wskazane w Części II.A PSO 2027 (nie jest szczepieniem poekspozycyjnym wg cz. II.A; brak wskazań w cz. I.B).',
+      productType: 'Białkowe szczepionki przeciw MenB (Bexsero, Trumenba) – brak na wykazie refundacji aptecznej MZ 84W (01.10.2026 r.); brak karty w bazie VaxNurse (pending_catalog_entry).',
+      conditions: 'W populacji ogólnej pełny koszt zakupu szczepionki ponoszą rodzice/opiekunowie (art. 19). WYJĄTKI: (1) bezpłatnie w ramach lokalnych programów polityki zdrowotnej JST (gminy/powiaty); (2) usługa kwalifikacji i podania w zadeklarowanym POZ mieści się w świadczeniu NFZ; (3) u pełnoletnich pracowników/służb objętych Rozp. RM z 3.01.2012 r. (cz. II.E str. 30–31) finansuje pracodawca.',
+      validityPeriod: 'PSO 2027 + Obwieszczenie MZ 84W obowiązujące od 01.10.2026 r.',
+      verifiedDate: '11.11.2026',
+      validityOrVerifiedDate: 'PSO 2027 (poz. 77) + Obwieszczenie MZ 84W z 01.10.2026 r.; weryfikacja: 11.11.2026',
+      mechanismBreakdown: {
+        stateVaccinePurchase: 'Brak powszechnego zakupu przez Ministra Zdrowia w programie ogólnopolskim (brak w cz. I.B i wykazie art. 18 ust. 5d).',
+        serviceExecutionFunding: 'Kwalifikacja i podanie u dzieci zadeklarowanych do POZ – w ramach świadczeń POZ (NFZ); w punktach prywatnych – możliwa opłata za usługę.',
+        pharmacyReimbursement: 'Brak refundacji aptecznej (zweryfikowano załącznik 84W A1 oraz D1 18- obowiązujący od 01.10.2026 r. – brak Bexsero i Trumenba).',
+        partialReimbursementDetail: 'Brak refundacji częściowej na wykazie MZ 84W.',
+        temporaryProgram: 'Możliwe lokalne programy polityki zdrowotnej jednostek samorządu terytorialnego (JST); obowiązek pracodawcy dla grup z cz. II.E (Rozp. RM 2012).',
+        regionalAvailabilityAndDistribution: 'Dystrybucja komercyjna poprzez apteki/punkty szczepień (albo lokalne punkty w programach JST); bieżąca dostępność magazynowa wymaga potwierdzenia w aptece/punkcie.',
+        localPointAvailabilityConfirmed: false
+      }
     },
     linkageAuditNote: null,
     alternativeCombinedOptions: null,
@@ -2695,9 +2765,9 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     psoPublicationDate: JOURNAL_PUBLICATION_DATE,
     clinicalNotes: 'Szczepienie zalecane niemowlętom od ukończenia 6. lub 8. tygodnia życia w zależności od rodzaju szczepionki (np. Nimenrix od ukończenia 6. tyg. życia, MenQuadfi od 12. m.ż.). Nie należy ujednolicać minimalnego wieku dla wszystkich szczepionek MenACWY – konieczna weryfikacja w ChPL.',
     contraindicationsOrWarnings: 'Anafilaksja na toksoid tężcowy lub błoniczy użyty jako nośnik.',
-    fundingStatus: 'Odpłatne ze środków własnych pacjenta/rodziców (z zastrzeżeniem ewentualnych programów samorządowych lub odrębnych wskazań z cz. I.B)',
+    fundingStatus: 'Co do zasady odpłatne w populacji ogólnej (zakup szczepionki wg art. 19 ustawy; brak w wykazie refundacyjnym MZ 84W z 01.10.2026 r.), z wyjątkami: programy JST, kwalifikacja/podanie w POZ NFZ oraz finansowanie przez pracodawcę w grupach z cz. II.E',
     fundingSource: 'self_funded',
-    officialFundingSourceRef: 'Art. 19 ustawy z 5.12.2008 r. (Dz.U. z 2025 poz. 1675 z późn. zm.) oraz Część II.A PSO 2027 (str. 19–21)',
+    officialFundingSourceRef: 'Art. 19 ustawy z 5.12.2008 r. + Cz. II.A (str. 20) i II.E (str. 30–31) PSO 2027 + kontrola Obwieszczenia MZ 84W (01.10.2026 r.)',
     linkedVaccineIds: [],
     chplReference: 'ChPL Nimenrix / MenQuadfi pkt 4.2',
     chplOfficialSourceUrl: null,
@@ -2708,10 +2778,22 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     alternativeProductLabel: null,
     alternativeProductStatus: 'none',
     fundingAuditDetails: {
-      legalBasis: 'Art. 19 ustawy z dnia 5 grudnia 2008 r. o zapobieganiu oraz zwalczaniu zakażeń i chorób zakaźnych u ludzi (koszt zakupu szczepionki zalecanej nieobjętej wykazem finansowanym z art. 18 ust. 5d ponosi osoba poddająca się szczepieniu); Część II.A PSO 2027 (str. 19–21).',
-      targetGroup: 'Populacja objęta PSO 2027',
-      conditions: 'Brak powszechnego finansowania zakupu szczepionki przez MZ. Koszt preparatu ponoszą rodzice/opiekunowie, z wyjątkiem lokalnych programów polityki zdrowotnej jednostek samorządu terytorialnego lub odrębnych wskazań obowiązkowych (np. cz. I.B dla VZV).',
-      validityOrVerifiedDate: 'PSO 2027 (Dz. Urz. Min. Zdrow. 2026 poz. 77 z 30.10.2026 r.); weryfikacja: 11.11.2026'
+      legalBasis: 'Art. 19 ustawy z dnia 5 grudnia 2008 r.; Część II.A (str. 20) i II.D–E (str. 29–31) PSO 2027; Obwieszczenie MZ z 16.09.2026 r. na 01.10.2026 r. (84W – brak Nimenrix, Menveo i MenQuadfi na A1 i D1).',
+      targetGroup: 'Populacja ogólna dzieci od ukończenia 6./8. tyg. życia oraz nastolatki i podróżujący z Części II.A / II.I PSO 2027 (brak wskazań w cz. I.B).',
+      productType: 'Skoniugowane 4-walentne szczepionki MenACWY (Nimenrix, Menveo, MenQuadfi) – brak na wykazie MZ 84W (01.10.2026 r.); brak karty w bazie VaxNurse (pending_catalog_entry).',
+      conditions: 'W populacji ogólnej pełny koszt zakupu szczepionki ponoszą rodzice/opiekunowie (art. 19). WYJĄTKI: (1) lokalne programy polityki zdrowotnej JST; (2) usługa kwalifikacji i podania w zadeklarowanym POZ finansowana w ramach stawki NFZ; (3) w grupach pracowniczych/mundurowych z cz. II.E (Rozp. RM z 3.01.2012 r.) koszt pokrywa pracodawca.',
+      validityPeriod: 'PSO 2027 + Obwieszczenie MZ 84W obowiązujące od 01.10.2026 r.',
+      verifiedDate: '11.11.2026',
+      validityOrVerifiedDate: 'PSO 2027 (poz. 77) + Obwieszczenie MZ 84W z 01.10.2026 r.; weryfikacja: 11.11.2026',
+      mechanismBreakdown: {
+        stateVaccinePurchase: 'Brak zakupu ze środków MZ (nie figuruje w cz. I.B ani w wykazie art. 18 ust. 5d).',
+        serviceExecutionFunding: 'W POZ NFZ kwalifikacja i podanie szczepionki przyniesionej przez zadeklarowanego pacjenta wchodzą w świadczenia gwarantowane POZ; w punktach prywatnych usługa może być odpłatna.',
+        pharmacyReimbursement: 'Brak refundacji aptecznej (zweryfikowano załącznik 84W A1 i D1 18- z 01.10.2026 r. – brak Nimenrix, Menveo i MenQuadfi).',
+        partialReimbursementDetail: 'Brak refundacji częściowej na wykazie MZ 84W.',
+        temporaryProgram: 'Możliwe lokalne programy polityki zdrowotnej JST; u dorosłych pracowników w narażeniu (cz. II.E) finansuje pracodawca.',
+        regionalAvailabilityAndDistribution: 'Dystrybucja apteczna/komercyjna; dostępność konkretnego preparatu w aptece lub punkcie zależy od lokalnych zapasów.',
+        localPointAvailabilityConfirmed: false
+      }
     },
     linkageAuditNote: null,
     alternativeCombinedOptions: null,
@@ -2758,13 +2840,13 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     psoJournalPublicationDate: JOURNAL_PUBLICATION_DATE,
     psoJournalEntry: JOURNAL_ENTRY,
     psoPublicationDate: JOURNAL_PUBLICATION_DATE,
-    clinicalNotes: 'Szczepienie zalecane wszystkim dzieciom od 6. m.ż. Dzieciom poniżej 9. roku życia szczepionym po raz pierwszy w życiu podaje się 2 dawki w odstępie co najmniej 4 tygodni. Bezpłatne na podstawie art. 43a ustawy o świadczeniach.',
+    clinicalNotes: 'Szczepienie zalecane wszystkim dzieciom od ukończenia 6. m.ż. Dzieciom poniżej 9. roku życia szczepionym po raz pierwszy w życiu podaje się 2 dawki w odstępie co najmniej 4 tygodni. Wybór konkretnego preparatu decyduje o refundacji aptecznej (wykaz 84W od 01.10.2026 r.): trójwalentne Vaxigrip i Influvac są bezpłatne dla <18 r.ż. na liście D1 (kod „DZ”) i z 50% refundacją w A1 (dopłata 26,65 zł), natomiast donosowy Fluenz (24 m.ż.–18 lat) nie widnieje na wykazie 84W.',
     contraindicationsOrWarnings: 'Ciężka anafilaksja na białko jaja kurzego (dla szczepionek inaktywowanych rzadko; dla LAIV przeciwwskazane u dzieci z ciężką astmą lub immunosupresją).',
-    fundingStatus: 'Refundacja / bezpłatność wg art. 43a (wykaz DZ) zależy od aktualnego obwieszczenia MZ i konkretnego preparatu – wymaga weryfikacji dla sezonu 2027',
+    fundingStatus: 'Zależne od produktu (84W od 01.10.2026 r.): Vaxigrip / Influvac bezpłatne z kodem „DZ” (lista D1 18-) lub 50% na A1 (26,65 zł); donosowy Fluenz brak w 84W (100% odpłatny); podanie u dzieci w POZ (NFZ)',
     fundingSource: 'mixed',
-    officialFundingSourceRef: 'Część II.A PSO 2027 (str. 19 – brak zapisu o finansowaniu); odrębna podstawa: art. 43a ustawy z 27.08.2004 r. oraz aktualne Obwieszczenie refundacyjne MZ',
+    officialFundingSourceRef: 'Obwieszczenie MZ z 16.09.2026 r. na 01.10.2026 r. (zał. 84W: A1 poz. 3664 Influvac, poz. 4136 Vaxigrip; D1 art. 43a ust. 1 pkt 1) + POZ NFZ; w PSO II.A str. 19 brak normy finansowej',
     linkedVaccineIds: [],
-    chplReference: 'ChPL Vaxigrip Tetra / Fluenz Tetra pkt 4.2',
+    chplReference: 'ChPL Vaxigrip (trójwalentna) / Influvac (trójwalentna) / Fluenz pkt 4.2',
     chplOfficialSourceUrl: null,
     chplProductName: null,
     chplMarketingAuthorizationHolder: null,
@@ -2773,10 +2855,82 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     alternativeProductLabel: null,
     alternativeProductStatus: 'none',
     fundingAuditDetails: {
-      legalBasis: 'Sam zapis w Części II.A PSO 2027 (str. 19) nie ustanawia finansowania. Odrębną podstawą refundacji aptecznej jest art. 43a ustawy z dnia 27 sierpnia 2004 r. o świadczeniach opieki zdrowotnej finansowanych ze środków publicznych oraz aktualne Obwieszczenie MZ w sprawie wykazu refundowanych leków.',
-      targetGroup: 'Dzieci i młodzież od ukończenia 6. miesiąca życia do ukończenia 18. roku życia.',
-      conditions: 'Bezpłatność na receptę z kodem DZ dotyczy wyłącznie preparatów aktualnie umieszczonych na liście refundacyjnej MZ w danym sezonie (np. wybrane szczepionki trójwalentne w sezonie 2026/2027); inne preparaty mogą być objęte refundacją częściową lub odpłatne. Brak karty handlowej w bazie VaxNurse uniemożliwia automatyczne potwierdzenie bezpłatności.',
-      validityOrVerifiedDate: 'Oczekuje na weryfikację produktowego obwieszczenia MZ dla sezonu 2026/2027 i 2027/2028 (stan na 11.11.2026: pending_clarification)'
+      legalBasis: 'Część II.A PSO 2027 (str. 19) sama w sobie nie ustanawia finansowania. Odrębną podstawą refundacji aptecznej od 01.10.2026 r. jest Obwieszczenie MZ z 16.09.2026 r. (załącznik 84W: lista A1 oraz D1 na podstawie art. 43a ust. 1 pkt 1 ustawy z 27.08.2004 r.). Koszt usługi wykonania w POZ regulują umowy POZ NFZ.',
+      targetGroup: 'Dzieci i młodzież od ukończenia 6. m.ż. do ukończenia 18. r.ż. (z rozróżnieniem wieku rejestracyjnego preparatów oraz uprawnienia „DZ” na recepcie).',
+      productType: 'Rozdzielnie wg preparatu: (1) Influvac i Vaxigrip (trójwalentne inaktywowane od 6. m.ż., na 84W A1 + D1 18-); (2) Fluenz (donosowa 24 m.ż.–18 lat, brak na 84W); (3) Efluelda (wysokodawkowa A1 50% 81,72 zł, wył. dorośli >=60 r.ż., brak na D1 18-).',
+      conditions: 'Nie można nadać jednego statusu finansowania procedurze ogólnej: bezpłatność „DZ” (18-) w aptece dotyczy WYŁĄCZNIE Vaxigrip i Influvac na podstawie recepty z kodem uprawnienia „DZ” (w okresie ważności listy 84W od 01.10.2026 r.; decyzje A1 do 30.06.2028 r.). Preparat donosowy Fluenz pozostaje poza refundacją 84W (100% odpłatny). Apteki wykonują szczepienia z puli NFZ od 18. r.ż.; dzieci do 18 lat są szczepione w POZ.',
+      validityPeriod: 'Obwieszczenie refundacyjne MZ nr 84W obowiązujące od 01.10.2026 r. (decyzje Vaxigrip/Influvac w A1: od 01.07.2026 r. na 2 lata); wymaga rewizji dla kolejnych obwieszczeń w 2027 r.',
+      verifiedDate: '11.11.2026',
+      validityOrVerifiedDate: 'Obwieszczenie MZ 84W z 01.10.2026 r. + PSO 2027; weryfikacja: 11.11.2026 (status procedury ogólnej: pending_clarification per produkt)',
+      mechanismBreakdown: {
+        stateVaccinePurchase: 'Brak zakupu szczepionek przeciw grypie przez MZ dla POZ (dystrybucja poprzez rynek apteczny na receptę).',
+        serviceExecutionFunding: 'U dzieci <18 r.ż. kwalifikacja i podanie w przychodni POZ wchodzą w świadczenia gwarantowane (stawka kapitacyjna NFZ); szczepienia w aptekach finansowane przez NFZ dotyczą osób dorosłych (>=18 r.ż.).',
+        pharmacyReimbursement: 'TAK dla Influvac (GTIN 05901797711283) i Vaxigrip (GTIN 05909991561505): wykaz D1 („18-”, art. 43a ust. 1 pkt 1) – bezpłatny lek na receptę z kodem DZ; brak Fluenz w wykazie 84W.',
+        partialReimbursementDetail: 'Wykaz A1: Influvac i Vaxigrip 50% odpłatności (dopłata pacjenta 26,65 zł przy limicie 53,30 zł we wszystkich zarejestrowanych wskazaniach); Efluelda 50% (81,72 zł) wyłącznie dla >=60 r.ż.',
+        temporaryProgram: 'Nie dotyczy programu centralnego MZ; mogą działać uzupełniające lokalne programy JST.',
+        regionalAvailabilityAndDistribution: 'Dostępność poszczególnych preparatów (Vaxigrip, Influvac, Fluenz) w konkretnych aptekach w sezonie 2026/2027 zależy od bieżących dostaw hurtowych (niepotwierdzona per punkt).',
+        localPointAvailabilityConfirmed: false
+      },
+      fundingScopes: [
+        {
+          scopeId: 'flu-trivalent-inactivated',
+          label: 'Szczepionki trójwalentne inaktywowane: Vaxigrip oraz Influvac (od 6. m.ż.)',
+          ageGroup: 'Dzieci 6. m.ż. – 18 lat (kod DZ na liście D1) oraz dorośli/inne wskazania',
+          productScope: 'Influvac (GTIN 05901797711283) oraz Vaxigrip (GTIN 05909991561505)',
+          fundingStatus: 'verified_reimbursement',
+          validityPeriod: 'Od 01.10.2026 r. (84W); decyzje A1 od 01.07.2026 r. na 2 lata',
+          sourceRef: 'Obwieszczenie MZ 84W (A1 poz. 3664/4136 oraz D1 poz. 2384/2567)',
+          sourceUrl: 'https://www.gov.pl/web/zdrowie/obwieszczenie-ministra-zdrowia-z-dnia-16-wrzesnia-2026-r-w-sprawie-wykazu-refundowanych-lekow-srodkow-spozywczych-specjalnego-przeznaczenia-zywieniowego-oraz-wyrobow-medycznych-na-1-pazdziernika-2026-r',
+          conditionsAndExceptions: 'Bezpłatne z apteki na receptę z kodem uprawnienia „DZ” (<18 lat) lub odpłatność 50% (dopłata 26,65 zł) bez kodu DZ. Dodatkowo bezpłatne na D2 (65+) i E (ciąża+). Podanie u dzieci w POZ (NFZ).',
+          mechanismBreakdown: {
+            stateVaccinePurchase: 'Nie dotyczy (wydanie z apteki na receptę).',
+            serviceExecutionFunding: 'POZ NFZ dla zadeklarowanych dzieci <18 r.ż. (apteki z umową NFZ wykonują usługę od 18 r.ż.).',
+            pharmacyReimbursement: 'Lista D1 (18-): 0 zł z kodem DZ.',
+            partialReimbursementDetail: 'Lista A1: 50% (dopłata 26,65 zł, limit 53,30 zł).',
+            temporaryProgram: 'Sezonowe wytyczne NFZ i obwieszczenia refundacyjne co kwartał.',
+            regionalAvailabilityAndDistribution: 'Dostępność apteczna zmienna regionalnie (wymaga sprawdzenia w aptece).',
+            localPointAvailabilityConfirmed: false
+          }
+        },
+        {
+          scopeId: 'flu-live-nasal',
+          label: 'Szczepionka donosowa żywa LAIV: Fluenz (24 m.ż. – 18 lat)',
+          ageGroup: 'Dzieci od ukończenia 24. m.ż. do ukończenia 18. r.ż.',
+          productScope: 'Fluenz (aerozol do nosa)',
+          fundingStatus: 'verified_self_funded',
+          validityPeriod: 'Wg wykazu MZ 84W od 01.10.2026 r.',
+          sourceRef: 'Obwieszczenie MZ 84W (01.10.2026 r.) – brak pozycji na A1 i D1',
+          conditionsAndExceptions: 'Brak refundacji aptecznej na wykazie 84W z 01.10.2026 r. – pacjent/rodzic pokrywa 100% kosztu szczepionki w aptece (chyba że produkt zostanie objęty lokalnym programem JST). Podanie donosowe w zadeklarowanym POZ finansowane w ramach POZ.',
+          mechanismBreakdown: {
+            stateVaccinePurchase: 'Brak zakupu centralnego MZ.',
+            serviceExecutionFunding: 'Kwalifikacja i podanie w zadeklarowanym POZ – świadczenie NFZ POZ.',
+            pharmacyReimbursement: 'Brak w załączniku 84W (A1 oraz D1 18-) na 01.10.2026 r.',
+            partialReimbursementDetail: 'Brak refundacji częściowej (100% odpłatności za lek).',
+            temporaryProgram: 'Ewentualne programy JST.',
+            regionalAvailabilityAndDistribution: 'Dostępność w aptekach niepotwierdzona automatycznie.',
+            localPointAvailabilityConfirmed: false
+          }
+        },
+        {
+          scopeId: 'flu-highdose-efluelda-exclusion',
+          label: 'Wyłączenie pediatryczne: Efluelda (wysokodawkowa)',
+          ageGroup: 'Wyłącznie dorośli w wieku >=60 lat (NIE dotyczy dzieci)',
+          productScope: 'Efluelda (GTIN 05909991560225)',
+          fundingStatus: 'pending_clarification',
+          validityPeriod: 'Od 01.10.2026 r. (A1 od 01.07.2026 r. na 2 lata)',
+          sourceRef: 'Obwieszczenie MZ 84W A1 poz. 4135 (50% = 81,72 zł); brak na D1 (18-)',
+          conditionsAndExceptions: 'Wymieniona w załączniku 84W wyłącznie dla wskazań rejestracyjnych dorosłych >=60 r.ż. (50% na A1 = 81,72 zł, grupa limitowa 247.2). Nie przysługuje w populacji pediatrycznej 18-.',
+          mechanismBreakdown: {
+            stateVaccinePurchase: 'Brak zakupu MZ.',
+            serviceExecutionFunding: 'Nie dotyczy procedury pediatrycznej (szczepionka dla dorosłych >=60 lat).',
+            pharmacyReimbursement: 'Brak na liście D1 (18-).',
+            partialReimbursementDetail: 'A1: 50% (81,72 zł) wyłącznie >=60 lat.',
+            temporaryProgram: 'Nie dotyczy.',
+            regionalAvailabilityAndDistribution: 'Rynek apteczny.',
+            localPointAvailabilityConfirmed: false
+          }
+        }
+      ]
     },
     linkageAuditNote: null,
     alternativeCombinedOptions: null,
@@ -2825,9 +2979,9 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     psoPublicationDate: JOURNAL_PUBLICATION_DATE,
     clinicalNotes: 'Szczepienie zalecane zdrowym dzieciom od ukończenia 9. lub 12. m.ż. Schemat 2-dawkowy podawany w odstępie co najmniej 6 tygodni (nie wcześniej niż po 4 tygodniach). Odpłatne dla populacji ogólnej (bezpłatne wyłącznie dla grup ryzyka z Części I.B).',
     contraindicationsOrWarnings: 'Ciężkie niedobory odporności, ciąża.',
-    fundingStatus: 'Odpłatne ze środków własnych pacjenta/rodziców (z zastrzeżeniem ewentualnych programów samorządowych lub odrębnych wskazań z cz. I.B)',
+    fundingStatus: 'Co do zasady odpłatne w populacji ogólnej zdrowych dzieci (art. 19 ustawy; brak Varilrix/Varivax w 84W z 01.10.2026 r.), LECZ BEZPŁATNE I OBOWIĄZKOWE dla grup z Części I.B PSO (w tym m.in. dzieci w żłobkach, klubach dziecięcych i grupach ryzyka klinicznego – patrz pso-risk-vzv-special)',
     fundingSource: 'self_funded',
-    officialFundingSourceRef: 'Art. 19 ustawy z 5.12.2008 r. (Dz.U. z 2025 poz. 1675 z późn. zm.) oraz Część II.A PSO 2027 (str. 19–21)',
+    officialFundingSourceRef: 'Art. 19 ustawy z 5.12.2008 r. + Cz. II.A (str. 21) i II.E–F (str. 30–32) vs obowiązkowe wyjątki z Cz. I.B PSO 2027 (str. 14) + kontrola 84W (01.10.2026 r.)',
     linkedVaccineIds: [],
     chplReference: 'ChPL Varilrix / Varivax pkt 4.2',
     chplOfficialSourceUrl: null,
@@ -2838,10 +2992,62 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     alternativeProductLabel: null,
     alternativeProductStatus: 'none',
     fundingAuditDetails: {
-      legalBasis: 'Art. 19 ustawy z dnia 5 grudnia 2008 r. o zapobieganiu oraz zwalczaniu zakażeń i chorób zakaźnych u ludzi (koszt zakupu szczepionki zalecanej nieobjętej wykazem finansowanym z art. 18 ust. 5d ponosi osoba poddająca się szczepieniu); Część II.A PSO 2027 (str. 19–21).',
-      targetGroup: 'Populacja objęta PSO 2027',
-      conditions: 'Brak powszechnego finansowania zakupu szczepionki przez MZ. Koszt preparatu ponoszą rodzice/opiekunowie, z wyjątkiem lokalnych programów polityki zdrowotnej jednostek samorządu terytorialnego lub odrębnych wskazań obowiązkowych (np. cz. I.B dla VZV).',
-      validityOrVerifiedDate: 'PSO 2027 (Dz. Urz. Min. Zdrow. 2026 poz. 77 z 30.10.2026 r.); weryfikacja: 11.11.2026'
+      legalBasis: 'Art. 19 ustawy z dnia 5 grudnia 2008 r. dla populacji zalecanej (Część II.A str. 21) ORAZ art. 17–18 tej ustawy dla szczepień obowiązkowych w Części I.B (str. 14) i finansowanie pracodawcy w Części II.E (str. 30); Obwieszczenie MZ 84W z 01.10.2026 r. (brak Varilrix i Varivax na A1 i D1).',
+      targetGroup: 'Populacja ogólna zdrowych dzieci nieobjętych obowiązkiem z Części I.B PSO (uwaga: dzieci w żłobkach, klubach dziecięcych, placówkach opiekuńczych, z niedoborami odporności oraz z ich otoczenia podlegają bezpłatnym szczepieniom obowiązkowym z Cz. I.B).',
+      productType: 'Szczepionki przeciw ospie wietrznej (Varilrix, Varivax) – brak na wykazie refundacji aptecznej MZ 84W (01.10.2026 r.); dla kryteriów z Cz. I.B zabezpieczane przez MZ.',
+      conditions: 'Odpłatność z art. 19 NIE dotyczy wszystkich dzieci bezwarunkowo. WYJĄTKI BEZPŁATNOŚCI: (1) obowiązek ustawowy z Części I.B str. 14 (rekord pso-risk-vzv-special: m.in. dzieci do 19 r.ż. w żłobkach, klubach dziecięcych, DPS/ZOL, przed chemioterapią/immunosupresją i ich otoczenie – pełne finansowanie zakupu przez MZ i podania przez NFZ); (2) lokalne programy JST; (3) podanie w zadeklarowanym POZ NFZ po zakupie przez rodzica; (4) pracodawca w cz. II.E. Profilaktyka poekspozycyjna (cz. II.F str. 32) poza I.B jest co do zasady odpłatna w aptece.',
+      validityPeriod: 'PSO 2027 + Obwieszczenie MZ 84W obowiązujące od 01.10.2026 r.',
+      verifiedDate: '11.11.2026',
+      validityOrVerifiedDate: 'PSO 2027 (poz. 77) + Obwieszczenie MZ 84W z 01.10.2026 r.; weryfikacja: 11.11.2026',
+      mechanismBreakdown: {
+        stateVaccinePurchase: 'Brak zakupu MZ w ścieżce zalecanej dla populacji ogólnej (II.A), NATOMIAST pełny zakup MZ dla bardzo szerokiej grupy ustawowych wskazań z Części I.B PSO (str. 14, w tym żłobki/kluby dziecięce).',
+        serviceExecutionFunding: 'Kwalifikacja i podanie w zadeklarowanym POZ finansowane przez NFZ (zarówno dla ścieżki I.B, jak i po zakupie szczepionki zalecanym w II.A).',
+        pharmacyReimbursement: 'Brak refundacji aptecznej (zweryfikowano załącznik 84W A1 i D1 18- z 01.10.2026 r. – brak Varilrix i Varivax).',
+        partialReimbursementDetail: 'Brak refundacji częściowej na wykazie 84W.',
+        temporaryProgram: 'Brak programu czasowego poza stałym katalogiem I.B; możliwe programy JST oraz obowiązki pracodawcy (cz. II.E).',
+        regionalAvailabilityAndDistribution: 'Dla I.B dystrybucja PSSE -> POZ; dla II.A zakup w aptekach (bieżąca dostępność magazynowa niepotwierdzona automatycznie).',
+        localPointAvailabilityConfirmed: false
+      },
+      fundingScopes: [
+        {
+          scopeId: 'vzv-general-ii-a',
+          label: 'Populacja ogólna (poza Cz. I.B – dzieci zdrowe nieuczęszczające do żłobka/klubu)',
+          ageGroup: 'Od 9./12. m.ż. poza grupami Cz. I.B',
+          productScope: 'Varilrix / Varivax',
+          fundingStatus: 'verified_self_funded',
+          validityPeriod: 'PSO 2027 + 84W od 01.10.2026 r.',
+          sourceRef: 'Art. 19 ustawy z 5.12.2008 r. + Cz. II.A PSO (str. 21)',
+          conditionsAndExceptions: 'Pełny koszt zakupu w aptece ponoszą rodzice; brak preparatu na liście 84W. Kwalifikacja i podanie w POZ finansowane przez NFZ.',
+          mechanismBreakdown: {
+            stateVaccinePurchase: 'Brak (zakup indywidualny wg art. 19).',
+            serviceExecutionFunding: 'POZ NFZ dla zadeklarowanego dziecka.',
+            pharmacyReimbursement: 'Brak w 84W (01.10.2026 r.).',
+            partialReimbursementDetail: 'Brak.',
+            temporaryProgram: 'Ewentualne lokalne programy JST.',
+            regionalAvailabilityAndDistribution: 'Apteki komercyjne (dostępność niepotwierdzona per punkt).',
+            localPointAvailabilityConfirmed: false
+          }
+        },
+        {
+          scopeId: 'vzv-mandatory-i-b-exception',
+          label: 'Wyjątek ustawowy Cz. I.B (pso-risk-vzv-special): żłobki, kluby dziecięce, ryzyko i otoczenie',
+          ageGroup: 'Dzieci i młodzież do ukończenia 19. r.ż. spełniające kryteria 1–3 z Cz. I.B',
+          productScope: 'Preparat VZV z centralnego zakupu MZ',
+          fundingStatus: 'verified_public_free',
+          validityPeriod: 'Stałe w PSO 2027 (str. 14)',
+          sourceRef: 'Cz. I.B PSO 2027 str. 14 + art. 18 ustawy z 5.12.2008 r.',
+          conditionsAndExceptions: 'Szczepienie całkowicie bezpłatne (zakup MZ + wykonanie NFZ) m.in. dla dzieci w żłobkach/klubach dziecięcych, placówkach opiekuńczych oraz grup ciężkiego niedoboru odporności i ich otoczenia.',
+          mechanismBreakdown: {
+            stateVaccinePurchase: 'Tak – pełny zakup przez MZ (art. 18).',
+            serviceExecutionFunding: 'Tak – NFZ / budżet państwa.',
+            pharmacyReimbursement: 'Nie dotyczy (wydawane z puli PSSE w POZ).',
+            partialReimbursementDetail: 'Nie dotyczy.',
+            temporaryProgram: 'Stały obowiązek PSO 2027.',
+            regionalAvailabilityAndDistribution: 'PSSE -> POZ (dostępność magazynowa zależna od punktu).',
+            localPointAvailabilityConfirmed: false
+          }
+        }
+      ]
     },
     linkageAuditNote: null,
     alternativeCombinedOptions: null,
@@ -2888,13 +3094,13 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     psoJournalPublicationDate: JOURNAL_PUBLICATION_DATE,
     psoJournalEntry: JOURNAL_ENTRY,
     psoPublicationDate: JOURNAL_PUBLICATION_DATE,
-    clinicalNotes: 'Powszechny program bezpłatnych szczepień przeciw HPV dla dziewcząt i chłopców. Schemat 2-dawkowy podawany w odstępie 6–12 miesięcy. WARUNEK BEZPŁATNOŚCI: szczepienie musi być ROZPOCZĘTE przed ukończeniem 14. roku życia i może być nieodpłatnie zakończone po ukończeniu 14. roku życia.',
+    clinicalNotes: 'Powszechny program bezpłatnych szczepień przeciw HPV (gov.pl/web/zdrowie/hpv) dla dziewcząt i chłopców po ukończeniu 9. r.ż. do ukończenia 14. r.ż. Dostępne dwa preparaty: Cervarix (2-walentny: 16, 18) oraz Gardasil 9 (9-walentny: 6, 11, 16, 18, 31, 33, 45, 52, 58). Schemat 2-dawkowy w odstępie 6–12 miesięcy. WARUNEK BEZPŁATNOŚCI: szczepienie musi być ROZPOCZĘTE do ukończenia 14. r.ż. i może być nieodpłatnie zakończone po ukończeniu 14. r.ż.',
     contraindicationsOrWarnings: 'Ciąża (odroczyć), ciężka anafilaksja po dawce 1.',
-    fundingStatus: 'Bezpłatne w ramach programu powszechnego MZ dla osób po ukończeniu 9. r.ż. do ukończenia 14. r.ż.',
+    fundingStatus: 'Bezpłatne w powszechnym programie MZ dla wieku 9–14 lat (Cervarix oraz Gardasil 9, schemat 2-dawkowy); zakup MZ + realizacja NFZ w POZ',
     fundingSource: 'free_public_program',
-    officialFundingSourceRef: 'Art. 18 ust. 5d ustawy z 5.12.2008 r. + Obwieszczenie MZ z 30.09.2026 r. (Dz. Urz. Min. Zdrow. poz. 71) + Część II.A PSO 2027 (str. 20–21)',
+    officialFundingSourceRef: 'Art. 18 ust. 5d ustawy z 5.12.2008 r. + Obwieszczenie MZ z 30.09.2026 r. (Dz. Urz. Min. Zdrow. poz. 71) + gov.pl/web/zdrowie/hpv + Cz. II.A PSO 2027 (str. 20–21)',
     linkedVaccineIds: [],
-    chplReference: 'ChPL Gardasil 9 / Cervarix pkt 4.2',
+    chplReference: 'ChPL Cervarix (2-walentna) oraz ChPL Gardasil 9 (9-walentna) pkt 4.2 (schemat 2-dawkowy 9–14 lat)',
     chplOfficialSourceUrl: null,
     chplProductName: null,
     chplMarketingAuthorizationHolder: null,
@@ -2903,10 +3109,64 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     alternativeProductLabel: null,
     alternativeProductStatus: 'none',
     fundingAuditDetails: {
-      legalBasis: 'Art. 18 ust. 5d ustawy z dnia 5 grudnia 2008 r.; Obwieszczenie Ministra Zdrowia z dnia 30 września 2026 r. w sprawie wykazu zalecanych szczepień ochronnych objętych finansowaniem (Dz. Urz. Min. Zdrow. poz. 71); Część II.A PSO 2027 (str. 20–21).',
-      targetGroup: 'Dziewczęta i chłopcy po ukończeniu 9. roku życia do ukończenia 14. roku życia.',
-      conditions: 'Schemat 2-dawkowy w odstępie 6–12 miesięcy. Szczepienie musi zostać rozpoczęte przed ukończeniem 14. r.ż. i może być nieodpłatnie zakończone po ukończeniu 14. r.ż. Bezpłatnie podawane są preparaty objęte aktualnym wykazem programu powszechnego.',
-      validityOrVerifiedDate: 'Obwieszczenie MZ poz. 71 z 30.09.2026 r. + PSO 2027 poz. 77 z 30.10.2026 r.; weryfikacja: 11.11.2026'
+      legalBasis: 'Art. 18 ust. 5d ustawy z dnia 5 grudnia 2008 r.; Obwieszczenie Ministra Zdrowia z dnia 30 września 2026 r. w sprawie wykazu zalecanych szczepień ochronnych objętych finansowaniem (Dz. Urz. Min. Zdrow. 2026 poz. 71); gov.pl/web/zdrowie/hpv; Część II.A PSO 2027 (str. 20–21).',
+      targetGroup: 'Dziewczęta i chłopcy po ukończeniu 9. roku życia do ukończenia 14. roku życia (grupa A – powszechny program 2-dawkowy).',
+      productType: 'Oba produkty w programie powszechnym: Cervarix (2-walentna HPV 16, 18) ORAZ Gardasil 9 (9-walentna HPV 6, 11, 16, 18, 31, 33, 45, 52, 58) – karty produktów oczekują w bazie VaxNurse (pending_catalog_entry).',
+      conditions: 'Schemat 2-dawkowy (odstęp 6–12 mies.) – rozpoczęcie do ukończenia 14. r.ż., zakończenie 2. dawką bezpłatne również po ukończeniu 14. r.ż. Różnica poza programem (15+ lub recepta apteczna wg 84W z 01.10.2026 r.): Cervarix znajduje się na listach A1 (50%) i D1 (18- DZ), natomiast Gardasil 9 poza programem 9–14 jest 100% odpłatny.',
+      validityPeriod: 'Program stały / Obwieszczenie MZ poz. 71 z 30.09.2026 r. + PSO 2027',
+      verifiedDate: '11.11.2026',
+      validityOrVerifiedDate: 'Obwieszczenie MZ poz. 71 z 30.09.2026 r. + PSO 2027 poz. 77 z 30.10.2026 r.; weryfikacja: 11.11.2026',
+      mechanismBreakdown: {
+        stateVaccinePurchase: 'Tak – centralny zakup szczepionek Cervarix i Gardasil 9 przez Ministra Zdrowia dla programu powszechnego 9–14 lat.',
+        serviceExecutionFunding: 'Tak – kwalifikacja i wykonanie szczepienia finansowane przez NFZ w przychodniach POZ realizujących program (w tym szczepienia w szkołach podstawowych).',
+        pharmacyReimbursement: 'W ścieżce programu powszechnego szczepionka dostarczana przez PSSE do POZ (bez recepty aptecznej); niezależnie Cervarix figuruje w 84W (A1 + D1 18-), a Gardasil 9 nie.',
+        partialReimbursementDetail: 'Program 9–14 lat w POZ bez dopłaty pacjenta (0 zł za oba preparaty).',
+        temporaryProgram: 'Nie dotyczy – powszechny ogólnopolski program zalecanych szczepień MZ (zamknięcie puli 19–26 w WSSE Wrocław z 05.11.2026 r. NIE dotyczy kohorty 9–14 lat!).',
+        regionalAvailabilityAndDistribution: 'Dystrybucja PSSE -> POZ; dostępność wybranego konkretnego preparatu (Cervarix vs Gardasil 9) w danej przychodni wymaga potwierdzenia w POZ.',
+        localPointAvailabilityConfirmed: false
+      },
+      fundingScopes: [
+        {
+          scopeId: 'hpv-9-14-cervarix',
+          label: 'Grupa A (9–14 lat): Cervarix (2-walentna) w programie powszechnym',
+          ageGroup: '9–14 lat (rozpoczęcie przed ukończeniem 14. r.ż., zakończenie 2. dawką bezpłatne)',
+          productScope: 'Cervarix (HPV 16, 18)',
+          fundingStatus: 'verified_public_free',
+          validityPeriod: 'Program powszechny MZ + PSO 2027 (stan na 11.11.2026 r.)',
+          sourceRef: 'Obwieszczenie MZ poz. 71 + gov.pl/web/zdrowie/hpv + PSO II.A str. 20–21',
+          sourceUrl: 'https://www.gov.pl/web/zdrowie/hpv',
+          conditionsAndExceptions: 'Bezpłatna w programie powszechnym POZ (zakup MZ + podanie NFZ); niezależnie dostępna także na wykazie aptecznym 84W (D1 18- / A1 50%).',
+          mechanismBreakdown: {
+            stateVaccinePurchase: 'Tak – zakup MZ.',
+            serviceExecutionFunding: 'Tak – POZ NFZ.',
+            pharmacyReimbursement: 'Niezależnie w 84W (D1 18- oraz A1 50%).',
+            partialReimbursementDetail: '0 zł w programie POZ.',
+            temporaryProgram: 'Program stały 9–14 lat.',
+            regionalAvailabilityAndDistribution: 'Dystrybucja PSSE -> POZ (zależnie od stanu punktu).',
+            localPointAvailabilityConfirmed: false
+          }
+        },
+        {
+          scopeId: 'hpv-9-14-gardasil9',
+          label: 'Grupa A (9–14 lat): Gardasil 9 (9-walentna) w programie powszechnym',
+          ageGroup: '9–14 lat (rozpoczęcie przed ukończeniem 14. r.ż., zakończenie 2. dawką bezpłatne)',
+          productScope: 'Gardasil 9 (HPV 6, 11, 16, 18, 31, 33, 45, 52, 58)',
+          fundingStatus: 'verified_public_free',
+          validityPeriod: 'Program powszechny MZ + PSO 2027 (stan na 11.11.2026 r.)',
+          sourceRef: 'Obwieszczenie MZ poz. 71 + gov.pl/web/zdrowie/hpv + PSO II.A str. 20–21',
+          sourceUrl: 'https://www.gov.pl/web/zdrowie/hpv',
+          conditionsAndExceptions: 'Bezpłatna wyłącznie w ramach programu powszechnego (9–14 lat) i jego kontynuacji po ukończeniu 14. r.ż.; w aptece poza programem brak w 84W (100% odpłatna).',
+          mechanismBreakdown: {
+            stateVaccinePurchase: 'Tak – zakup MZ w programie 9–14 lat.',
+            serviceExecutionFunding: 'Tak – POZ NFZ.',
+            pharmacyReimbursement: 'Brak Gardasil 9 na wykazie aptecznym 84W z 01.10.2026 r.',
+            partialReimbursementDetail: '0 zł w programie POZ; 100% odpłatności w aptece poza programem.',
+            temporaryProgram: 'Program stały 9–14 lat.',
+            regionalAvailabilityAndDistribution: 'Dystrybucja PSSE -> POZ (dostępność tego preparatu zależy od punktu).',
+            localPointAvailabilityConfirmed: false
+          }
+        }
+      ]
     },
     linkageAuditNote: null,
     alternativeCombinedOptions: null,
@@ -2922,17 +3182,17 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
   {
     id: 'pso-rec-hpv-catchup',
     aliasId: 'child-hpv-catchup',
-    disease: 'Zakażenia ludzkim wirusem brodawczaka (HPV) – młodzież w wieku 15–18 lat',
+    disease: 'Zakażenia ludzkim wirusem brodawczaka (HPV) – młodzież 15–18 lat oraz młodzi dorośli 19–26 lat',
     shortCode: 'HPV-catchup',
     pathogenCategory: 'wirusy',
     obligationType: 'zalecane',
     populationScope: 'cross_age',
     ageBracketId: '14-rok',
-    targetAgeDisplay: 'W 15.–18. roku życia (schemat 3-dawkowy)',
-    targetGroupDescription: 'Młodzież w wieku 15–18 lat oraz dorośli',
+    targetAgeDisplay: 'W 15.–18. r.ż. oraz u dorosłych 19–26 lat (schemat 3-dawkowy)',
+    targetGroupDescription: 'Młodzież w wieku 15–18 lat (refundacja apteczna Cervarix vs brak refundacji Gardasil 9) oraz młodzi dorośli 19–26 lat (program czasowy Cervarix od 01.10.2026 r.)',
     doseNumberInSeries: 1,
     totalDosesInStandardSeries: 3,
-    doseLabel: '1. dawka w schemacie 3-dawkowym (0, 1–2, 6 miesięcy)',
+    doseLabel: '1. dawka w schemacie 3-dawkowym (Cervarix: 0, 1, 6 mies.; Gardasil 9: 0, 2, 6 mies.)',
     administrationRoute: 'Domięśniowo (i.m.)',
     injectionSite: 'Mięsień naramienny',
     minIntervalFromPrevious: 'Brak (dawka pierwsza)',
@@ -2946,20 +3206,20 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     psoPart: 'Część II.A',
     psoPointOrSubpoint: 'Tabela Część II.A',
     psoPdfPage: 21,
-    psoSection: 'Część II.A PSO 2027 – Szczepienia zalecane: HPV 15–18 lat (str. 21)',
+    psoSection: 'Część II.A PSO 2027 – Szczepienia zalecane: HPV 15–18 lat oraz dorośli (str. 21)',
     psoOfficialUrl: OFFICIAL_PDF_URL,
     psoLegalAct: LEGAL_ACT_KEYWORD,
     psoGisAnnouncementDate: GIS_ANNOUNCEMENT_DATE,
     psoJournalPublicationDate: JOURNAL_PUBLICATION_DATE,
     psoJournalEntry: JOURNAL_ENTRY,
     psoPublicationDate: JOURNAL_PUBLICATION_DATE,
-    clinicalNotes: 'Szczepienie osób w wieku 15–18 lat oraz dorosłych wykonuje się w schemacie 3-dawkowym (0, 1–2, 6 miesięcy). Zgodnie z oficjalnym zapisem PSO 2027: „warunki całkowitej lub częściowej refundacji określają przepisy odrębne” – nie gwarantuje się bezwarunkowej bezpłatności; status finansowania wymaga weryfikacji aktualnego obwieszczenia refundacyjnego.',
+    clinicalNotes: 'Szczepienie osób w wieku 15–18 lat oraz dorosłych wykonuje się w schemacie 3-dawkowym (Cervarix: 0, 1, 6 mies.; Gardasil 9: 0, 2, 6 mies.; wyjątkowo 2. dawka po rozpoczęciu <14. r.ż. kończona bezpłatnie jako 2-dawkowa). Finansowanie JEST ROZDZIELONE per grupa wieku, produkt i region: (B) 15–18 lat w aptece 84W: Cervarix bezpłatny na D1 „18-” (DZ) i 50% na A1 (139,44 zł), Gardasil 9 brak w 84W (100% odpłatny); (C) 19–26 lat: ogólnopolski program czasowy MZ/GIS z 02.10.2026 r. wył. dla Cervarix (51 000 dawek, start przed ukończeniem 25 lat, do 31.05.2027 r.), przy czym WSSE we Wrocławiu 05.11.2026 r. zamknęła program regionalny z powodu wyczerpania puli.',
     contraindicationsOrWarnings: 'Ciąża (szczepienie odracza się do zakończenia ciąży).',
-    fundingStatus: 'Całkowita lub częściowa refundacja zgodnie z odrębnymi przepisami – wymaga osobnego sprawdzenia aktualnego wykazu refundacyjnego MZ dla produktu',
+    fundingStatus: 'Zależne od wieku, preparatu i regionu wg odrębnych przepisów: 15–18 lat Cervarix (18- DZ = 0 zł / A1 50% 139,44 zł) vs Gardasil 9 (100% odpłatny); 19–26 lat program czasowy Cervarix (start <25 r.ż. do 31.05.2027 r., pula WSSE Wrocław zamknięta 05.11.2026 r.)',
     fundingSource: 'mixed',
-    officialFundingSourceRef: 'Część II.A PSO 2027 (str. 21: „warunki całkowitej lub częściowej refundacji określają przepisy odrębne”) + odrębne obwieszczenia refundacyjne MZ',
+    officialFundingSourceRef: 'PSO II.A (str. 21) + 84W od 01.10.2026 r. (Cervarix A1 poz. 3669, D1 poz. 2385; brak Gardasil 9) + Komunikat GIS z 02.10.2026 r. (Dz. Urz. MZ poz. 71) + Aktualizacja WSSE Wrocław z 05.11.2026 r.',
     linkedVaccineIds: [],
-    chplReference: 'ChPL Gardasil 9 / Cervarix pkt 4.2 (schemat 3-dawkowy)',
+    chplReference: 'ChPL Cervarix (0, 1, 6 mies.) oraz ChPL Gardasil 9 (0, 2, 6 mies.) pkt 4.2',
     chplOfficialSourceUrl: null,
     chplProductName: null,
     chplMarketingAuthorizationHolder: null,
@@ -2968,10 +3228,103 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     alternativeProductLabel: null,
     alternativeProductStatus: 'none',
     fundingAuditDetails: {
-      legalBasis: 'Część II.A PSO 2027 (str. 21) odsyła do przepisów odrębnych: obwieszczeń MZ w sprawie wykazu refundowanych leków oraz uprawnień z art. 43a ustawy z dnia 27 sierpnia 2004 r. (wykaz bezpłatnych leków 18-).',
-      targetGroup: 'Młodzież w wieku 15–18 lat (schemat 3-dawkowy).',
-      conditions: 'Status refundacji (100% na wykazie 18- / częściowa refundacja apteczna / pełna odpłatność) zależy od wybranego produktu handlowego (Cervarix vs Gardasil 9) oraz aktualnego obwieszczenia refundacyjnego MZ obowiązującego w dniu wystawienia recepty. Wymaga weryfikacji per produkt.',
-      validityOrVerifiedDate: 'Oczekuje na powiązanie z kartą produktu i kontrolę aktualnego obwieszczenia MZ na 2027 r. (stan na 11.11.2026: pending_clarification)'
+      legalBasis: 'Część II.A PSO 2027 (str. 21) odsyła do przepisów odrębnych: (1) Obwieszczenia MZ 84W z 16.09.2026 r. na 01.10.2026 r. (A1 50% oraz D1 18- art. 43a ust. 1 pkt 1); (2) Obwieszczenia MZ z 30.09.2026 r. (Dz. Urz. Min. Zdrow. poz. 71) i Komunikatu GIS z 02.10.2026 r. dla 19–26 lat; (3) Aktualizacji WSSE we Wrocławiu z 05.11.2026 r.',
+      targetGroup: 'Młodzież w wieku 15–18 lat (Grupa B) oraz młodzi dorośli 19–26 lat (Grupa C) – rozdzielone na odrębne zakresy bez duplikacji procedury.',
+      productType: 'Rozdzielnie wg preparatu: Cervarix (2-walentna, GTIN 05909990064748: objęta 84W A1+D1 oraz programem 19–26) vs Gardasil 9 (9-walentna: brak w 84W i brak w programie 19–26).',
+      conditions: 'NIE WOLNO oznaczać całej kategorii HPV jako jednolicie „bezpłatnej”. W wieku 15–18 lat bezpłatność apteczna z kodem „DZ” (18-) dotyczy wyłącznie szczepionki Cervarix (50% dla pozostałych wskazań = 139,44 zł), podczas gdy Gardasil 9 jest 100% odpłatny (poza zakończeniem serii rozpoczętej <14. r.ż.). Program bezpłatnych szczepień 19–26 lat (51 000 dawek Cervarix, rozpoczęcie przed ukończeniem 25 r.ż., zakończenie do 31.05.2027 r.) ma charakter czasowy i ograniczony pulą – na obszarze właściwości WSSE we Wrocławiu został zakończony 05.11.2026 r. po wyczerpaniu puli (nie zamyka to ogólnopolskiego programu 9–14 ani refundacji aptecznej Cervarix).',
+      validityPeriod: '84W od 01.10.2026 r. (Cervarix A1 od 01.01.2026 r. na 3 lata); program czasowy 19–26 lat: 01.10.2026 r. – 31.05.2027 r. (do wyczerpania puli); WSSE Wrocław: zamknięcie puli od 05.11.2026 r.',
+      verifiedDate: '11.11.2026',
+      validityOrVerifiedDate: '84W (01.10.2026 r.) + GIS (02.10.2026 r.) + WSSE Wrocław (05.11.2026 r.); weryfikacja: 11.11.2026 (pending_clarification per wiek/produkt/region)',
+      mechanismBreakdown: {
+        stateVaccinePurchase: 'Dla 15–18 lat: wył. kontynuacja rozpoczęta <14. r.ż. lub brak zakupu MZ (recepta apteczna). Dla 19–26 lat: zakup MZ wyłącznie w ramach puli czasowej 51 000 dawek Cervarix (do wyczerpania puli, max 31.05.2027 r.).',
+        serviceExecutionFunding: 'Kwalifikacja i wykonanie w POZ NFZ (dla 19–26 w programie rozliczenie w ramach stawki kapitacyjnej POZ; w aptekach nie objęto programem czasowym 19–26 bez umowy lub wg przepisów odrębnych).',
+        pharmacyReimbursement: 'Cervarix na wykazie D1 (18- DZ, poz. 2385) = 0 zł na receptę dla osób do ukończenia 18. r.ż.; Gardasil 9 BRAK na liście 84W A1 i D1.',
+        partialReimbursementDetail: 'Cervarix na liście A1 (poz. 3669): odpłatność 50%, dopłata pacjenta 139,44 zł (limit/detal 278,88 zł, decyzja od 2026-01-01 na 3 lata); Gardasil 9 brak refundacji częściowej.',
+        temporaryProgram: 'Program czasowy GIS/MZ dla 19–26 lat (Cervarix, 51 000 dawek / 17 000 osób, start <25 r.ż., do 31.05.2027 r.); regionalne wyczerpanie puli WSSE Wrocław od 05.11.2026 r.',
+        regionalAvailabilityAndDistribution: 'Zróżnicowana regionalnie i punktowo: program 19–26 zamknięty w obszarze WSSE we Wrocławiu od 05.11.2026 r. (w innych województwach zależny od lokalnych stanów PSSE/POZ); dostępność apteczna Cervarix/Gardasil 9 niepotwierdzona per apteka.',
+        localPointAvailabilityConfirmed: false
+      },
+      fundingScopes: [
+        {
+          scopeId: 'hpv-15-18-cervarix',
+          label: 'Grupa B (15–18 lat): Cervarix (2-walentna) – refundacja apteczna 84W',
+          ageGroup: '15–18 lat (schemat 3-dawkowy 0, 1, 6 mies.; uwaga: do ukończenia 18. r.ż. kod „DZ”)',
+          productScope: 'Cervarix (GTIN 05909990064748)',
+          fundingStatus: 'verified_reimbursement',
+          validityPeriod: 'Od 01.10.2026 r. (84W; decyzja A1 od 2026-01-01 na 3 lata)',
+          sourceRef: 'Obwieszczenie MZ 84W (A1 poz. 3669 oraz D1 poz. 2385, art. 43a ust. 1 pkt 1)',
+          sourceUrl: 'https://www.gov.pl/web/zdrowie/obwieszczenie-ministra-zdrowia-z-dnia-16-wrzesnia-2026-r-w-sprawie-wykazu-refundowanych-lekow-srodkow-spozywczych-specjalnego-przeznaczenia-zywieniowego-oraz-wyrobow-medycznych-na-1-pazdziernika-2026-r',
+          conditionsAndExceptions: 'Bezpłatna na receptę w aptece z kodem uprawnienia „DZ” (osoby do ukończenia 18. r.ż.) albo odpłatność 50% (dopłata 139,44 zł, cena/limit 278,88 zł) na liście A1 we wszystkich zarejestrowanych wskazaniach. Podanie w zadeklarowanym POZ w ramach NFZ.',
+          mechanismBreakdown: {
+            stateVaccinePurchase: 'Nie dotyczy ścieżki aptecznej 15–18 (z wyjątkiem kończenia 2. dawki rozpoczętej <14. r.ż.).',
+            serviceExecutionFunding: 'Tak – kwalifikacja i podanie w zadeklarowanym POZ (NFZ).',
+            pharmacyReimbursement: 'Lista D1 (18-): 0 zł na receptę z kodem „DZ”.',
+            partialReimbursementDetail: 'Lista A1: 50% odpłatności (dopłata 139,44 zł przy cenie detalicznej 278,88 zł).',
+            temporaryProgram: 'Stała refundacja apteczna wg aktualnych obwieszczeń MZ (niezależna od puli 19–26).',
+            regionalAvailabilityAndDistribution: 'Dostępna w aptekach (stan magazynowy danej apteki wymaga sprawdzenia).',
+            localPointAvailabilityConfirmed: false
+          }
+        },
+        {
+          scopeId: 'hpv-15-18-gardasil9',
+          label: 'Grupa B (15–18 lat): Gardasil 9 (9-walentna) – brak w wykazie 84W',
+          ageGroup: '15–18 lat (schemat 3-dawkowy 0, 2, 6 mies.)',
+          productScope: 'Gardasil 9',
+          fundingStatus: 'verified_self_funded',
+          validityPeriod: 'Wg wykazu MZ 84W od 01.10.2026 r.',
+          sourceRef: 'Obwieszczenie MZ 84W (01.10.2026 r.) – brak pozycji na A1 i D1',
+          conditionsAndExceptions: 'Brak na wykazie refundacyjnym A1 i brak na liście bezpłatnych leków D1 (18-) na 01.10.2026 r. Rozpoczęcie w wieku 15–18 lat wiąże się z 100% odpłatnością zakupu w aptece (chyba że jest to 2. dawka kontynuacji bezpłatnego cyklu rozpoczętego <14. r.ż. w POZ lub lokalny program JST).',
+          mechanismBreakdown: {
+            stateVaccinePurchase: 'Brak dla rozpoczynających >=14. r.ż. (wył. dokończenie cyklu 2-dawkowego rozpoczętego <14. r.ż.).',
+            serviceExecutionFunding: 'Kwalifikacja i podanie w zadeklarowanym POZ (NFZ).',
+            pharmacyReimbursement: 'Brak Gardasil 9 na A1 oraz D1 (18-) w załączniku 84W.',
+            partialReimbursementDetail: 'Brak refundacji częściowej (100% odpłatności za lek).',
+            temporaryProgram: 'Nie objęta programem 19–26 ani refundacją 84W (ew. programy JST).',
+            regionalAvailabilityAndDistribution: 'Rynek apteczny komercyjny.',
+            localPointAvailabilityConfirmed: false
+          }
+        },
+        {
+          scopeId: 'hpv-19-26-cervarix-program',
+          label: 'Grupa C (19–26 lat): program czasowy MZ/GIS (wyłącznie Cervarix)',
+          ageGroup: 'Osoby w wieku 19–26 lat pod warunkiem rozpoczęcia przed ukończeniem 25. roku życia',
+          productScope: 'Wyłącznie Cervarix (schemat 3-dawkowy: 0, 1, 6 miesięcy)',
+          fundingStatus: 'verified_public_free',
+          validityPeriod: 'Od 01.10.2026 r. do 31.05.2027 r. lub do wyczerpania ogólnopolskiej puli 51 000 dawek',
+          sourceRef: 'Komunikat GIS z 02.10.2026 r. + Obwieszczenie MZ z 30.09.2026 r. (Dz. Urz. Min. Zdrow. 2026 poz. 71)',
+          sourceUrl: 'https://www.gov.pl/web/gis/komunikat-gis-bezplatne-szczepienia-przeciw-hpv-dla-osob-w-wieku-1926-lat--zasady-od-1-pazdziernika-2026-r',
+          conditionsAndExceptions: 'Bezpłatnie wyłącznie Cervarix dla osób z prawem do świadczeń NFZ; pula 51 000 dawek (17 000 osób). Pierwsza dawka musi być podana przed ukończeniem 25. r.ż., zakończenie wszystkich 3 dawek do 31.05.2027 r. w POZ (w tym POZ studenckich). Poza warunkiem <25 lat lub dla Gardasil 9 brak bezpłatnego programu.',
+          mechanismBreakdown: {
+            stateVaccinePurchase: 'Tak – zakup MZ limitowanej puli 51 000 dawek Cervarix.',
+            serviceExecutionFunding: 'Tak – realizacja w POZ w ramach stawki kapitacyjnej NFZ.',
+            pharmacyReimbursement: 'Niezależnie w aptece (poza pulą programu): Cervarix 50% w A1 (139,44 zł); Gardasil 9 brak w 84W.',
+            partialReimbursementDetail: '0 zł w programie czasowym do wyczerpania puli.',
+            temporaryProgram: 'Program czasowy MZ: 01.10.2026 r. – 31.05.2027 r. (limitowana pula dawek).',
+            regionalAvailabilityAndDistribution: 'Dystrybucja PSSE -> POZ; wyczerpanie puli w części regionów (patrz WSSE Wrocław 05.11.2026 r.).',
+            localPointAvailabilityConfirmed: false
+          }
+        },
+        {
+          scopeId: 'hpv-19-26-wsse-wroclaw-closure',
+          label: 'Grupa C – aktualizacja regionalna: WSSE we Wrocławiu (05.11.2026 r.)',
+          ageGroup: 'Młodzi dorośli 19–26 lat na obszarze właściwości WSSE we Wrocławiu',
+          productScope: 'Czasowy program Cervarix (19–26 lat)',
+          fundingStatus: 'regional_pool_closed',
+          validityPeriod: 'Zamknięcie programu na obszarze WSSE Wrocław od 05.11.2026 r.',
+          sourceRef: 'Komunikat WSSE we Wrocławiu – aktualizacja z 05.11.2026 r. (wykorzystanie puli i zamknięcie programu)',
+          sourceUrl: 'https://www.gov.pl/web/wsse-wroclaw/bezplatne-szczepienia-przeciw-hpv-takze-dla-mlodych-doroslych',
+          conditionsAndExceptions: 'WSSE we Wrocławiu ogłosiła 05.11.2026 r. wyczerpanie przydzielonej puli szczepionek i zamknięcie programu 19–26 lat na obszarze swojej właściwości. UWAGA: Jest to zakończenie REGIONALNE programu czasowego 19–26 – NIE stanowi ogólnopolskiego zamknięcia programu 9–14 lat ani cofnięcia aptecznej refundacji Cervarix (84W: A1 50% / D1 18-).',
+          mechanismBreakdown: {
+            stateVaccinePurchase: 'Pula dawek dla programu 19–26 w obszarze WSSE we Wrocławiu została wyczerpana z dniem 05.11.2026 r.',
+            serviceExecutionFunding: 'W POZ zadeklarowanego pacjenta możliwe podanie szczepionki zakupionej samodzielnie na receptę (wg stawki kapitacyjnej).',
+            pharmacyReimbursement: 'Nadal obowiązuje ogólnopolska lista 84W: Cervarix na A1 z 50% odpłatnością (139,44 zł) oraz na D1 (18- DZ).',
+            partialReimbursementDetail: '50% na A1 dla dorosłych przy zakupie aptecznym Cervarix (139,44 zł).',
+            temporaryProgram: 'Zakończony regionalnie od 05.11.2026 r. na obszarze właściwości WSSE we Wrocławiu.',
+            regionalAvailabilityAndDistribution: 'Obszar WSSE Wrocław – brak dostępnych dawek z puli programu czasowego 19–26 od 05.11.2026 r.',
+            localPointAvailabilityConfirmed: false
+          }
+        }
+      ]
     },
     linkageAuditNote: null,
     alternativeCombinedOptions: null,
@@ -3020,9 +3373,9 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     psoPublicationDate: JOURNAL_PUBLICATION_DATE,
     clinicalNotes: 'Szczepienie schematem 3-dawkowym (dawka 2 po 1–3 mies., dawka 3 po 5–12 mies.). Dawka przypominająca co 3–5 lat. Dedykowana postać pediatryczna (Junior).',
     contraindicationsOrWarnings: 'Ciężka anafilaksja na białko jaja kurzego.',
-    fundingStatus: 'Odpłatne ze środków własnych pacjenta/rodziców (z zastrzeżeniem ewentualnych programów samorządowych lub odrębnych wskazań z cz. I.B)',
+    fundingStatus: 'Co do zasady odpłatne w populacji ogólnej (zakup szczepionki wg art. 19 ustawy; brak FSME-Immun i Encepur w 84W z 01.10.2026 r.), z wyjątkami: programy JST, podanie w POZ NFZ oraz finansowanie przez pracodawcę w grupach narażonych (cz. II.E)',
     fundingSource: 'self_funded',
-    officialFundingSourceRef: 'Art. 19 ustawy z 5.12.2008 r. (Dz.U. z 2025 poz. 1675 z późn. zm.) oraz Część II.A PSO 2027 (str. 19–21)',
+    officialFundingSourceRef: 'Art. 19 ustawy z 5.12.2008 r. + Cz. II.A (str. 20) i II.E (str. 31) PSO 2027 + kontrola 84W (01.10.2026 r.)',
     linkedVaccineIds: [],
     chplReference: 'ChPL FSME-Immun Junior / Encepur Junior pkt 4.2',
     chplOfficialSourceUrl: null,
@@ -3033,10 +3386,22 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     alternativeProductLabel: null,
     alternativeProductStatus: 'none',
     fundingAuditDetails: {
-      legalBasis: 'Art. 19 ustawy z dnia 5 grudnia 2008 r. o zapobieganiu oraz zwalczaniu zakażeń i chorób zakaźnych u ludzi (koszt zakupu szczepionki zalecanej nieobjętej wykazem finansowanym z art. 18 ust. 5d ponosi osoba poddająca się szczepieniu); Część II.A PSO 2027 (str. 19–21).',
-      targetGroup: 'Populacja objęta PSO 2027',
-      conditions: 'Brak powszechnego finansowania zakupu szczepionki przez MZ. Koszt preparatu ponoszą rodzice/opiekunowie, z wyjątkiem lokalnych programów polityki zdrowotnej jednostek samorządu terytorialnego lub odrębnych wskazań obowiązkowych (np. cz. I.B dla VZV).',
-      validityOrVerifiedDate: 'PSO 2027 (Dz. Urz. Min. Zdrow. 2026 poz. 77 z 30.10.2026 r.); weryfikacja: 11.11.2026'
+      legalBasis: 'Art. 19 ustawy z dnia 5 grudnia 2008 r.; Część II.A (str. 20) i Część II.E (str. 30–31, Rozp. RM z 3.01.2012 r.) PSO 2027; Obwieszczenie MZ 84W z 01.10.2026 r. (brak FSME-Immun i Encepur na A1 i D1).',
+      targetGroup: 'Populacja ogólna dzieci od ukończenia 1. r.ż. oraz grupy narażone zawodowo w Części II.E (brak wskazań w cz. I.B).',
+      productType: 'Szczepionki przeciw KZM (FSME-Immun 0,25 ml Junior / 0,5 ml, Encepur K / Adults) – brak na wykazie MZ 84W (01.10.2026 r.); brak karty w bazie VaxNurse (pending_catalog_entry).',
+      conditions: 'W populacji ogólnej dzieci koszt zakupu szczepionki ponoszą rodzice/opiekunowie (art. 19). WYJĄTKI: (1) lokalne programy polityki zdrowotnej JST; (2) kwalifikacja i podanie w zadeklarowanym POZ w ramach świadczeń NFZ; (3) pełne finansowanie przez pracodawcę dla narażonych pracowników sektora rolnego, leśnego, transportu, budownictwa oraz służb mundurowych (cz. II.E str. 31).',
+      validityPeriod: 'PSO 2027 + Obwieszczenie MZ 84W obowiązujące od 01.10.2026 r.',
+      verifiedDate: '11.11.2026',
+      validityOrVerifiedDate: 'PSO 2027 (poz. 77) + Obwieszczenie MZ 84W z 01.10.2026 r.; weryfikacja: 11.11.2026',
+      mechanismBreakdown: {
+        stateVaccinePurchase: 'Brak zakupu ze środków MZ w programie ogólnopolskim (brak w cz. I.B oraz wykazie art. 18 ust. 5d).',
+        serviceExecutionFunding: 'W zadeklarowanym POZ kwalifikacja i podanie w ramach świadczeń POZ (NFZ); w poradniach komercyjnych opłata za wykonanie.',
+        pharmacyReimbursement: 'Brak refundacji aptecznej (zweryfikowano załącznik 84W A1 i D1 18- z 01.10.2026 r. – brak FSME-Immun i Encepur).',
+        partialReimbursementDetail: 'Brak refundacji częściowej na wykazie 84W.',
+        temporaryProgram: 'Możliwe lokalne programy JST; ustawowy obowiązek finansowania przez pracodawcę w grupach zawodowych cz. II.E (Rozp. RM 2012).',
+        regionalAvailabilityAndDistribution: 'Dystrybucja apteczna/komercyjna (sezonowa zmienność podaży; stan w konkretnej aptece niepotwierdzony).',
+        localPointAvailabilityConfirmed: false
+      }
     },
     linkageAuditNote: null,
     alternativeCombinedOptions: null,
@@ -3085,9 +3450,9 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     psoPublicationDate: JOURNAL_PUBLICATION_DATE,
     clinicalNotes: 'Szczepienie inaktywowaną szczepionką w schemacie 2-dawkowym (druga dawka po 6–12 miesiącach, max do 5 lat). Zapewnia wieloletnią, prawdopodobnie całożyciową odporność.',
     contraindicationsOrWarnings: 'Anafilaksja na składniki szczepionki.',
-    fundingStatus: 'Odpłatne ze środków własnych pacjenta/rodziców (z zastrzeżeniem ewentualnych programów samorządowych lub odrębnych wskazań z cz. I.B)',
+    fundingStatus: 'Co do zasady odpłatne w populacji ogólnej (zakup szczepionki wg art. 19 ustawy; brak Havrix i Avaxim w 84W z 01.10.2026 r.), z wyjątkami: programy JST, podanie w POZ NFZ oraz finansowanie przez pracodawcę w grupach z cz. II.E',
     fundingSource: 'self_funded',
-    officialFundingSourceRef: 'Art. 19 ustawy z 5.12.2008 r. (Dz.U. z 2025 poz. 1675 z późn. zm.) oraz Część II.A PSO 2027 (str. 19–21)',
+    officialFundingSourceRef: 'Art. 19 ustawy z 5.12.2008 r. + Cz. II.A (str. 20) i II.E–F (str. 30–32) PSO 2027 + kontrola 84W (01.10.2026 r.)',
     linkedVaccineIds: [],
     chplReference: 'ChPL Havrix Junior / Avaxim 80U pkt 4.2',
     chplOfficialSourceUrl: null,
@@ -3098,10 +3463,22 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     alternativeProductLabel: null,
     alternativeProductStatus: 'none',
     fundingAuditDetails: {
-      legalBasis: 'Art. 19 ustawy z dnia 5 grudnia 2008 r. o zapobieganiu oraz zwalczaniu zakażeń i chorób zakaźnych u ludzi (koszt zakupu szczepionki zalecanej nieobjętej wykazem finansowanym z art. 18 ust. 5d ponosi osoba poddająca się szczepieniu); Część II.A PSO 2027 (str. 19–21).',
-      targetGroup: 'Populacja objęta PSO 2027',
-      conditions: 'Brak powszechnego finansowania zakupu szczepionki przez MZ. Koszt preparatu ponoszą rodzice/opiekunowie, z wyjątkiem lokalnych programów polityki zdrowotnej jednostek samorządu terytorialnego lub odrębnych wskazań obowiązkowych (np. cz. I.B dla VZV).',
-      validityOrVerifiedDate: 'PSO 2027 (Dz. Urz. Min. Zdrow. 2026 poz. 77 z 30.10.2026 r.); weryfikacja: 11.11.2026'
+      legalBasis: 'Art. 19 ustawy z dnia 5 grudnia 2008 r.; Część II.A (str. 20), II.D–E (str. 29–31, Rozp. RM z 3.01.2012 r.) i II.F (str. 32) PSO 2027; Obwieszczenie MZ 84W z 01.10.2026 r. (brak Havrix i Avaxim na A1 i D1).',
+      targetGroup: 'Populacja ogólna dzieci od ukończenia 1. r.ż. oraz grupy ryzyka / narażenia w Cz. II.A, II.E, II.F i II.I PSO 2027 (brak wskazań w cz. I.B).',
+      productType: 'Inaktywowane szczepionki przeciw WZW typu A (Havrix Junior/Adult, Avaxim) – brak na wykazie MZ 84W (01.10.2026 r.); brak karty w bazie VaxNurse (pending_catalog_entry).',
+      conditions: 'W populacji ogólnej dzieci koszt zakupu preparatu ponoszą rodzice/opiekunowie (art. 19). WYJĄTKI: (1) lokalne programy polityki zdrowotnej JST; (2) usługa kwalifikacji i podania w zadeklarowanym POZ finansowana w ramach NFZ; (3) pełne finansowanie przez pracodawcę w grupach z cz. II.E (m.in. gastronomia, gospodarka komunalna, turystyka, rolnictwo, służby mundurowe); (4) profilaktyka poekspozycyjna w cz. II.F (do 14 dni od kontaktu) nie ma odrębnej refundacji w 84W poza akcjami interwencyjnymi ze środków publicznych.',
+      validityPeriod: 'PSO 2027 + Obwieszczenie MZ 84W obowiązujące od 01.10.2026 r.',
+      verifiedDate: '11.11.2026',
+      validityOrVerifiedDate: 'PSO 2027 (poz. 77) + Obwieszczenie MZ 84W z 01.10.2026 r.; weryfikacja: 11.11.2026',
+      mechanismBreakdown: {
+        stateVaccinePurchase: 'Brak powszechnego zakupu ze środków MZ (nie figuruje w cz. I.B ani wykazie art. 18 ust. 5d; ew. akcje ogniskowe ze środków publicznych tylko doraźnie).',
+        serviceExecutionFunding: 'W zadeklarowanym POZ kwalifikacja i podanie w ramach NFZ; w punktach medycyny podróży odpłatnie.',
+        pharmacyReimbursement: 'Brak refundacji aptecznej (zweryfikowano załącznik 84W A1 i D1 18- z 01.10.2026 r. – brak Havrix i Avaxim).',
+        partialReimbursementDetail: 'Brak refundacji częściowej na wykazie 84W.',
+        temporaryProgram: 'Możliwe lokalne programy JST; obowiązek finansowania przez pracodawcę w sektorach z cz. II.E (Rozp. RM 2012).',
+        regionalAvailabilityAndDistribution: 'Dystrybucja apteczna/komercyjna (częste wahania podaży preparatów pediatrycznych; stan danej apteki niepotwierdzony).',
+        localPointAvailabilityConfirmed: false
+      }
     },
     linkageAuditNote: null,
     alternativeCombinedOptions: null,
@@ -3117,20 +3494,20 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
   {
     id: 'pso-rec-covid-pediatric',
     aliasId: 'child-covid-pediatric',
-    disease: 'COVID-19 (Szczepienie sezonowe u dzieci i młodzieży)',
+    disease: 'COVID-19 (Szczepienie zalecane – sezon 2026/2027, Spikevax XFG)',
     shortCode: 'COVID-19',
     pathogenCategory: 'wirusy',
     obligationType: 'zalecane',
     populationScope: 'pediatric',
     ageBracketId: 'grupy-ryzyka',
-    targetAgeDisplay: 'Od ukończenia 6. miesiąca życia do 18. roku życia',
-    targetGroupDescription: 'Dzieci i młodzież od 6. m.ż. do 18. r.ż., w szczególności z grup podwyższonego ryzyka ciężkiego przebiegu',
+    targetAgeDisplay: 'Od 6 mies. do 4 lat (*) | 5–11 lat | 12+ lat (Komunikat nr 39 MZ)',
+    targetGroupDescription: 'Dzieci i młodzież (od 6 mies. do 18 r.ż., ze szczególnym uwzględnieniem chorób współistniejących i immunosupresji) zgodnie z Komunikatem nr 39 MZ na sezon 2026/2027',
     doseNumberInSeries: 1,
     totalDosesInStandardSeries: 1,
-    doseLabel: 'Szczepienie podstawowe / sezonowe dawką adaptowaną',
+    doseLabel: '6 mies.–4 lata: 2 dawki (bez historii) lub 1 dawka 0,25 ml (z historią); 5–11 lat: 1 dawka 0,25 ml; >=12 lat: 1 dawka 0,5 ml',
     administrationRoute: 'Domięśniowo (i.m.)',
     injectionSite: 'Przednioboczna część uda (<12 m.ż.) lub mięsień naramienny',
-    minIntervalFromPrevious: 'Zgodnie z aktualnymi komunikatami Ministra Zdrowia',
+    minIntervalFromPrevious: '6 mies.–4 lata bez historii: 2. dawka >=28 dni po 1.; ciężki niedobór odporności: dodatkowa dawka >=2 mies. (>=28 dni od 2. dawki w grupie 6m–4l bez historii)',
     sourcePart: 'Część II.A',
     sourceOfficialPoint: null,
     sourceCriteriaNumbers: null,
@@ -3141,20 +3518,20 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     psoPart: 'Część II.A',
     psoPointOrSubpoint: 'Tabela Część II.A',
     psoPdfPage: 19,
-    psoSection: 'Część II.A PSO 2027 – Szczepienia zalecane: COVID-19 (str. 19)',
+    psoSection: 'Część II.A PSO 2027 (str. 19) + Komunikat nr 39 MZ z 04/07.09.2026 r. (sezon 2026/2027)',
     psoOfficialUrl: OFFICIAL_PDF_URL,
     psoLegalAct: LEGAL_ACT_KEYWORD,
     psoGisAnnouncementDate: GIS_ANNOUNCEMENT_DATE,
     psoJournalPublicationDate: JOURNAL_PUBLICATION_DATE,
     psoJournalEntry: JOURNAL_ENTRY,
     psoPublicationDate: JOURNAL_PUBLICATION_DATE,
-    clinicalNotes: 'Szczepienie realizowane zgodnie z wytycznymi i komunikatami Ministra Zdrowia aktualizowanymi na dany sezon epidemiczny szczepionkami adaptowanymi do aktualnie krążących podwariantów wirusa SARS-CoV-2.',
-    contraindicationsOrWarnings: 'Ciężka anafilaksja po dawce poprzedniej.',
-    fundingStatus: 'Wymaga weryfikacji odrębnych komunikatów i zarządzeń Ministra Zdrowia na rok 2027 – PSO 2027 odsyła wyłącznie do komunikatów MZ',
-    fundingSource: 'mixed',
-    officialFundingSourceRef: 'Część II.A PSO 2027 (str. 19: „Zgodnie z komunikatami Ministra Zdrowia”) – oczekuje na potwierdzenie aktualnego komunikatu MZ na 2027 r.',
+    clinicalNotes: 'Szczepienia w sezonie 2026/2027 (Komunikat nr 39 MZ z 04/07.09.2026 r., preparat Spikevax XFG, bez e-skierowania, z wpisem do e-Karty Szczepień kod ICD-9 99.557): (1) 6 miesięcy – 4 lata (*do dnia poprzedzającego 5. urodziny) bez historii szczepień – 2 dawki pediatryczne po 0,25 ml (25 µg) w odstępie co najmniej 28 dni; (2) 6 miesięcy – 4 lata z historią szczepień lub potwierdzonym zakażeniem SARS-CoV-2 w wywiadzie – 1 dawka 0,25 ml; (3) 5–11 lat – 1 dawka 0,25 ml; (4) >=12 lat – 1 dawka 0,5 ml (50 µg). CIĘŻKI NIEDOBÓR ODPORNOŚCI: dodatkowa właściwa dla wieku dawka w odstępie co najmniej 2 miesięcy od ostatniej dawki (dla 6m–4l bez historii 3. dawka >=28 dni od 2. dawki) każdorazowo decyzją lekarza. Dozwolone jednoczasowe podanie ze szczepionką przeciw grypie.',
+    contraindicationsOrWarnings: 'Ciężka anafilaksja po poprzedniej dawce lub na składniki szczepionki (Spikevax XFG). Apteki realizują szczepienia wyłącznie u dorosłych >=18. r.ż.; dzieci <18 r.ż. szczepione w POZ. Po rozmrożeniu w RARS ważność szczepionki 30 dni (+2°C do +8°C), z PSSE może być <14 dni.',
+    fundingStatus: 'Potwierdzone bezpłatne w sezonie 2026/2027 (zakup szczepionki Spikevax XFG przez MZ + kwalifikacja/podanie NFZ w POZ dla osób z prawem do świadczeń); dostępność w konkretnym punkcie niepotwierdzona automatycznie',
+    fundingSource: 'free_public_program',
+    officialFundingSourceRef: 'Komunikat nr 39 MZ z 04/07.09.2026 r. (ZPŚ.641.12.2026.JK, sezon 2026/2027) + art. 18 ust. 5d ustawy z 5.12.2008 r. + Ogólne wytyczne MZ z 04.09.2026 r.',
     linkedVaccineIds: [],
-    chplReference: 'ChPL Comirnaty / Nuvaxovid pkt 4.2',
+    chplReference: 'ChPL / EPAR Spikevax XFG (dawka pediatryczna 25 µg/0,25 ml GTIN 00380777714110 oraz >=12 lat 50 µg/0,5 ml GTIN 00380777712024; EMA sierpień 2026)',
     chplOfficialSourceUrl: null,
     chplProductName: null,
     chplMarketingAuthorizationHolder: null,
@@ -3163,10 +3540,104 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     alternativeProductLabel: null,
     alternativeProductStatus: 'none',
     fundingAuditDetails: {
-      legalBasis: 'Część II.A PSO 2027 (str. 19) wskazuje wyłącznie na odrębne komunikaty Ministra Zdrowia w sprawie realizacji szczepień przeciw COVID-19.',
-      targetGroup: 'Dzieci i młodzież zgodnie z aktualnymi wskazaniami sezonowymi Ministra Zdrowia.',
-      conditions: 'Dostępność publicznego finansowania, kwalifikowane grupy wiekowe oraz dystrybucja preparatów są określane każdorazowo w sezonowych komunikatach Ministra Zdrowia; nie można ich zakładać automatycznie na podstawie samego wpisu do PSO 2027.',
-      validityOrVerifiedDate: 'Brak zweryfikowanego komunikatu MZ na rok 2027 w źródłach bazowych aplikacji (stan na 11.11.2026: pending_clarification)'
+      legalBasis: 'Część II.A PSO 2027 (str. 19) + Komunikat nr 39 Ministra Zdrowia w sprawie realizacji szczepień przeciw COVID-19 w sezonie 2026/2027 (04/07.09.2026 r., art. 18 ust. 5d ustawy z 5.12.2008 r.) + Ogólne wytyczne MZ z 04.09.2026 r. (Zarządzenia Prezesa NFZ Nr 9/2026/DGL i Nr 22/2025/DSOZ).',
+      targetGroup: 'Dzieci i młodzież uprawnione do świadczeń NFZ (4 podgrupy wieku: 6 mies.–4 lata bez historii, 6 mies.–4 lata z historią/przechorowaniem, 5–11 lat, >=12 lat oraz grupy z ciężkim niedoborem odporności).',
+      productType: 'Spikevax XFG: 25 µg/0,25 ml PFS dla dzieci 6 mies.–11 lat (GTIN 00380777714110, pakowane po 1 szt.) oraz 50 µg/0,5 ml PFS dla >=12 lat (GTIN 00380777712024, pakowane po 10 szt.); brak karty handlowej w bazie VaxNurse (pending_catalog_entry).',
+      conditions: 'Potwierdzono bezpłatność w sezonie 2026/2027 dla osób z prawem do świadczeń NFZ (szczepionki kupuje MZ, kwalifikację i podanie finansuje NFZ; zamówienia POZ dla dzieci od 29.09.2026 r.). Rozdzielenie statusów: (1) finansowanie MZ/NFZ jest potwierdzone dla sezonu 2026/2027; (2) bieżąca dostępność w konkretnym POZ/PSSE i limity RARS pozostają NIEPOTWIERDZONE automatycznie; (3) osoby bez prawa do świadczeń NFZ nie mają bezpłatnej szczepionki MZ ani finansowania usługi NFZ.',
+      validityPeriod: 'Sezon epidemiczny 2026/2027 (Komunikat nr 39 MZ z 04/07.09.2026 r.; zamówienia dla dorosłych od 11.09.2026 r., dla dzieci od 29.09.2026 r.)',
+      verifiedDate: '11.11.2026',
+      validityOrVerifiedDate: 'Komunikat nr 39 MZ (04/07.09.2026 r.) – sezon 2026/2027; weryfikacja: 11.11.2026',
+      mechanismBreakdown: {
+        stateVaccinePurchase: 'Tak – szczepionki Spikevax XFG zakupione w całości przez Ministra Zdrowia na sezon 2026/2027 (art. 18 ust. 5d ustawy z 5.12.2008 r.).',
+        serviceExecutionFunding: 'Tak – kwalifikacja i wykonanie w przychodniach POZ dla dzieci i dorosłych finansowane przez NFZ (Zarządzenie 22/2025/DSOZ; apteki z umową NFZ wył. od 18. r.ż.); w POZ szczepienie zakupionym samodzielnie preparatem również w stawce kapitacyjnej dla uprawnionych.',
+        pharmacyReimbursement: 'Nie dotyczy ścieżki bezpłatnej MZ (szczepionki RARS -> PSSE -> POZ/apteki); brak preparatów przeciw COVID-19 na wykazie refundacyjnym 84W.',
+        partialReimbursementDetail: 'Brak dopłat dla osób z prawem do świadczeń NFZ; pacjenci bez prawa do świadczeń ponoszą 100% kosztu szczepionki i usługi (o ile dostępna w aptece).',
+        temporaryProgram: 'Sezonowy mechanizm finansowania na sezon 2026/2027 (Komunikat nr 39 MZ z 04/07.09.2026 r.).',
+        regionalAvailabilityAndDistribution: 'Dystrybucja RARS (zamrożona) -> Centralna Baza Rezerw -> WSSE -> PSSE -> POZ/apteki (+2°C do +8°C, ważność 30 dni po rozmrożeniu; możliwe <14 dni z PSSE i limity RARS). BIEŻĄCA DOSTĘPNOŚĆ W KONKRETNYM PUNKCIE NIEPOTWIERDZONA.',
+        localPointAvailabilityConfirmed: false
+      },
+      fundingScopes: [
+        {
+          scopeId: 'covid-6m-4y-naive',
+          label: 'Grupa 6 miesięcy – 4 lata (*) BEZ historii szczepień',
+          ageGroup: 'Od 6 mies. do dnia poprzedzającego 5. urodziny, bez historii szczepień',
+          productScope: 'Spikevax XFG dawka pediatryczna 25 µg/0,25 ml PFS (GTIN 00380777714110)',
+          fundingStatus: 'verified_public_free',
+          validityPeriod: 'Sezon 2026/2027 (zamówienia RARS dla dzieci od 29.09.2026 r.)',
+          sourceRef: 'Komunikat nr 39 MZ z 04/07.09.2026 r. + Ogólne wytyczne MZ',
+          sourceUrl: 'https://www.gov.pl/web/zdrowie/komunikat-nr-39-ministra-zdrowia-w-sprawie-realizacji-szczepien-przeciw-covid-19-w-sezonie-20262027',
+          conditionsAndExceptions: 'Schemat dwudawkowy: 2 dawki po 0,25 ml w odstępie co najmniej 28 dni (w e-Karcie 1 z 2, 2 z 2). W ciężkim niedoborze odporności 3. dawkę można podać >=28 dni po 2. dawce (decyzją lekarza). Bezpłatnie w POZ dla uprawnionych do świadczeń NFZ.',
+          mechanismBreakdown: {
+            stateVaccinePurchase: 'Tak – zakup MZ (RARS -> PSSE -> POZ).',
+            serviceExecutionFunding: 'Tak – POZ NFZ (kwalifikacja lekarska <9 r.ż.).',
+            pharmacyReimbursement: 'Nie dotyczy (pula MZ).',
+            partialReimbursementDetail: '0 zł dla uprawnionych do świadczeń NFZ.',
+            temporaryProgram: 'Sezon 2026/2027.',
+            regionalAvailabilityAndDistribution: 'Dostępność magazynowa wymaga weryfikacji w konkretnym POZ (ważność po rozmrożeniu 30 dni).',
+            localPointAvailabilityConfirmed: false
+          }
+        },
+        {
+          scopeId: 'covid-6m-4y-primed',
+          label: 'Grupa 6 miesięcy – 4 lata (*) Z historią szczepień lub zakażeniem SARS-CoV-2',
+          ageGroup: 'Od 6 mies. do dnia poprzedzającego 5. urodziny, z historią szczepień lub potwierdzonym zakażeniem SARS-CoV-2 w wywiadzie',
+          productScope: 'Spikevax XFG dawka pediatryczna 25 µg/0,25 ml PFS (GTIN 00380777714110)',
+          fundingStatus: 'verified_public_free',
+          validityPeriod: 'Sezon 2026/2027',
+          sourceRef: 'Komunikat nr 39 MZ z 04/07.09.2026 r.',
+          sourceUrl: 'https://www.gov.pl/web/zdrowie/komunikat-nr-39-ministra-zdrowia-w-sprawie-realizacji-szczepien-przeciw-covid-19-w-sezonie-20262027',
+          conditionsAndExceptions: '1 dawka 0,25 ml (w e-Karcie 1 z 1). W ciężkim niedoborze odporności dodatkowa dawka właściwa dla wieku >=2 mies. po ostatniej dawce decyzją lekarza.',
+          mechanismBreakdown: {
+            stateVaccinePurchase: 'Tak – zakup MZ.',
+            serviceExecutionFunding: 'Tak – POZ NFZ (kwalifikacja lekarska <9 r.ż.).',
+            pharmacyReimbursement: 'Nie dotyczy (pula MZ).',
+            partialReimbursementDetail: '0 zł.',
+            temporaryProgram: 'Sezon 2026/2027.',
+            regionalAvailabilityAndDistribution: 'Zależy od dostaw PSSE i terminów w POZ (stan punktu niepotwierdzony).',
+            localPointAvailabilityConfirmed: false
+          }
+        },
+        {
+          scopeId: 'covid-5-11y',
+          label: 'Grupa 5 – 11 lat',
+          ageGroup: 'Dzieci w wieku 5–11 lat',
+          productScope: 'Spikevax XFG dawka pediatryczna 25 µg/0,25 ml PFS (GTIN 00380777714110)',
+          fundingStatus: 'verified_public_free',
+          validityPeriod: 'Sezon 2026/2027',
+          sourceRef: 'Komunikat nr 39 MZ z 04/07.09.2026 r.',
+          sourceUrl: 'https://www.gov.pl/web/zdrowie/komunikat-nr-39-ministra-zdrowia-w-sprawie-realizacji-szczepien-przeciw-covid-19-w-sezonie-20262027',
+          conditionsAndExceptions: '1 dawka 0,25 ml (w e-Karcie 1 z 1). W ciężkim niedoborze odporności dodatkowa dawka >=2 mies. od poprzedniej decyzją lekarza. Powyżej 9. r.ż. kwalifikację może przeprowadzić również pielęgniarka/położna.',
+          mechanismBreakdown: {
+            stateVaccinePurchase: 'Tak – zakup MZ.',
+            serviceExecutionFunding: 'Tak – POZ NFZ.',
+            pharmacyReimbursement: 'Nie dotyczy (pula MZ).',
+            partialReimbursementDetail: '0 zł.',
+            temporaryProgram: 'Sezon 2026/2027.',
+            regionalAvailabilityAndDistribution: 'Wymaga potwierdzenia dostępności w POZ.',
+            localPointAvailabilityConfirmed: false
+          }
+        },
+        {
+          scopeId: 'covid-12plus',
+          label: 'Grupa 12 lat i więcej (w tym młodzież 12–18 lat)',
+          ageGroup: 'Osoby w wieku 12 lat i starsze',
+          productScope: 'Spikevax XFG dawka 50 µg/0,5 ml PFS (GTIN 00380777712024)',
+          fundingStatus: 'verified_public_free',
+          validityPeriod: 'Sezon 2026/2027',
+          sourceRef: 'Komunikat nr 39 MZ z 04/07.09.2026 r.',
+          sourceUrl: 'https://www.gov.pl/web/zdrowie/komunikat-nr-39-ministra-zdrowia-w-sprawie-realizacji-szczepien-przeciw-covid-19-w-sezonie-20262027',
+          conditionsAndExceptions: 'Jednodawkowa szczepionka 50 µg/0,5 ml (1 z 1). W ciężkim niedoborze odporności dodatkowa dawka w min. odstępie 2 mies. od poprzedniej dawki decyzją lekarza. Osoby od ukończenia 18. r.ż. mogą skorzystać także z aptek z umową NFZ (<18 lat wył. POZ).',
+          mechanismBreakdown: {
+            stateVaccinePurchase: 'Tak – zakup MZ.',
+            serviceExecutionFunding: 'Tak – POZ NFZ (oraz apteki z umową NFZ od ukończenia 18. r.ż.).',
+            pharmacyReimbursement: 'Nie dotyczy (pula MZ).',
+            partialReimbursementDetail: '0 zł dla uprawnionych do świadczeń NFZ.',
+            temporaryProgram: 'Sezon 2026/2027.',
+            regionalAvailabilityAndDistribution: 'Opakowania po 10 PFS (>=12 lat); dostępność punktowa niepotwierdzona automatycznie.',
+            localPointAvailabilityConfirmed: false
+          }
+        }
+      ]
     },
     linkageAuditNote: null,
     alternativeCombinedOptions: null,
@@ -3176,10 +3647,14 @@ export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = [
     chplReferenceStatus: 'reference_name_only',
     chplContentVerificationStatus: 'not_verified',
     chplVerificationStatus: 'pending_chpl_verification',
-    fundingVerificationStatus: 'pending_clarification',
+    fundingVerificationStatus: 'verified_public_free',
     productLinkageStatus: 'pending_catalog_entry'
   }
 ];
+
+export const CHILD_VACCINES_CATALOG: ChildVaccineItem[] = RAW_CHILD_VACCINES_CATALOG.map(
+  enrichMandatoryFundingDetails
+);
 
 export function findChildVaccine(id: string): ChildVaccineItem | undefined {
   return CHILD_VACCINES_CATALOG.find(item => item.id === id || item.aliasId === id);
@@ -3590,25 +4065,25 @@ export const COMBINED_VACCINES_VARIANTS_PART_III_M: CombinedVaccineVariant[] = [
   {
     id: 'variant-6w1-3plus1',
     variantType: '6w1_3plus1',
-    name: 'Wariant ze szczepionką 6w1 (DTPa-HBV-IPV-Hib) w schemacie 3+1',
-    psoPartAndSection: 'Część I.A.2 oraz Część III.M PSO 2027',
+    name: 'Wariant ze szczepionką 6w1 (DTPa-HBV-IPV-Hib) w schemacie podstawowym 3+1',
+    psoPartAndSection: 'Część I.A.2 oraz Część III.M pkt 1 PSO 2027 (str. 11–12 i 42)',
     psoPdfPage: 11,
     antigenComposition: 'Błonica, tężec, krztusiec (bezkomórkowy), WZW B (rDNA), poliomyelitis (inaktywowany), Hib',
     hbvAdministrationRule: 'Noworodek otrzymuje 1. dawkę monowalentnego WZW B w 1. dobie życia, a kolejne dawki HBV są podawane w składzie 6w1.',
-    scheduleDetails: 'Dawki pierwotne: 3 dawki 6w1 (w 2., 4., 5.–6. miesiącu życia z odstępem min. 4–8 tygodni) + 4. dawka uzupełniająca w 16.–18. miesiącu życia (min. 6 miesięcy po 3. dawce). W 7. miesiącu życia NIE podaje się osobnej dawki WZW B.',
-    interchangeabilityWarning: 'Schematy 3+1 i 2+1 NIE SĄ automatycznie zamienne. Wybór schematu zależy od preparatu, ChPL i decyzji lekarza.',
-    chplCrossReference: 'ChPL Infanrix hexa pkt 4.2 (Schemat szczepienia pierwotnego 3-dawkowy)'
+    scheduleDetails: 'SCHEMAT PODSTAWOWY 3+1 (Część III.M pkt 1, str. 42): 3 dawki 6w1 w cyklu pierwotnym (najczęściej po ukończeniu 6 tyg. życia, w 4. i 5.–6. miesiącu życia, w odstępach co najmniej 1 miesiąca) + 1 dawka uzupełniająca co najmniej 6 miesięcy po trzeciej dawce (najczęściej między 16. a 18. m.ż.). W 7. m.ż. NIE podaje się osobnej dawki WZW B.',
+    interchangeabilityWarning: 'Schemat podstawowy 3+1 i schemat kontynuacji 2+1 NIE SĄ automatycznie zamienne. Schemat 3+1 stanowi podstawowy model dawkowania 6w1 w Polsce.',
+    chplCrossReference: 'ChPL Infanrix hexa pkt 4.2 (Schemat szczepienia pierwotnego 3-dawkowy) oraz PSO 2027 cz. III.M pkt 1 (str. 42)'
   },
   {
     id: 'variant-6w1-2plus1',
     variantType: '6w1_2plus1',
-    name: 'Wariant ze szczepionką 6w1 (DTPa-HBV-IPV-Hib) w schemacie 2+1',
-    psoPartAndSection: 'Część I.A.2 oraz Część III.M PSO 2027',
-    psoPdfPage: 11,
+    name: 'Schemat 2+1 – indywidualna kontynuacja wcześniej rozpoczętego szczepienia, zgodnie z ChPL i decyzją lekarza',
+    psoPartAndSection: 'Część III.M pkt 2 (str. 42) oraz Część I.A.2 PSO 2027 (str. 11–12)',
+    psoPdfPage: 42,
     antigenComposition: 'Błonica, tężec, krztusiec (bezkomórkowy), WZW B (rDNA), poliomyelitis (inaktywowany), Hib',
-    hbvAdministrationRule: 'WARUNEK BEZWZGLĘDNY: Zastosowanie schematu 2+1 jest możliwe WYŁĄCZNIE wtedy, gdy noworodek otrzymał pierwszą dawkę szczepionki przeciw WZW B w 1. dobie życia po urodzeniu.',
-    scheduleDetails: 'Dawki pierwotne: 2 dawki 6w1 (np. w 2. i 4. miesiącu życia) z zachowaniem odstępu co najmniej 2 miesięcy (8 tygodni) między dawkami + 3. dawka uzupełniająca podana w 11.–13. m.ż. lub 16.–18. m.ż. (co najmniej 6 miesięcy od 2. dawki).',
-    interchangeabilityWarning: 'Schematy 2+1 i 3+1 NIE SĄ automatycznie zamienne. Zastosowanie schematu 2+1 wymaga wyraźnej decyzji lekarza kwalifikującego, zgodności z ChPL preparatu (np. Infanrix hexa pkt 4.2) oraz potwierdzenia podania dawki monowalentnej WZW B w 1. dobie życia.',
-    chplCrossReference: 'ChPL Infanrix hexa pkt 4.2 (Schemat szczepienia pierwotnego 2-dawkowy)'
+    hbvAdministrationRule: 'WARUNEK BEZWZGLĘDNY: Zastosowanie schematu 2+1 jest możliwe WYŁĄCZNIE wtedy, gdy noworodek otrzymał pierwszą dawkę szczepionki przeciw WZW B w 1. dobie życia po urodzeniu ORAZ dziecko rozpoczęło szczepienia w innym schemacie (np. za granicą) i wymaga kontynuacji wg decyzji lekarza.',
+    scheduleDetails: 'NIE JEST TO STANDARDOWY SCHEMAT DLA WSZYSTKICH DZIECI. Zgodnie z Częścią III.M pkt 2 PSO 2027 (str. 42): w indywidualnych przypadkach dzieci, które rozpoczęły szczepienia w innym schemacie (np. w innym kraju), jako kontynuację, zgodnie z ChPL i na podstawie decyzji lekarza dopuszcza się schemat 3-dawkowy: 1. dawka po ukończeniu 6. tyg. życia, 2. dawka najwcześniej po 8 tyg. od pierwszej (zazwyczaj w 3. lub 4. m.ż.), dawka uzupełniająca co najmniej 6 mies. po ostatniej dawce (najlepiej między 11. a 18. m.ż.).',
+    interchangeabilityWarning: 'Schematy 2+1 i 3+1 NIE SĄ automatycznie zamienne i NIE SĄ równorzędnymi standardami dla ogółu dzieci w Polsce. Zastosowanie 2+1 wymaga udokumentowanej kontynuacji wcześniej rozpoczętego schematu, wyraźnej decyzji lekarza, zgodności z ChPL (np. Infanrix hexa pkt 4.2) oraz podania WZW B w 1. dobie życia.',
+    chplCrossReference: 'Część III.M pkt 2 PSO 2027 (str. 42) oraz ChPL Infanrix hexa pkt 4.2 (Schemat szczepienia pierwotnego 2-dawkowy)'
   }
 ];

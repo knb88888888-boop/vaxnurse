@@ -405,8 +405,87 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                   <div><strong>Audyt finansowania (odrębny od samego wpisu do PSO):</strong></div>
                   <div><strong>Podstawa prawna:</strong> {item.fundingAuditDetails.legalBasis}</div>
                   <div><strong>Grupa docelowa:</strong> {item.fundingAuditDetails.targetGroup}</div>
+                  <div><strong>Typ i zakres preparatów:</strong> {item.fundingAuditDetails.productType}</div>
                   <div><strong>Warunki i zastrzeżenia:</strong> {item.fundingAuditDetails.conditions}</div>
+                  <div><strong>Okres obowiązywania:</strong> {item.fundingAuditDetails.validityPeriod}</div>
+                  <div><strong>Data weryfikacji źródeł:</strong> {item.fundingAuditDetails.verifiedDate}</div>
                   <div><strong>Stan weryfikacji / ważność:</strong> {item.fundingAuditDetails.validityOrVerifiedDate}</div>
+
+                  {item.fundingAuditDetails.mechanismBreakdown && (
+                    <div className="funding-mechanism-list">
+                      <div><strong>Rozdzielenie mechanizmów finansowania i realizacji:</strong></div>
+                      <ul>
+                        <li><strong>Zakup preparatu ze środków publicznych:</strong> {item.fundingAuditDetails.mechanismBreakdown.stateVaccinePurchase}</li>
+                        <li><strong>Wykonanie usługi szczepienia:</strong> {item.fundingAuditDetails.mechanismBreakdown.serviceExecutionFunding}</li>
+                        <li><strong>Refundacja apteczna (wykaz MZ 84W):</strong> {item.fundingAuditDetails.mechanismBreakdown.pharmacyReimbursement}</li>
+                        <li><strong>Odpłatność częściowa / pełnopłatna:</strong> {item.fundingAuditDetails.mechanismBreakdown.partialReimbursementDetail}</li>
+                        <li><strong>Program czasowy / interwencyjny:</strong> {item.fundingAuditDetails.mechanismBreakdown.temporaryProgram}</li>
+                        <li><strong>Dystrybucja i dostępność regionalna:</strong> {item.fundingAuditDetails.mechanismBreakdown.regionalAvailabilityAndDistribution}</li>
+                      </ul>
+                      <div className={item.fundingAuditDetails.mechanismBreakdown.localPointAvailabilityConfirmed ? 'point-availability-confirmed' : 'point-availability-unconfirmed'}>
+                        <strong>Stan magazynowy w punkcie szczepień:</strong>{' '}
+                        {item.fundingAuditDetails.mechanismBreakdown.localPointAvailabilityConfirmed
+                          ? 'Potwierdzona dostępność lokalna w punkcie'
+                          : 'Niepotwierdzona lokalnie w tym punkcie (brak automatycznego domniemania dostępności fiolki na półce)'}
+                      </div>
+                    </div>
+                  )}
+
+                  {item.fundingAuditDetails.fundingScopes && item.fundingAuditDetails.fundingScopes.length > 0 && (
+                    <div className="funding-scopes-container">
+                      <div><strong>Szczegółowy podział zakresów wiekowych, produktowych i regionalnych ({item.fundingAuditDetails.fundingScopes.length}):</strong></div>
+                      {item.fundingAuditDetails.fundingScopes.map(scope => (
+                        <div key={scope.scopeId} className="funding-scope-item">
+                          <div className="funding-scope-header">
+                            <strong>{scope.label}</strong>
+                            <span
+                              className={`funding-scope-badge ${
+                                scope.fundingStatus === 'verified_public_free'
+                                  ? 'scope-badge-free'
+                                  : scope.fundingStatus === 'verified_reimbursement'
+                                    ? 'scope-badge-reimbursed'
+                                    : scope.fundingStatus === 'verified_self_funded'
+                                      ? 'scope-badge-self'
+                                      : scope.fundingStatus === 'regional_pool_closed'
+                                        ? 'scope-badge-closed'
+                                        : 'scope-badge-pending'
+                              }`}
+                            >
+                              {scope.fundingStatus === 'verified_public_free' && 'Bezpłatne publiczne'}
+                              {scope.fundingStatus === 'verified_reimbursement' && 'Refundacja apteczna'}
+                              {scope.fundingStatus === 'verified_self_funded' && 'Co do zasady odpłatne'}
+                              {scope.fundingStatus === 'regional_pool_closed' && 'Zamknięta pula regionalna'}
+                              {scope.fundingStatus === 'pending_clarification' && 'Wymaga doprecyzowania'}
+                            </span>
+                          </div>
+                          <div><strong>Grupa wiekowa:</strong> {scope.ageGroup}</div>
+                          <div><strong>Zakres preparatów:</strong> {scope.productScope}</div>
+                          <div><strong>Okres obowiązywania:</strong> {scope.validityPeriod}</div>
+                          <div>
+                            <strong>Źródło:</strong>{' '}
+                            {scope.sourceUrl ? (
+                              <a href={scope.sourceUrl} target="_blank" rel="noopener noreferrer">{scope.sourceRef}</a>
+                            ) : (
+                              scope.sourceRef
+                            )}
+                          </div>
+                          <div><strong>Warunki i wyjątki:</strong> {scope.conditionsAndExceptions}</div>
+                          <div className="funding-scope-mechanisms">
+                            <span><strong>Zakup publiczny:</strong> {scope.mechanismBreakdown.stateVaccinePurchase}</span>{' | '}
+                            <span><strong>Usługa:</strong> {scope.mechanismBreakdown.serviceExecutionFunding}</span>{' | '}
+                            <span><strong>Refundacja:</strong> {scope.mechanismBreakdown.pharmacyReimbursement}</span>{' | '}
+                            <span><strong>Odpłatność częściowa:</strong> {scope.mechanismBreakdown.partialReimbursementDetail}</span>{' | '}
+                            <span><strong>Program czasowy:</strong> {scope.mechanismBreakdown.temporaryProgram}</span>{' | '}
+                            <span><strong>Dystrybucja / region:</strong> {scope.mechanismBreakdown.regionalAvailabilityAndDistribution}</span>
+                          </div>
+                          <div className={scope.mechanismBreakdown.localPointAvailabilityConfirmed ? 'point-availability-confirmed' : 'point-availability-unconfirmed'}>
+                            <strong>Punktowa dostępność fiolki:</strong>{' '}
+                            {scope.mechanismBreakdown.localPointAvailabilityConfirmed ? 'Potwierdzona w punkcie' : 'Niepotwierdzona lokalnie w punkcie'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -488,7 +567,7 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                 >
                   {item.fundingVerificationStatus === 'verified_public_free' && 'Potwierdzone: bezpłatne (zakup MZ / NFZ)'}
                   {item.fundingVerificationStatus === 'verified_reimbursement' && 'Potwierdzone: refundacja wg odrębnych przepisów'}
-                  {item.fundingVerificationStatus === 'verified_self_funded' && 'Potwierdzone: odpłatne (środki pacjenta/rodziców)'}
+                  {item.fundingVerificationStatus === 'verified_self_funded' && 'Co do zasady odpłatne w populacji ogólnej (z wyjątkami ustawowymi / grup ryzyka)'}
                   {item.fundingVerificationStatus === 'pending_clarification' && 'Wymaga doprecyzowania (odrębne obwieszczenia/komunikaty)'}
                 </span>
               </div>
