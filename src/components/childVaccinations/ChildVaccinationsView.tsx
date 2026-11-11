@@ -32,6 +32,7 @@ import {
   COMBINED_VACCINES_VARIANTS_PART_III_M
 } from '../../data/childVaccinesData';
 import { VACCINES_CATALOG } from '../../data/vaccinesCatalog';
+import { loadVaccinesFromStorage } from '../../utils/vaccineVerification';
 import {
   auditChildVaccinesCatalogSummary,
   auditVariantA2IpvCoverage,
@@ -45,7 +46,6 @@ interface ChildVaccinationsViewProps {
   onSelectVaccineProduct?: (vaccineId: string) => void;
 }
 
-const VAX_STORAGE_KEY = 'vaxnurse_vaccines_catalog_state_v1';
 
 type ViewTab = 'procedures' | 'qualifications' | 'principles' | 'catchup' | 'combined';
 
@@ -62,15 +62,9 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
 
   // Load products from localStorage or default catalog to reflect any pending/clarification statuses
   const catalogVaccines: VaccineProduct[] = useMemo(() => {
-    try {
-      const stored = localStorage.getItem(VAX_STORAGE_KEY);
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch (e) {
-      console.warn('Błąd odczytu bazy preparatów z localStorage:', e);
-    }
-    return VACCINES_CATALOG;
+    const storage = typeof window !== 'undefined' ? window.localStorage : null;
+    const loaded = loadVaccinesFromStorage(storage, VACCINES_CATALOG);
+    return loaded.vaccines;
   }, []);
 
   // Filter States

@@ -99,12 +99,23 @@ export const VaccineCard: React.FC<VaccineCardProps> = ({ vaccine, onOpenDetails
 
       {/* Verification & Safety Notice */}
       {vaccine.sourceDiscrepancies && vaccine.sourceDiscrepancies.length > 0 ? (
-        <div className="v-card-unverified-warning discrepancy">
-          <AlertTriangle size={15} className="warning-icon disc-icon" />
-          <span>
-            <strong>Niezgodność w ChPL (status: {DISCREPANCY_STATUS_META[vaccine.sourceDiscrepancies[0].status]?.label || 'Wymaga wyjaśnienia'}):</strong> Rozbieżność w ilości fenyloalaniny (0,0289 µg w pkt 2 vs 0,0298 µg w pkt 4.4). Zatwierdzenie zablokowane do czasu urzędowego sprostowania.
-          </span>
-        </div>
+        vaccine.sourceDiscrepancies[0].status === 'resolved_with_official_document' ? (
+          !statusMeta.isVerified && (
+            <div className="v-card-unverified-warning discrepancy">
+              <AlertTriangle size={15} className="warning-icon disc-icon" />
+              <span>
+                <strong>Niezgodność w ChPL (status: {DISCREPANCY_STATUS_META[vaccine.sourceDiscrepancies[0].status]?.label || 'Wyjaśniona'}):</strong> Rozbieżność fenyloalaniny została wyjaśniona i skontrolowana. Karta ma status «Gotowy do ręcznej weryfikacji» i oczekuje na końcowe zatwierdzenie całej ChPL.
+              </span>
+            </div>
+          )
+        ) : (
+          <div className="v-card-unverified-warning discrepancy">
+            <AlertTriangle size={15} className="warning-icon disc-icon" />
+            <span>
+              <strong>Niezgodność w ChPL (status: {DISCREPANCY_STATUS_META[vaccine.sourceDiscrepancies[0].status]?.label || 'Wymaga wyjaśnienia'}):</strong> Rozbieżność w ilości fenyloalaniny (0,0289 µg w pkt 2 vs 0,0298 µg w pkt 4.4). Zatwierdzenie zablokowane do czasu rejestracji i ręcznej kontroli dokumentu urzędowego.
+            </span>
+          </div>
+        )
       ) : !statusMeta.isVerified && (
         <div className="v-card-unverified-warning">
           <AlertTriangle size={15} className="warning-icon" />

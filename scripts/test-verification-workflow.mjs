@@ -1,397 +1,342 @@
-// scripts/test-verification-workflow.mjs
-// Test suite for Infanrix hexa verification workflow in VaxNurse (Scenarios A through H)
+// Rzeczywiste testy integracyjne workflow weryfikacji preparatu Infanrix hexa (VaxNurse)
+// Uruchomienie: node --experimental-strip-types scripts/test-verification-workflow.mjs
 
 import assert from 'node:assert/strict';
+import { VACCINES_CATALOG } from '../src/data/vaccinesCatalog.ts';
+import {
+  VAX_STORAGE_KEY,
+  LOCAL_UNAUTHENTICATED_AUTHOR,
+  validateClarificationForm,
+  validateDocumentCheckForm,
+  validateFinalChplApproval,
+  applyClarificationRegistration,
+  applyDocumentCheckConfirmation,
+  applyFinalChplApproval,
+  revokeFinalChplApproval,
+  revokeDocumentCheckToSubmitted,
+  resetVaccineClarificationToInitial,
+  resetCatalogPreservingHistory,
+  loadVaccinesFromStorage,
+  saveVaccinesToStorage,
+  getUnresolvedDiscrepancies,
+  isProductApprovalBlocked
+} from '../src/utils/vaccineVerification.ts';
+import { enforceClinicalIntegrityOnImport } from '../src/utils/backup.ts';
 
-console.log('================================================================');
-console.log('   AUDYT I TESTY LOGIKI WERYFIKACJI INFANRIX HEXA W VAXNURSE   ');
-console.log('================================================================\n');
+let passed = 0;
 
-// 1. Walidacja formularza Etapu 1 (6 pól)
-function validateEtap1Form(fields) {
-  const errors = {};
-  if (!fields.documentId?.trim()) errors.documentId = 'Wymagane: Podaj identyfikator dokumentu.';
-  if (!fields.issuer?.trim()) errors.issuer = 'Wymagane: Podaj instytucję lub podmiot wystawiający.';
-  if (!fields.documentDate?.trim()) errors.documentDate = 'Wymagane: Podaj datę wydania dokumentu urzędowego.';
-  if (!fields.receivedDate?.trim()) errors.receivedDate = 'Wymagane: Podaj datę otrzymania dokumentu.';
-  if (!fields.documentUrlOrLocation?.trim()) errors.documentUrlOrLocation = 'Wymagane: Podaj odnośnik URL lub lokalizację.';
-  if (!fields.verifierJustification?.trim()) errors.verifierJustification = 'Wymagane: Podaj uzasadnienie osoby weryfikującej.';
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors
-  };
+function runTest(name, fn) {
+  fn();
+  passed += 1;
+  console.log(`PASS: ${name}`);
 }
 
-// 2. Walidacja potwierdzenia kontroli Etapu 2 (4 elementy)
-function validateEtap2Form(fields) {
-  const errors = {};
-  if (!fields.docOpenedConfirmed) {
-    errors.docOpenedConfirmed = 'Wymagane: Potwierdź otwarcie lub wskazanie dokumentu źródłowego.';
-  }
-  if (!fields.docCheckDate?.trim()) {
-    errors.docCheckDate = 'Wymagane: Podaj datę dokonania sprawdzenia dokumentu.';
-  }
-  if (!fields.checkerNameAndRole?.trim()) {
-    errors.checkerNameAndRole = 'Wymagane: Wskaż osobę dokonującą sprawdzenia.';
-  }
-  if (!fields.checkerJustification?.trim()) {
-    errors.checkerJustification = 'Wymagane: Podaj uzasadnienie, dlaczego dokument rozwiązuje daną niezgodność.';
-  }
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors
-  };
-}
+const getInitialInfanrix = () => {
+  const infanrix = VACCINES_CATALOG.find(v => v.id === 'vac-infanrix-hexa');
+  assert.ok(infanrix, 'Infanrix hexa musi istnieć w VACCINES_CATALOG');
+  return structuredClone(infanrix);
+};
 
-// 3. Sprawdzanie czy zatwierdzenie jest zablokowane
-function isApprovalBlocked(product) {
-  const primaryDiscrepancy = product.sourceDiscrepancies?.[0];
-  const isDiscrepancyResolved = primaryDiscrepancy?.status === 'resolved_with_official_document';
-  const hasUnresolvedDiscrepancies = !isDiscrepancyResolved;
-  const isReady = product.verificationStatus === 'ready_for_manual_verification';
-  const isAlreadyVerified = product.verificationStatus === 'verified_chpl';
-  return hasUnresolvedDiscrepancies || (!isReady && !isAlreadyVerified);
-}
+const VALID_STAGE1_FIELDS = {
+  documentId: 'URPL/DPR/2026/012',
+  issuer: 'URPL (Urząd Rejestracji Produktów Leczniczych) / GSK',
+  documentDate: '2026-10-15',
+  receivedDate: '2026-11-10',
+  documentUrlOrLocation: 'https://rejestry.ezdrowie.gov.pl/rpl/infanrix-hexa-sprostowanie-2026.pdf',
+  verifierJustification: 'Oficjalne sprostowanie URPL wyjaśnia zawartość fenyloalaniny pomiędzy pkt 2 i pkt 4.4 ChPL.'
+};
 
-// Mock initial Infanrix hexa product
-function createInitialInfanrixHexa() {
-  return {
-    id: 'vac-infanrix-hexa',
-    tradeName: 'Infanrix hexa',
-    verificationStatus: 'requires_source_clarification',
-    sourceDiscrepancies: [
-      {
-        id: 'disc-phenylalanine-content-01',
-        fieldName: 'Zawartość fenyloalaniny',
-        firstValue: '0,0289 mikrograma na dawkę',
-        firstSection: '2',
-        secondValue: '0,0298 mikrograma na dawkę',
-        secondSection: '4.4',
-        status: 'requires_clarification',
-        description: 'Niezgodność wewnętrzna oficjalnej ChPL...',
-        resolution: {
-          documentId: '',
-          issuer: '',
-          documentDate: '',
-          receivedDate: '',
-          documentUrlOrLocation: '',
-          verifierJustification: '',
-          isResolved: false
-        }
-      }
-    ],
-    statusHistory: [
-      {
-        id: 'hist-init-01',
-        timestamp: '10.11.2026 r., 12:00',
-        previousStatus: 'pending_verification',
-        newStatus: 'requires_source_clarification',
-        reason: 'Wykryto niezgodność wewnętrzną ChPL',
-        author: 'System kontroli'
-      }
-    ]
-  };
-}
+const VALID_STAGE2_FIELDS = {
+  docOpenedConfirmed: true,
+  sourceDocumentLocation: VALID_STAGE1_FIELDS.documentUrlOrLocation,
+  docCheckDate: '2026-11-10',
+  checkerNameAndRole: 'mgr piel. Anna Nowak, koordynator punktu szczepień',
+  checkerJustification: 'Otwarto dokument URPL/DPR/2026/012; załączone sprostowanie jednoznacznie usuwa rozbieżność 0,0289 vs 0,0298 µg fenyloalaniny.'
+};
 
-// Mock localStorage engine
-class MockLocalStorage {
-  constructor(shouldFail = false) {
-    this.store = new Map();
-    this.shouldFail = shouldFail;
-  }
-  getItem(key) {
-    return this.store.get(key) || null;
-  }
-  setItem(key, value) {
-    if (this.shouldFail) {
-      throw new Error('QuotaExceededError: Pamięć localStorage przekroczona.');
-    }
-    this.store.set(key, String(value));
-  }
-  removeItem(key) {
-    this.store.delete(key);
-  }
-  clear() {
-    this.store.clear();
-  }
-}
+const VALID_STAGE3_FIELDS = {
+  fullChplVerifiedConfirmed: true,
+  verifierName: 'lek. Jan Kowalski',
+  verificationNotes: 'Ręcznie zweryfikowano całą dokumentację ChPL (punkty 1–10) względem druku GSK z 12.02.2026 oraz dokumentu URPL/DPR/2026/012.'
+};
 
-let passedTests = 0;
-const totalTests = 8;
+// 0. Integralność katalogu bazowego (niezmieniony stan kliniczny Infanrix hexa i brak fałszywych niezgodności dla innych preparatów)
+runTest('0. Katalog bazowy zachowuje nierozwiązaną rozbieżność fenyloalaniny dla Infanrix hexa', () => {
+  const infanrix = getInitialInfanrix();
+  assert.equal(infanrix.verificationStatus, 'requires_source_clarification');
+  assert.equal(infanrix.sourceDiscrepancies?.length, 1);
+  assert.equal(infanrix.sourceDiscrepancies[0].id, 'disc-phenylalanine-content-01');
+  assert.equal(infanrix.sourceDiscrepancies[0].status, 'requires_clarification');
+  assert.match(infanrix.sourceDiscrepancies[0].firstValue, /0,0289/);
+  assert.match(infanrix.sourceDiscrepancies[0].secondValue, /0,0298/);
+  assert.equal(isProductApprovalBlocked(infanrix), true);
 
-// ============================================================================
-// SCENARIUSZ A: Formularz niekompletny -> odrzucenie zapisu
-// ============================================================================
-console.log('Test A: Formularz niekompletny -> odrzucenie zapisu');
-{
-  // A1: Etap 1 – brak pól
-  const emptyEtap1 = validateEtap1Form({});
-  assert.equal(emptyEtap1.isValid, false, 'Pusty formularz Etapu 1 musi zostać odrzucony');
-  assert.equal(Object.keys(emptyEtap1.errors).length, 6, 'Musi zgłosić brak wszystkich 6 pól');
+  const priorix = VACCINES_CATALOG.find(v => v.id === 'vac-priorix');
+  assert.ok(priorix, 'Priorix musi istnieć w katalogu');
+  assert.equal(getUnresolvedDiscrepancies(priorix).length, 0);
+});
 
-  // A2: Etap 1 – częściowo wypełniony (np. tylko 4 pola z 6)
-  const partialEtap1 = validateEtap1Form({
-    documentId: 'URPL/DPR/2026/012',
-    issuer: 'URPLWMiPB',
-    documentDate: '2026-03-01',
-    receivedDate: '2026-03-05'
-    // brak documentUrlOrLocation i verifierJustification
+// SCENARIUSZ A: Formularz niekompletny: zapis odrzucony
+runTest('Scenariusz A: Formularz Etapu 1 niekompletny (0 lub 5 z 6 pól) zostaje odrzucony', () => {
+  const initial = getInitialInfanrix();
+  const initialHistoryLen = initial.statusHistory?.length ?? 0;
+
+  const emptyVal = validateClarificationForm({
+    documentId: '',
+    issuer: '',
+    documentDate: '',
+    receivedDate: '',
+    documentUrlOrLocation: '',
+    verifierJustification: '   '
   });
-  assert.equal(partialEtap1.isValid, false, 'Częściowo wypełniony formularz Etapu 1 musi zostać odrzucony');
-  assert.ok(partialEtap1.errors.documentUrlOrLocation, 'Musi wymagać lokalizacji dokumentu');
-  assert.ok(partialEtap1.errors.verifierJustification, 'Musi wymagać uzasadnienia');
+  assert.equal(emptyVal.isValid, false);
+  assert.equal(Object.keys(emptyVal.errors).length, 6);
 
-  // A3: Etap 2 – niepotwierdzony checkbox
-  const unconfirmedEtap2 = validateEtap2Form({
+  const partialResult = applyClarificationRegistration(initial, {
+    ...VALID_STAGE1_FIELDS,
+    verifierJustification: '   '
+  });
+  assert.equal(partialResult.success, false);
+  assert.ok(partialResult.errors.verifierJustification);
+
+  // Brak mutacji pierwotnego obiektu ani postępu statusu
+  assert.equal(initial.sourceDiscrepancies[0].status, 'requires_clarification');
+  assert.equal(initial.verificationStatus, 'requires_source_clarification');
+  assert.equal(initial.statusHistory?.length ?? 0, initialHistoryLen);
+});
+
+// SCENARIUSZ B: Sześć pól wypełnionych: wyjaśnienie zarejestrowane, zatwierdzenie nadal zablokowane
+runTest('Scenariusz B: Wypełnienie 6 pól rejestruje wyjaśnienie (clarification_submitted), ale utrzymuje blokadę zatwierdzenia', () => {
+  const initial = getInitialInfanrix();
+  const initialHistoryLen = initial.statusHistory?.length ?? 0;
+
+  const stage1 = applyClarificationRegistration(initial, VALID_STAGE1_FIELDS);
+  assert.equal(stage1.success, true);
+
+  const afterStage1 = stage1.vaccine;
+  const disc = afterStage1.sourceDiscrepancies[0];
+  assert.equal(disc.status, 'clarification_submitted');
+  assert.equal(disc.resolution?.documentId, VALID_STAGE1_FIELDS.documentId);
+  assert.equal(disc.resolution?.issuer, VALID_STAGE1_FIELDS.issuer);
+  assert.equal(disc.resolution?.documentDate, VALID_STAGE1_FIELDS.documentDate);
+  assert.equal(disc.resolution?.receivedDate, VALID_STAGE1_FIELDS.receivedDate);
+  assert.equal(disc.resolution?.documentUrlOrLocation, VALID_STAGE1_FIELDS.documentUrlOrLocation);
+  assert.equal(disc.resolution?.verifierJustification, VALID_STAGE1_FIELDS.verifierJustification);
+  assert.equal(disc.resolution?.isResolved, false);
+
+  assert.equal(afterStage1.verificationStatus, 'requires_source_clarification');
+  assert.equal(isProductApprovalBlocked(afterStage1), true);
+  assert.equal(afterStage1.statusHistory?.length, initialHistoryLen + 1);
+  assert.equal(afterStage1.statusHistory[0].author, LOCAL_UNAUTHENTICATED_AUTHOR);
+
+  const directApprovalAttempt = applyFinalChplApproval(afterStage1, VALID_STAGE3_FIELDS);
+  assert.equal(directApprovalAttempt.success, false);
+  assert.ok(directApprovalAttempt.blockedReason);
+});
+
+// SCENARIUSZ D: Przygotowany dokument bez ręcznej kontroli -> preparat nadal wymaga wyjaśnienia
+runTest('Scenariusz D: Przygotowany dokument bez kompletnej ręcznej kontroli utrzymuje status requires_source_clarification', () => {
+  const initial = getInitialInfanrix();
+  const stage1 = applyClarificationRegistration(initial, VALID_STAGE1_FIELDS);
+  assert.equal(stage1.success, true);
+  const afterStage1 = stage1.vaccine;
+
+  // Brak potwierdzenia otwarcia dokumentu lub brak pól Etapu 2 musi zostać odrzucony
+  const incompleteDocCheckVal = validateDocumentCheckForm({
     docOpenedConfirmed: false,
-    docCheckDate: '10.11.2026',
-    checkerNameAndRole: 'Pielęgniarka',
-    checkerJustification: 'Uzasadnienie'
+    sourceDocumentLocation: '',
+    docCheckDate: '2026-11-10',
+    checkerNameAndRole: '',
+    checkerJustification: ''
   });
-  assert.equal(unconfirmedEtap2.isValid, false, 'Brak potwierdzenia otwarcia dokumentu musi odrzucić zapis');
-  assert.ok(unconfirmedEtap2.errors.docOpenedConfirmed);
+  assert.equal(incompleteDocCheckVal.isValid, false);
+  assert.ok(incompleteDocCheckVal.errors.docOpenedConfirmed);
+  assert.ok(incompleteDocCheckVal.errors.sourceDocumentLocation);
+  assert.ok(incompleteDocCheckVal.errors.checkerNameAndRole);
+  assert.ok(incompleteDocCheckVal.errors.checkerJustification);
 
-  passedTests++;
-  console.log('   ✓ SCENARIUSZ A ZALICZONY: Niekompletny formularz (zarówno Etapu 1 jak i Etapu 2) jest bezwzględnie odrzucany.\n');
-}
+  const failedDocCheck = applyDocumentCheckConfirmation(afterStage1, {
+    ...VALID_STAGE2_FIELDS,
+    docOpenedConfirmed: false
+  });
+  assert.equal(failedDocCheck.success, false);
+  assert.equal(afterStage1.sourceDiscrepancies[0].status, 'clarification_submitted');
+  assert.equal(afterStage1.verificationStatus, 'requires_source_clarification');
+  assert.equal(isProductApprovalBlocked(afterStage1), true);
+});
 
-// ============================================================================
-// SCENARIUSZ B: Sześć pól wypełnionych -> wyjaśnienie zarejestrowane, zatwierdzenie zablokowane
-// ============================================================================
-console.log('Test B: Sześć pól wypełnionych -> wyjaśnienie zarejestrowane, ale zatwierdzenie nadal zablokowane');
-let vaccineState = createInitialInfanrixHexa();
-{
-  const validEtap1Input = {
-    documentId: 'URPL/DPR/2026/012',
-    issuer: 'Urząd Rejestracji Produktów Leczniczych (URPLWMiPB)',
-    documentDate: '2026-03-01',
-    receivedDate: '2026-03-05',
-    documentUrlOrLocation: 'https://urpl.gov.pl/decyzje/2026/VR323859',
-    verifierJustification: 'Potwierdzono sprostowanie specyfikacji przez URPL.'
-  };
+// SCENARIUSZ C & E: Ręczne potwierdzenie sprawdzenia dokumentu -> resolved_with_official_document -> ready_for_manual_verification
+runTest('Scenariusz C i E: Ręczna kontrola zmienia status niezgodności na resolved_with_official_document, a preparatu na ready_for_manual_verification (nie verified_chpl)', () => {
+  const initial = getInitialInfanrix();
+  const stage1 = applyClarificationRegistration(initial, VALID_STAGE1_FIELDS);
+  assert.equal(stage1.success, true);
 
-  const validation = validateEtap1Form(validEtap1Input);
-  assert.equal(validation.isValid, true);
+  const stage2 = applyDocumentCheckConfirmation(stage1.vaccine, VALID_STAGE2_FIELDS);
+  assert.equal(stage2.success, true);
 
-  // Rejestracja Etapu 1:
-  vaccineState = {
-    ...vaccineState,
-    verificationStatus: 'requires_source_clarification', // Musi pozostać requires_source_clarification!
-    sourceDiscrepancies: [
-      {
-        ...vaccineState.sourceDiscrepancies[0],
-        status: 'clarification_submitted', // Status niezgodności: clarification_submitted
-        resolution: {
-          ...validEtap1Input,
-          registeredAt: '10.11.2026 r., 12:30',
-          registeredBy: 'Pielęgniarka koordynująca',
-          isResolved: false
-        }
-      }
-    ],
-    statusHistory: [
-      {
-        id: 'hist-02',
-        timestamp: '10.11.2026 r., 12:30',
-        previousStatus: 'requires_source_clarification',
-        newStatus: 'requires_source_clarification',
-        reason: 'Zarejestrowano dane wyjaśnienia. Oczekuje na ręczną kontrolę dokumentu.',
-        author: 'Pielęgniarka koordynująca'
-      },
-      ...vaccineState.statusHistory
-    ]
-  };
+  const afterStage2 = stage2.vaccine;
+  const disc = afterStage2.sourceDiscrepancies[0];
+  assert.equal(disc.status, 'resolved_with_official_document');
+  assert.equal(disc.resolution?.isResolved, true);
+  assert.equal(disc.resolution?.documentCheck?.isConfirmed, true);
+  assert.equal(disc.resolution?.documentCheck?.sourceDocumentOpenedOrIndicated, true);
+  assert.ok(disc.resolution?.documentCheck?.confirmedAt);
+  assert.match(afterStage2.statusHistory[0].reason, /oświadczenie lokalne bez uwierzytelniania tożsamości/);
+  assert.equal(disc.resolution?.documentCheck?.sourceDocumentLocation, VALID_STAGE2_FIELDS.sourceDocumentLocation);
+  assert.equal(disc.resolution?.documentCheck?.checkerNameAndRole, VALID_STAGE2_FIELDS.checkerNameAndRole);
+  assert.equal(disc.resolution?.documentCheck?.checkDate, VALID_STAGE2_FIELDS.docCheckDate);
+  assert.equal(disc.resolution?.documentCheck?.checkerJustification, VALID_STAGE2_FIELDS.checkerJustification);
 
-  assert.equal(vaccineState.sourceDiscrepancies[0].status, 'clarification_submitted', 'Status niezgodności musi być clarification_submitted');
-  assert.equal(vaccineState.verificationStatus, 'requires_source_clarification', 'Status preparatu musi pozostać requires_source_clarification');
-  assert.equal(isApprovalBlocked(vaccineState), true, 'Zatwierdzenie preparatu musi być nadal bezwzględnie zablokowane');
+  // Etap 3: ready_for_manual_verification, nigdy automatycznie verified_chpl
+  assert.equal(afterStage2.verificationStatus, 'ready_for_manual_verification');
+  assert.notEqual(afterStage2.verificationStatus, 'verified_chpl');
+  assert.equal(afterStage2.userVerificationDate, null);
+  assert.equal(isProductApprovalBlocked(afterStage2), false);
 
-  passedTests++;
-  console.log('   ✓ SCENARIUSZ B ZALICZONY: Po wypełnieniu 6 pól niezgodność ma status clarification_submitted, preparat ma status requires_source_clarification, a zatwierdzenie jest zablokowane.\n');
-}
+  // Sprawdzenie cofnięcia sprawdzenia dokumentu -> powrót do Etapu 1
+  const revertedToStage1 = revokeDocumentCheckToSubmitted(afterStage2, initial, VALID_STAGE2_FIELDS.checkerNameAndRole);
+  assert.equal(revertedToStage1.sourceDiscrepancies[0].status, 'clarification_submitted');
+  assert.equal(revertedToStage1.verificationStatus, 'requires_source_clarification');
+  assert.equal(isProductApprovalBlocked(revertedToStage1), true);
+  assert.equal(revertedToStage1.statusHistory.length, afterStage2.statusHistory.length + 1);
+});
 
-// ============================================================================
-// SCENARIUSZ C: Ręczne potwierdzenie sprawdzenia dokumentu -> resolved_with_official_document
-// ============================================================================
-console.log('Test C: Ręczne potwierdzenie sprawdzenia dokumentu -> resolved_with_official_document');
-{
-  const validEtap2Input = {
-    docOpenedConfirmed: true,
-    docCheckDate: '10.11.2026 r.',
-    checkerNameAndRole: 'mgr pielęgniarstwa Anna Nowak, koordynator punktu szczepień',
-    checkerJustification: 'Otwarto oficjalny dokument sprostowania URPL. Potwierdzono, że właściwą zawartością fenyloalaniny jest 0,0289 µg/dawkę.'
-  };
+// SCENARIUSZ F: Ostateczne zatwierdzenie dopiero po osobnej ręcznej weryfikacji całej ChPL
+runTest('Scenariusz F: Ostateczne zatwierdzenie (verified_chpl) wymaga osobnego potwierdzenia weryfikacji całej ChPL', () => {
+  const initial = getInitialInfanrix();
+  const stage1 = applyClarificationRegistration(initial, VALID_STAGE1_FIELDS);
+  assert.equal(stage1.success, true);
+  const stage2 = applyDocumentCheckConfirmation(stage1.vaccine, VALID_STAGE2_FIELDS);
+  assert.equal(stage2.success, true);
+  const ready = stage2.vaccine;
 
-  const validation = validateEtap2Form(validEtap2Input);
-  assert.equal(validation.isValid, true);
+  const incompleteFinalVal = validateFinalChplApproval({
+    fullChplVerifiedConfirmed: false,
+    verifierName: '',
+    verificationNotes: ''
+  });
+  assert.equal(incompleteFinalVal.isValid, false);
+  assert.equal(Object.keys(incompleteFinalVal.errors).length, 3);
 
-  // Potwierdzenie kontroli Etapu 2:
-  vaccineState = {
-    ...vaccineState,
-    verificationStatus: 'ready_for_manual_verification',
-    sourceDiscrepancies: [
-      {
-        ...vaccineState.sourceDiscrepancies[0],
-        status: 'resolved_with_official_document', // Dopiero teraz zmiana na resolved_with_official_document!
-        resolution: {
-          ...vaccineState.sourceDiscrepancies[0].resolution,
-          documentCheck: {
-            sourceDocumentOpenedOrIndicated: true,
-            sourceDocumentLocation: vaccineState.sourceDiscrepancies[0].resolution.documentUrlOrLocation,
-            checkDate: validEtap2Input.docCheckDate,
-            checkerNameAndRole: validEtap2Input.checkerNameAndRole,
-            checkerJustification: validEtap2Input.checkerJustification,
-            isConfirmed: true,
-            confirmedAt: '10.11.2026 r., 12:35'
-          },
-          isResolved: true
-        }
-      }
-    ],
-    statusHistory: [
-      {
-        id: 'hist-03',
-        timestamp: '10.11.2026 r., 12:35',
-        previousStatus: 'requires_source_clarification',
-        newStatus: 'ready_for_manual_verification',
-        reason: 'Ręcznie potwierdzono sprawdzenie dokumentu źródłowego.',
-        author: validEtap2Input.checkerNameAndRole
-      },
-      ...vaccineState.statusHistory
-    ]
-  };
+  const rejectedFinal = applyFinalChplApproval(ready, {
+    ...VALID_STAGE3_FIELDS,
+    fullChplVerifiedConfirmed: false
+  });
+  assert.equal(rejectedFinal.success, false);
+  assert.equal(ready.verificationStatus, 'ready_for_manual_verification');
 
-  assert.equal(vaccineState.sourceDiscrepancies[0].status, 'resolved_with_official_document', 'Status niezgodności musi być resolved_with_official_document');
-  assert.equal(vaccineState.sourceDiscrepancies[0].resolution.documentCheck.isConfirmed, true, 'documentCheck.isConfirmed musi wynosić true');
+  const approved = applyFinalChplApproval(ready, VALID_STAGE3_FIELDS);
+  assert.equal(approved.success, true);
+  assert.equal(approved.vaccine.verificationStatus, 'verified_chpl');
+  assert.ok(approved.vaccine.userVerificationDate);
+  assert.equal(approved.vaccine.userVerificationNotes, VALID_STAGE3_FIELDS.verificationNotes);
+  assert.equal(approved.vaccine.chpl.composition.verificationStatus, 'verified_chpl');
+  assert.equal(approved.vaccine.statusHistory.length, ready.statusHistory.length + 1);
 
-  passedTests++;
-  console.log('   ✓ SCENARIUSZ C ZALICZONY: Ręczna kontrola dokumentu zmienia status niezgodności na resolved_with_official_document.\n');
-}
+  const revokedFinal = revokeFinalChplApproval(approved.vaccine, initial, VALID_STAGE3_FIELDS.verifierName);
+  assert.equal(revokedFinal.verificationStatus, 'ready_for_manual_verification');
+  assert.equal(revokedFinal.userVerificationDate, null);
+  assert.notEqual(revokedFinal.chpl.composition.verificationStatus, 'verified_chpl');
+  assert.equal(revokedFinal.statusHistory.length, approved.vaccine.statusHistory.length + 1);
+});
 
-// ============================================================================
-// SCENARIUSZ D: Przygotowany dokument, ale bez ręcznej kontroli -> preparat nadal wymaga wyjaśnienia
-// ============================================================================
-console.log('Test D: Przygotowany dokument bez ręcznej kontroli -> preparat nadal wymaga wyjaśnienia źródłowego');
-{
-  const testStateD = createInitialInfanrixHexa();
-  // Symulacja stanu po samym Etapie 1
-  testStateD.sourceDiscrepancies[0].status = 'clarification_submitted';
-  testStateD.verificationStatus = 'requires_source_clarification';
+// SCENARIUSZ G: Odświeżenie strony (utrwalenie localStorage) i świadome przywracanie stanu początkowego bez usuwania historii zmian
+runTest('Scenariusz G: Zapis i ponowny odczyt localStorage zachowuje stan oraz reset z zachowaniem historii zmian', () => {
+  const initial = getInitialInfanrix();
+  const s1 = applyClarificationRegistration(initial, VALID_STAGE1_FIELDS);
+  assert.equal(s1.success, true);
+  const s2 = applyDocumentCheckConfirmation(s1.vaccine, VALID_STAGE2_FIELDS);
+  assert.equal(s2.success, true);
+  const s3 = applyFinalChplApproval(s2.vaccine, VALID_STAGE3_FIELDS);
+  assert.equal(s3.success, true);
 
-  assert.equal(testStateD.verificationStatus, 'requires_source_clarification', 'Bez Etapu 2 status preparatu musi pozostać requires_source_clarification');
-  assert.equal(testStateD.sourceDiscrepancies[0].status, 'clarification_submitted');
-  assert.equal(isApprovalBlocked(testStateD), true, 'Zatwierdzenie musi być zablokowane');
+  const updatedCatalog = VACCINES_CATALOG.map(v => (v.id === 'vac-infanrix-hexa' ? s3.vaccine : v));
 
-  passedTests++;
-  console.log('   ✓ SCENARIUSZ D ZALICZONY: Preparat z wypełnionym dokumentem, lecz bez ręcznej kontroli, nadal wymaga wyjaśnienia źródłowego.\n');
-}
-
-// ============================================================================
-// SCENARIUSZ E: Rozwiązana niezgodność -> preparat przechodzi do ready_for_manual_verification
-// ============================================================================
-console.log('Test E: Rozwiązana niezgodność -> przejście preparatu do ready_for_manual_verification (NIE verified_chpl)');
-{
-  assert.equal(vaccineState.verificationStatus, 'ready_for_manual_verification', 'Status preparatu po Etapie 1 + Etapie 2 musi wynosić ready_for_manual_verification');
-  assert.notEqual(vaccineState.verificationStatus, 'verified_chpl', 'Preparat NIE MOŻE mieć jeszcze statusu verified_chpl');
-  assert.equal(isApprovalBlocked(vaccineState), false, 'Blokada zatwierdzenia została zdjęta, karta jest gotowa do ręcznej decyzji personelu');
-
-  passedTests++;
-  console.log('   ✓ SCENARIUSZ E ZALICZONY: Preparat przeszedł do ready_for_manual_verification i nie został automatycznie oznaczony jako verified_chpl.\n');
-}
-
-// ============================================================================
-// SCENARIUSZ F: Ostateczne zatwierdzenie -> możliwe dopiero po osobnej ręcznej weryfikacji ChPL
-// ============================================================================
-console.log('Test F: Ostateczne zatwierdzenie -> osobna, świadoma decyzja personelu');
-{
-  // Próba zatwierdzenia, gdy preparat byłby jeszcze w stanie requires_source_clarification:
-  const blockedState = createInitialInfanrixHexa();
-  assert.throws(() => {
-    if (blockedState.verificationStatus !== 'ready_for_manual_verification') {
-      throw new Error('Blokada bezpieczeństwa: Zatwierdzenie dozwolone wyłącznie w stanie ready_for_manual_verification.');
+  const backingStore = new Map();
+  const mockStorage = {
+    getItem: key => backingStore.get(key) ?? null,
+    setItem: (key, val) => {
+      backingStore.set(key, String(val));
     }
-  }, /Blokada bezpieczeństwa/);
-
-  // Świadome zatwierdzenie w stanie ready_for_manual_verification:
-  const approvedState = {
-    ...vaccineState,
-    verificationStatus: 'verified_chpl',
-    userVerificationDate: '10.11.2026 r., 12:40',
-    userVerificationNotes: 'Zweryfikowano z oficjalną dokumentacją ChPL w Rejestrze Produktów Leczniczych.',
-    statusHistory: [
-      {
-        id: 'hist-04',
-        timestamp: '10.11.2026 r., 12:40',
-        previousStatus: 'ready_for_manual_verification',
-        newStatus: 'verified_chpl',
-        reason: 'Świadome zatwierdzenie poprawności karty ChPL przez uprawniony personel.',
-        author: 'mgr pielęgniarstwa Anna Nowak'
-      },
-      ...vaccineState.statusHistory
-    ]
   };
 
-  assert.equal(approvedState.verificationStatus, 'verified_chpl');
-  assert.equal(approvedState.userVerificationDate, '10.11.2026 r., 12:40');
-  assert.equal(approvedState.statusHistory.length, 4, 'Historia zmian zawiera wszystkie zdarzenia bez ich usuwania');
+  const saveRes = saveVaccinesToStorage(mockStorage, updatedCatalog);
+  assert.equal(saveRes.success, true);
+  assert.equal(saveRes.error, null);
+  assert.ok(backingStore.has(VAX_STORAGE_KEY));
 
-  passedTests++;
-  console.log('   ✓ SCENARIUSZ F ZALICZONY: Ostateczne zatwierdzenie (verified_chpl) następuje dopiero po osobnej decyzji personelu.\n');
-}
+  // Symulacja odświeżenia strony
+  const loadRes = loadVaccinesFromStorage(mockStorage, VACCINES_CATALOG);
+  assert.equal(loadRes.error, null);
+  assert.equal(loadRes.loadedFromStorage, true);
+  const reloadedInfanrix = loadRes.vaccines.find(v => v.id === 'vac-infanrix-hexa');
+  assert.ok(reloadedInfanrix);
+  assert.equal(reloadedInfanrix.verificationStatus, 'verified_chpl');
+  assert.equal(reloadedInfanrix.sourceDiscrepancies[0].status, 'resolved_with_official_document');
+  assert.equal(reloadedInfanrix.statusHistory.length, s3.vaccine.statusHistory.length);
 
-// ============================================================================
-// SCENARIUSZ G: Odświeżenie strony -> zapisany stan zostaje w przeglądarce
-// ============================================================================
-console.log('Test G: Odświeżenie strony -> trwałość stanu w localStorage');
-{
-  const mockStorage = new MockLocalStorage();
-  const STORAGE_KEY = 'vaxnurse_vaccines_catalog_state_v1';
+  // Przywracanie stanu początkowego preparatu nie usuwa historii zmian
+  const historyBeforeReset = reloadedInfanrix.statusHistory.length;
+  const resetProd = resetVaccineClarificationToInitial(reloadedInfanrix, initial);
+  assert.equal(resetProd.verificationStatus, 'requires_source_clarification');
+  assert.equal(resetProd.sourceDiscrepancies[0].status, 'requires_clarification');
+  assert.equal(resetProd.chpl.composition.verificationStatus, initial.chpl.composition.verificationStatus);
+  assert.equal(resetProd.statusHistory.length, historyBeforeReset + 1);
 
-  // 1. Zapis do pamięci
-  mockStorage.setItem(STORAGE_KEY, JSON.stringify([vaccineState]));
+  // Przywracanie całego katalogu do stanu początkowego zachowuje historię zmian
+  const resetCat = resetCatalogPreservingHistory(updatedCatalog, VACCINES_CATALOG);
+  const resetCatInfanrix = resetCat.find(v => v.id === 'vac-infanrix-hexa');
+  assert.ok(resetCatInfanrix);
+  assert.equal(resetCatInfanrix.verificationStatus, 'requires_source_clarification');
+  assert.equal(resetCatInfanrix.sourceDiscrepancies[0].status, 'requires_clarification');
+  assert.equal(resetCatInfanrix.statusHistory.length, historyBeforeReset + 1);
 
-  // 2. Symulacja odświeżenia strony (odczyt z pamięci)
-  const storedJson = mockStorage.getItem(STORAGE_KEY);
-  assert.ok(storedJson, 'Dane muszą znajdować się w localStorage');
+  // Zabezpieczenie importu kopii przed sfingowanym resolved_with_official_document bez Etapu 2
+  const forged = structuredClone(s1.vaccine);
+  forged.sourceDiscrepancies[0].status = 'resolved_with_official_document';
+  forged.verificationStatus = 'verified_chpl';
+  const sanitized = enforceClinicalIntegrityOnImport([forged], VACCINES_CATALOG);
+  assert.equal(sanitized[0].sourceDiscrepancies[0].status, 'clarification_submitted');
+  assert.equal(sanitized[0].verificationStatus, 'requires_source_clarification');
+});
 
-  const restoredVaccines = JSON.parse(storedJson);
-  assert.equal(restoredVaccines.length, 1);
-  const restoredItem = restoredVaccines[0];
+// SCENARIUSZ H: Błędy odczytu i zapisu localStorage
+runTest('Scenariusz H: Błędy zapisu i odczytu localStorage zwracają czytelne komunikaty bez awarii aplikacji', () => {
+  const infanrix = getInitialInfanrix();
+  const catalog = VACCINES_CATALOG.map(v => (v.id === 'vac-infanrix-hexa' ? infanrix : v));
 
-  assert.equal(restoredItem.verificationStatus, 'ready_for_manual_verification');
-  assert.equal(restoredItem.sourceDiscrepancies[0].status, 'resolved_with_official_document');
-  assert.equal(restoredItem.sourceDiscrepancies[0].resolution.documentId, 'URPL/DPR/2026/012');
-  assert.equal(restoredItem.sourceDiscrepancies[0].resolution.documentCheck.isConfirmed, true);
-  assert.equal(restoredItem.sourceDiscrepancies[0].resolution.documentCheck.checkDate, '10.11.2026 r.');
-  assert.equal(restoredItem.statusHistory.length, 3);
+  const failingWriteStorage = {
+    setItem: () => {
+      throw new Error('QuotaExceededError: storage limit reached');
+    }
+  };
+  const writeErrRes = saveVaccinesToStorage(failingWriteStorage, catalog);
+  assert.equal(writeErrRes.success, false);
+  assert.ok(writeErrRes.error && writeErrRes.error.includes('localStorage'));
 
-  passedTests++;
-  console.log('   ✓ SCENARIUSZ G ZALICZONY: Pełen stan preparatu, historia i kontrola dokumentu przetrwały symulowane odświeżenie strony.\n');
-}
+  const corruptedJsonStorage = {
+    getItem: () => '{to-nie-jest-poprawny-json'
+  };
+  const jsonErrRes = loadVaccinesFromStorage(corruptedJsonStorage, VACCINES_CATALOG);
+  assert.equal(jsonErrRes.loadedFromStorage, false);
+  assert.ok(jsonErrRes.error && jsonErrRes.error.includes('localStorage'));
+  assert.equal(jsonErrRes.vaccines.length, VACCINES_CATALOG.length);
 
-// ============================================================================
-// SCENARIUSZ H: Błąd zapisu localStorage -> czytelny komunikat dla użytkownika
-// ============================================================================
-console.log('Test H: Błąd zapisu localStorage -> obsługa i czytelny komunikat dla użytkownika');
-{
-  const failingStorage = new MockLocalStorage(true); // shouldFail = true
-  const STORAGE_KEY = 'vaxnurse_vaccines_catalog_state_v1';
-  let storageErrorMessage = null;
+  const nonArrayStorage = {
+    getItem: () => JSON.stringify({ invalid: true })
+  };
+  const structureErrRes = loadVaccinesFromStorage(nonArrayStorage, VACCINES_CATALOG);
+  assert.equal(structureErrRes.loadedFromStorage, false);
+  assert.ok(structureErrRes.error && structureErrRes.error.includes('nieprawidłową strukturę'));
 
-  try {
-    failingStorage.setItem(STORAGE_KEY, JSON.stringify([vaccineState]));
-  } catch {
-    storageErrorMessage = 'Błąd zapisu w pamięci podręcznej przeglądarki (localStorage): Nie udało się utrwalić wprowadzonych zmian. Sprawdź ilość wolnego miejsca lub uprawnienia pamięci w przeglądarce.';
-  }
+  const throwingReadStorage = {
+    getItem: () => {
+      throw new Error('SecurityError: access denied');
+    }
+  };
+  const throwReadRes = loadVaccinesFromStorage(throwingReadStorage, VACCINES_CATALOG);
+  assert.equal(throwReadRes.loadedFromStorage, false);
+  assert.ok(throwReadRes.error && throwReadRes.error.includes('Brak dostępu'));
+});
 
-  assert.ok(storageErrorMessage, 'Musi zostać przechwycony błąd zapisu');
-  assert.match(storageErrorMessage, /Błąd zapisu w pamięci podręcznej przeglądarki \(localStorage\)/);
-  assert.match(storageErrorMessage, /Nie udało się utrwalić wprowadzonych zmian/);
-
-  passedTests++;
-  console.log('   ✓ SCENARIUSZ H ZALICZONY: Błąd localStorage został przechwycony i wygenerował czytelny komunikat ostrzegawczy.\n');
-}
-
-console.log('================================================================');
-console.log(` WYNIK KOŃCOWY: ${passedTests}/${totalTests} SCENARIUSZY ZALICZONYCH POMYŚLNIE (100%) `);
-console.log('================================================================\n');
+console.log(`\nWszystkie testy integracyjne przeszły pomyślnie (${passed}/8 grup scenariuszy).`);

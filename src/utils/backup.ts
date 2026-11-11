@@ -282,6 +282,67 @@ export const enforceClinicalIntegrityOnImport = (
           finalStatus = 'requires_source_clarification';
         }
       }
+
+      // Weryfikuj spójność statusu niezgodności ze stanem pól Etapu 1 i potwierdzenia Etapu 2
+      if (sanitizedDiscrepancies) {
+        sanitizedDiscrepancies = sanitizedDiscrepancies.map(d => {
+          const res = d.resolution;
+          const hasAllStage1 = Boolean(
+            res?.documentId?.trim() &&
+            res?.issuer?.trim() &&
+            res?.documentDate?.trim() &&
+            res?.receivedDate?.trim() &&
+            res?.documentUrlOrLocation?.trim() &&
+            res?.verifierJustification?.trim()
+          );
+          const check = res?.documentCheck;
+          const hasStage2 = Boolean(
+            check?.isConfirmed === true &&
+            check?.sourceDocumentOpenedOrIndicated === true &&
+            (check?.sourceDocumentLocation?.trim() || res?.documentUrlOrLocation?.trim()) &&
+            check?.checkDate?.trim() &&
+            check?.checkerNameAndRole?.trim() &&
+            check?.checkerJustification?.trim()
+          );
+
+          if (d.status === 'resolved_with_official_document' && (!hasAllStage1 || !hasStage2)) {
+            return {
+              ...d,
+              status: hasAllStage1 ? 'clarification_submitted' : 'requires_clarification',
+              resolution: res
+                ? {
+                    ...res,
+                    documentCheck: undefined,
+                    isResolved: false
+                  }
+                : undefined
+            };
+          }
+
+          if (d.status === 'clarification_submitted' && !hasAllStage1) {
+            return {
+              ...d,
+              status: 'requires_clarification',
+              resolution: res
+                ? {
+                    ...res,
+                    documentCheck: undefined,
+                    isResolved: false
+                  }
+                : undefined
+            };
+          }
+
+          return d;
+        });
+
+        const hasAnyUnresolved = sanitizedDiscrepancies.some(
+          d => d.status !== 'resolved_with_official_document'
+        );
+        if (hasAnyUnresolved) {
+          finalStatus = 'requires_source_clarification';
+        }
+      }
     }
 
     return {
@@ -315,7 +376,11 @@ export const getStoredVaccines = (): VaccineProduct[] => {
   try {
     const raw = localStorage.getItem(VAX_STORAGE_KEY);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed as VaccineProduct[];
+      }
+      console.warn('Nieprawidłowa struktura bazy preparatów w localStorage w module kopii.');
     }
   } catch (e) {
     console.warn('Błąd odczytu z localStorage w module kopii:', e);

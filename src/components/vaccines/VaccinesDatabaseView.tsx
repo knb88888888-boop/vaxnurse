@@ -6,7 +6,9 @@ import {
   X,
   ExternalLink,
   AlertCircle,
-  FileCheck
+  AlertTriangle,
+  FileCheck,
+  RotateCcw
 } from 'lucide-react';
 import type { ModuleDefinition } from '../../types/navigation';
 import type {
@@ -21,6 +23,12 @@ import {
   VACCINE_TYPE_LABELS,
   TARGET_GROUP_LABELS
 } from '../../data/vaccinesCatalog';
+import {
+  VAX_ACTIVE_ID_KEY,
+  loadVaccinesFromStorage,
+  saveVaccinesToStorage,
+  resetCatalogPreservingHistory
+} from '../../utils/vaccineVerification';
 import { VaccineCard } from './VaccineCard';
 import { VaccineDetailView } from './VaccineDetailView';
 
@@ -30,39 +38,38 @@ interface VaccinesDatabaseViewProps {
   initialSelectedVaccineId?: string | null;
 }
 
-const VAX_STORAGE_KEY = 'vaxnurse_vaccines_catalog_state_v1';
-const VAX_ACTIVE_ID_KEY = 'vaxnurse_active_vaccine_id_v1';
+const getBrowserStorage = (): Storage | null => {
+  try {
+    return typeof window !== 'undefined' ? window.localStorage : null;
+  } catch {
+    return null;
+  }
+};
 
 export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
   module,
   onBackToDashboard,
   initialSelectedVaccineId
 }) => {
-  const [vaccines, setVaccines] = useState<VaccineProduct[]>(() => {
-    try {
-      const stored = localStorage.getItem(VAX_STORAGE_KEY);
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch (e) {
-      console.warn('Błąd odczytu bazy szczepionek z localStorage:', e);
-    }
-    return VACCINES_CATALOG;
-  });
+  const initialLoad = useMemo(
+    () => loadVaccinesFromStorage(getBrowserStorage(), VACCINES_CATALOG),
+    []
+  );
 
+  const [vaccines, setVaccines] = useState<VaccineProduct[]>(initialLoad.vaccines);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<VaccineType | 'all'>('all');
   const [selectedTargetGroup, setSelectedTargetGroup] = useState<VaccineTargetGroup | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<VaccineVerificationStatus | 'all'>('all');
-  const [storageError, setStorageError] = useState<string | null>(null);
+  const [storageError, setStorageError] = useState<string | null>(initialLoad.error);
+  const [showResetCatalogConfirm, setShowResetCatalogConfirm] = useState(false);
 
   const [activeVaccineDetail, setActiveVaccineDetail] = useState<VaccineProduct | null>(() => {
     try {
-      const activeId = initialSelectedVaccineId || localStorage.getItem(VAX_ACTIVE_ID_KEY);
+      const storage = getBrowserStorage();
+      const activeId = initialSelectedVaccineId || storage?.getItem(VAX_ACTIVE_ID_KEY) || null;
       if (activeId) {
-        const stored = localStorage.getItem(VAX_STORAGE_KEY);
-        const list = stored ? JSON.parse(stored) : VACCINES_CATALOG;
-        return list.find((v: VaccineProduct) => v.id === activeId) || null;
+        return initialLoad.vaccines.find((v: VaccineProduct) => v.id === activeId) || null;
       }
     } catch (e) {
       console.warn('Błąd odczytu aktywnego preparatu z localStorage:', e);
@@ -71,43 +78,56 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
   });
 
   const handleUpdateVaccine = (updatedVaccine: VaccineProduct) => {
-    setVaccines(prev => {
-      const next = prev.map(v => v.id === updatedVaccine.id ? updatedVaccine : v);
-      try {
-        localStorage.setItem(VAX_STORAGE_KEY, JSON.stringify(next));
-        setStorageError(null);
-      } catch (e) {
-        console.warn('Błąd zapisu bazy do localStorage:', e);
-        setStorageError('Błąd zapisu w pamięci podręcznej przeglądarki (localStorage): Nie udało się utrwalić wprowadzonych zmian. Sprawdź ilość wolnego miejsca lub uprawnienia pamięci w przeglądarce.');
-      }
-      return next;
-    });
+    const next = vaccines.map(v => (v.id === updatedVaccine.id ? updatedVaccine : v));
+    const saveResult = saveVaccinesToStorage(getBrowserStorage(), next);
+
+    if (!saveResult.success) {
+      setStorageError(saveResult.error);
+    } else {
+      setStorageError(null);
+    }
+
+    setVaccines(next);
     setActiveVaccineDetail(updatedVaccine);
   };
 
   const handleOpenDetails = (vac: VaccineProduct) => {
     setActiveVaccineDetail(vac);
     try {
-      localStorage.setItem(VAX_ACTIVE_ID_KEY, vac.id);
-    } catch {}
+      getBrowserStorage()?.setItem(VAX_ACTIVE_ID_KEY, vac.id);
+    } catch (e) {
+      console.warn('Błąd zapisu aktywnego ID preparatu w localStorage:', e);
+    }
   };
 
   const handleBackToList = () => {
     setActiveVaccineDetail(null);
     try {
-      localStorage.removeItem(VAX_ACTIVE_ID_KEY);
-    } catch {}
+      getBrowserStorage()?.removeItem(VAX_ACTIVE_ID_KEY);
+    } catch (e) {
+      console.warn('Błąd usunięcia aktywnego ID preparatu z localStorage:', e);
+    }
   };
 
-  const handleResetCatalogToDefault = () => {
-    if (window.confirm('Czy na pewno chcesz przywrócić domyślny stan bazy preparatów z oficjalnego katalogu? Wszystkie zarejestrowane w przeglądarce wyjaśnienia i zmiany statusów zostaną zresetowane.')) {
-      try {
-        localStorage.removeItem(VAX_STORAGE_KEY);
-        localStorage.removeItem(VAX_ACTIVE_ID_KEY);
-      } catch {}
-      setVaccines(VACCINES_CATALOG);
-      setActiveVaccineDetail(null);
+  const handleConfirmResetCatalogToDefault = () => {
+    const resetVaccines = resetCatalogPreservingHistory(vaccines, VACCINES_CATALOG);
+    const saveResult = saveVaccinesToStorage(getBrowserStorage(), resetVaccines);
+
+    if (!saveResult.success) {
+      setStorageError(saveResult.error);
+    } else {
+      setStorageError(null);
     }
+
+    try {
+      getBrowserStorage()?.removeItem(VAX_ACTIVE_ID_KEY);
+    } catch (e) {
+      console.warn('Błąd czyszczenia aktywnego ID preparatu w localStorage:', e);
+    }
+
+    setVaccines(resetVaccines);
+    setActiveVaccineDetail(null);
+    setShowResetCatalogConfirm(false);
   };
 
   // Filter vaccines
@@ -176,6 +196,25 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
 
   return (
     <div className="vaccines-database-container">
+      {/* Storage Read/Write Error Alert */}
+      {storageError && (
+        <div className="v-storage-error-alert" role="alert">
+          <AlertTriangle size={20} className="v-storage-error-icon" />
+          <div className="v-storage-error-content">
+            <strong>Błąd pamięci podręcznej przeglądarki (localStorage):</strong>
+            <p>{storageError}</p>
+          </div>
+          <button
+            type="button"
+            className="btn-dismiss-storage-error"
+            onClick={() => setStorageError(null)}
+            title="Zamknij komunikat o błędzie pamięci"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Top navigation */}
       <div className="module-view-nav">
         <button
@@ -360,12 +399,44 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
         <button
           type="button"
           className="btn-reset-catalog-demo"
-          onClick={handleResetCatalogToDefault}
-          title="Przywróć stan początkowy katalogu (czyści zapisane wyjaśnienia w pamięci przeglądarki)"
+          onClick={() => setShowResetCatalogConfirm(true)}
+          title="Przywróć stan początkowy katalogu (wymaga potwierdzenia; zachowuje lokalną historię zmian)"
         >
           Przywróć stan początkowy danych
         </button>
       </div>
+
+      {/* Conscious confirmation for resetting catalog to initial state */}
+      {showResetCatalogConfirm && (
+        <div className="v-inline-confirm-box" role="alertdialog" aria-label="Potwierdzenie przywrócenia stanu początkowego katalogu">
+          <div className="v-inline-confirm-header">
+            <AlertTriangle size={18} className="v-inline-confirm-icon" />
+            <div>
+              <strong>Czy na pewno przywrócić stan początkowy danych katalogu?</strong>
+              <p>
+                Statusy preparatów i formularze wyjaśnień wrócą do stanu wyjściowego (dla Infanrix hexa: <em>Wymaga wyjaśnienia źródłowego</em>), natomiast <strong>lokalna historia zmian zostanie zachowana</strong> i nie ulegnie usunięciu.
+              </p>
+            </div>
+          </div>
+          <div className="v-inline-confirm-actions">
+            <button
+              type="button"
+              className="btn-confirm-reset-action"
+              onClick={handleConfirmResetCatalogToDefault}
+            >
+              <RotateCcw size={14} />
+              <span>Potwierdź przywrócenie stanu początkowego</span>
+            </button>
+            <button
+              type="button"
+              className="btn-cancel-reset-action"
+              onClick={() => setShowResetCatalogConfirm(false)}
+            >
+              Anuluj
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Vaccines Grid */}
       {filteredVaccines.length > 0 ? (

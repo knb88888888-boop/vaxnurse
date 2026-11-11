@@ -27,19 +27,25 @@ import {
 } from 'lucide-react';
 import type {
   VaccineProduct,
-  ChPLSection,
-  VaccineVerificationStatus,
-  DiscrepancyResolution,
-  DocumentVerificationCheck,
-  SourceDiscrepancy,
-  StatusHistoryEntry
+  ChPLSection
 } from '../../types/vaccines';
 import {
+  VACCINES_CATALOG,
   VERIFICATION_STATUS_META,
   DISCREPANCY_STATUS_META,
   VACCINE_TYPE_LABELS,
   TARGET_GROUP_LABELS
 } from '../../data/vaccinesCatalog';
+import {
+  applyClarificationRegistration,
+  applyDocumentCheckConfirmation,
+  applyFinalChplApproval,
+  revokeFinalChplApproval,
+  revokeDocumentCheckToSubmitted,
+  resetVaccineClarificationToInitial,
+  getUnresolvedDiscrepancies,
+  isProductApprovalBlocked
+} from '../../utils/vaccineVerification';
 
 interface VaccineDetailViewProps {
   vaccine: VaccineProduct;
@@ -58,16 +64,24 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
 }) => {
   const [currentVaccine, setCurrentVaccine] = useState<VaccineProduct>(initialVaccine);
   const statusMeta = VERIFICATION_STATUS_META[currentVaccine.verificationStatus];
+  const baselineVaccine = VACCINES_CATALOG.find(v => v.id === currentVaccine.id);
 
   // Niezgodności w oficjalnej dokumentacji ChPL
-  const primaryDiscrepancy = currentVaccine.sourceDiscrepancies?.[0];
-  const isDiscrepancyResolved = primaryDiscrepancy?.status === 'resolved_with_official_document';
-  const isDiscrepancySubmitted = primaryDiscrepancy?.status === 'clarification_submitted';
-  const isDiscrepancyRequiresClarification = !primaryDiscrepancy || primaryDiscrepancy.status === 'requires_clarification';
+  const discrepancies = currentVaccine.sourceDiscrepancies || [];
+  const hasDiscrepancies = discrepancies.length > 0;
+  const primaryDiscrepancy = discrepancies[0];
+  const unresolvedDiscrepancies = getUnresolvedDiscrepancies(currentVaccine);
+  const unresolvedCount = unresolvedDiscrepancies.length;
+  const hasUnresolvedDiscrepancies = unresolvedCount > 0;
 
-  // Blokada zatwierdzenia obowiązuje dopóki niezgodność nie ma statusu resolved_with_official_document
-  const hasUnresolvedDiscrepancies = !isDiscrepancyResolved;
-  const unresolvedCount = hasUnresolvedDiscrepancies ? 1 : 0;
+  const isDiscrepancyResolved =
+    hasDiscrepancies && primaryDiscrepancy?.status === 'resolved_with_official_document';
+  const isDiscrepancySubmitted =
+    hasDiscrepancies && primaryDiscrepancy?.status === 'clarification_submitted';
+  const isDiscrepancyRequiresClarification =
+    hasDiscrepancies && primaryDiscrepancy?.status === 'requires_clarification';
+
+  const approvalBlocked = isProductApprovalBlocked(currentVaccine);
 
   // 6 wymaganych pól formularza rejestracji formalnego wyjaśnienia (Etap 1)
   const [documentId, setDocumentId] = useState(
@@ -86,12 +100,13 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
     primaryDiscrepancy?.resolution?.documentUrlOrLocation || ''
   );
   const [verifierJustification, setVerifierJustification] = useState(
-    primaryDiscrepancy?.resolution?.verifierJustification || currentVaccine.userVerificationNotes || ''
+    primaryDiscrepancy?.resolution?.verifierJustification || ''
   );
 
-  // Stan błędów walidacji formularza Etapu 1
+  // Stan błędów walidacji formularza Etapu 1 oraz potwierdzenia cofnięcia do stanu początkowego
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [showValidationBanner, setShowValidationBanner] = useState(false);
+  const [showResetClarifConfirm, setShowResetClarifConfirm] = useState(false);
 
   const clearFieldError = (field: string) => {
     setFormErrors(prev => {
@@ -105,6 +120,11 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
   const [docOpenedConfirmed, setDocOpenedConfirmed] = useState<boolean>(
     primaryDiscrepancy?.resolution?.documentCheck?.sourceDocumentOpenedOrIndicated || false
   );
+  const [docSourceLocation, setDocSourceLocation] = useState<string>(
+    primaryDiscrepancy?.resolution?.documentCheck?.sourceDocumentLocation ||
+      primaryDiscrepancy?.resolution?.documentUrlOrLocation ||
+      ''
+  );
   const [docCheckDate, setDocCheckDate] = useState<string>(
     primaryDiscrepancy?.resolution?.documentCheck?.checkDate || ''
   );
@@ -117,6 +137,7 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
 
   const [docCheckErrors, setDocCheckErrors] = useState<Record<string, string>>({});
   const [showDocCheckValidationBanner, setShowDocCheckValidationBanner] = useState(false);
+  const [showRevokeDocCheckConfirm, setShowRevokeDocCheckConfirm] = useState(false);
 
   const clearDocCheckError = (field: string) => {
     setDocCheckErrors(prev => {
@@ -126,216 +147,86 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
     });
   };
 
+  // Etap 3 / Ostateczne zatwierdzenie całej ChPL (punkty 1–10)
+  const [fullChplVerifiedConfirmed, setFullChplVerifiedConfirmed] = useState<boolean>(false);
+  const [finalVerifierName, setFinalVerifierName] = useState<string>('');
+  const [finalVerificationNotes, setFinalVerificationNotes] = useState<string>('');
+  const [finalApprovalErrors, setFinalApprovalErrors] = useState<Record<string, string>>({});
+  const [showFinalApprovalValidationBanner, setShowFinalApprovalValidationBanner] = useState(false);
+  const [approvalBlockedNotice, setApprovalBlockedNotice] = useState<string | null>(null);
+
+  const clearFinalApprovalError = (field: string) => {
+    setFinalApprovalErrors(prev => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   // ETAP 1: Rejestracja formalnego wyjaśnienia rozbieżności (ścisła walidacja 6 pól)
   const handleRegisterClarification = () => {
-    const errors: Record<string, string> = {};
+    const result = applyClarificationRegistration(currentVaccine, {
+      documentId,
+      issuer,
+      documentDate,
+      receivedDate,
+      documentUrlOrLocation,
+      verifierJustification
+    });
 
-    if (!documentId.trim()) {
-      errors.documentId = 'Wymagane: Podaj identyfikator dokumentu (np. sygnatura URPL/DPR/2026/012 lub GSK-PL-VR-323859-CORR-01).';
-    }
-    if (!issuer.trim()) {
-      errors.issuer = 'Wymagane: Podaj instytucję lub podmiot wystawiający (np. URPLWMiPB lub GSK Services Sp. z o.o.).';
-    }
-    if (!documentDate.trim()) {
-      errors.documentDate = 'Wymagane: Podaj datę wydania dokumentu urzędowego.';
-    }
-    if (!receivedDate.trim()) {
-      errors.receivedDate = 'Wymagane: Podaj datę otrzymania dokumentu przez punkt szczepień.';
-    }
-    if (!documentUrlOrLocation.trim()) {
-      errors.documentUrlOrLocation = 'Wymagane: Podaj odnośnik URL do rejestru lub lokalizację w archiwum punktu szczepień.';
-    }
-    if (!verifierJustification.trim()) {
-      errors.verifierJustification = 'Wymagane: Podaj uzasadnienie osoby weryfikującej, ocenę wpływu klinicznego i podpis.';
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
+    if (!result.success) {
+      setFormErrors(result.errors);
       setShowValidationBanner(true);
       return;
     }
 
     setFormErrors({});
     setShowValidationBanner(false);
-
-    const now = new Date();
-    const formattedTimestamp = `${now.toLocaleDateString('pl-PL')} r., ${now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}`;
-
-    const resolutionData: DiscrepancyResolution = {
-      documentId: documentId.trim(),
-      issuer: issuer.trim(),
-      documentDate: documentDate.trim(),
-      receivedDate: receivedDate.trim(),
-      documentUrlOrLocation: documentUrlOrLocation.trim(),
-      verifierJustification: verifierJustification.trim(),
-      registeredAt: formattedTimestamp,
-      registeredBy: 'Pielęgniarka koordynująca punktu szczepień',
-      isResolved: false, // W Etapie 1 jeszcze nierozwiązana (wymaga Etapu 2)
-      clarificationDocument: `${documentId.trim()} (${issuer.trim()})`,
-      source: issuer.trim(),
-      verifierNotes: verifierJustification.trim(),
-      documentCheck: undefined
-    };
-
-    const updatedDiscrepancies: SourceDiscrepancy[] = (currentVaccine.sourceDiscrepancies || []).map(d => ({
-      ...d,
-      status: 'clarification_submitted',
-      resolution: resolutionData
-    }));
-
-    const historyEntry: StatusHistoryEntry = {
-      id: `hist-${Date.now()}`,
-      timestamp: formattedTimestamp,
-      previousStatus: currentVaccine.verificationStatus,
-      newStatus: 'requires_source_clarification',
-      reason: `Zarejestrowano dane urzędowego wyjaśnienia dla rozbieżności ${primaryDiscrepancy?.id || 'ChPL'} (dok. ${documentId.trim()}, wystawca: ${issuer.trim()}). Status niezgodności: Zgłoszono wyjaśnienie. Preparat pozostaje w stanie «Wymaga wyjaśnienia źródłowego» do czasu ręcznej kontroli dokumentu (Etap 2). Zatwierdzenie zablokowane.`,
-      author: 'Pielęgniarka koordynująca punktu szczepień'
-    };
-
-    // ETAP 1: status preparatu POZOSTAJE requires_source_clarification; zatwierdzenie NIE jest odblokowane
-    const updated: VaccineProduct = {
-      ...currentVaccine,
-      verificationStatus: 'requires_source_clarification',
-      clarificationDocument: documentId.trim(),
-      clarificationDate: receivedDate.trim(),
-      clarificationSource: issuer.trim(),
-      userVerificationDate: null,
-      userVerificationNotes: null,
-      sourceDiscrepancies: updatedDiscrepancies,
-      statusHistory: [historyEntry, ...(currentVaccine.statusHistory || [])]
-    };
-
-    setCurrentVaccine(updated);
+    setDocSourceLocation(documentUrlOrLocation.trim());
+    setCurrentVaccine(result.vaccine);
     if (onUpdateVaccine) {
-      onUpdateVaccine(updated);
+      onUpdateVaccine(result.vaccine);
     }
   };
 
   // ETAP 2: Ręczna kontrola dokumentu źródłowego przez uprawniony personel
   const handleConfirmDocumentCheck = () => {
-    const errors: Record<string, string> = {};
+    const effectiveLocation =
+      docSourceLocation.trim() ||
+      documentUrlOrLocation.trim() ||
+      primaryDiscrepancy?.resolution?.documentUrlOrLocation ||
+      '';
 
-    if (!docOpenedConfirmed) {
-      errors.docOpenedConfirmed = 'Wymagane: Potwierdź otwarcie lub wskazanie dokumentu źródłowego (zaznacz pole wyboru).';
-    }
-    if (!docCheckDate.trim()) {
-      errors.docCheckDate = 'Wymagane: Podaj datę dokonania sprawdzenia dokumentu.';
-    }
-    if (!checkerNameAndRole.trim()) {
-      errors.checkerNameAndRole = 'Wymagane: Wskaż osobę dokonującą sprawdzenia (imię, nazwisko, tytuł zawodowy).';
-    }
-    if (!checkerJustification.trim()) {
-      errors.checkerJustification = 'Wymagane: Podaj uzasadnienie, dlaczego dokument rozwiązuje daną niezgodność.';
-    }
+    const result = applyDocumentCheckConfirmation(currentVaccine, {
+      docOpenedConfirmed,
+      sourceDocumentLocation: effectiveLocation,
+      docCheckDate,
+      checkerNameAndRole,
+      checkerJustification
+    });
 
-    if (Object.keys(errors).length > 0) {
-      setDocCheckErrors(errors);
+    if (!result.success) {
+      setDocCheckErrors(result.errors);
       setShowDocCheckValidationBanner(true);
       return;
     }
 
     setDocCheckErrors({});
     setShowDocCheckValidationBanner(false);
-
-    const now = new Date();
-    const formattedTimestamp = `${now.toLocaleDateString('pl-PL')} r., ${now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}`;
-
-    const documentCheck: DocumentVerificationCheck = {
-      sourceDocumentOpenedOrIndicated: true,
-      sourceDocumentLocation: documentUrlOrLocation.trim(),
-      checkDate: docCheckDate.trim(),
-      checkerNameAndRole: checkerNameAndRole.trim(),
-      checkerJustification: checkerJustification.trim(),
-      isConfirmed: true,
-      confirmedAt: formattedTimestamp
-    };
-
-    const resolutionData: DiscrepancyResolution = {
-      ...(primaryDiscrepancy?.resolution || {
-        documentId: documentId.trim(),
-        issuer: issuer.trim(),
-        documentDate: documentDate.trim(),
-        receivedDate: receivedDate.trim(),
-        documentUrlOrLocation: documentUrlOrLocation.trim(),
-        verifierJustification: verifierJustification.trim()
-      }),
-      documentCheck,
-      isResolved: true
-    };
-
-    const updatedDiscrepancies: SourceDiscrepancy[] = (currentVaccine.sourceDiscrepancies || []).map(d => ({
-      ...d,
-      status: 'resolved_with_official_document',
-      resolution: resolutionData
-    }));
-
-    const historyEntry: StatusHistoryEntry = {
-      id: `hist-${Date.now()}`,
-      timestamp: formattedTimestamp,
-      previousStatus: currentVaccine.verificationStatus,
-      newStatus: 'ready_for_manual_verification',
-      reason: `Ręcznie potwierdzono sprawdzenie dokumentu źródłowego przez: ${checkerNameAndRole.trim()}. Niezgodność ${primaryDiscrepancy?.id || 'ChPL'} oznaczono jako «Wyjaśniona dokumentem urzędowym». Status preparatu zmieniono na: Gotowy do ręcznej weryfikacji. Karta oczekuje na ostateczną autoryzację ChPL.`,
-      author: checkerNameAndRole.trim()
-    };
-
-    // ETAP 3: Po formalnej rejestracji I ręcznym potwierdzeniu sprawdzenia dokumentu:
-    // status preparatu: ready_for_manual_verification (NIE verified_chpl!)
-    const updated: VaccineProduct = {
-      ...currentVaccine,
-      verificationStatus: 'ready_for_manual_verification',
-      userVerificationDate: null,
-      userVerificationNotes: null,
-      sourceDiscrepancies: updatedDiscrepancies,
-      statusHistory: [historyEntry, ...(currentVaccine.statusHistory || [])]
-    };
-
-    setCurrentVaccine(updated);
+    setDocSourceLocation(effectiveLocation);
+    setCurrentVaccine(result.vaccine);
     if (onUpdateVaccine) {
-      onUpdateVaccine(updated);
+      onUpdateVaccine(result.vaccine);
     }
   };
 
   // Cofnięcie sprawdzenia dokumentu (powrót do Etapu 1: status clarification_submitted, status preparatu: requires_source_clarification)
-  const handleRevokeDocumentCheck = () => {
-    const now = new Date();
-    const formattedTimestamp = `${now.toLocaleDateString('pl-PL')} r., ${now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}`;
-
-    const resolutionData: DiscrepancyResolution = {
-      ...(primaryDiscrepancy?.resolution || {
-        documentId: documentId.trim(),
-        issuer: issuer.trim(),
-        documentDate: documentDate.trim(),
-        receivedDate: receivedDate.trim(),
-        documentUrlOrLocation: documentUrlOrLocation.trim(),
-        verifierJustification: verifierJustification.trim()
-      }),
-      documentCheck: undefined,
-      isResolved: false
-    };
-
-    const updatedDiscrepancies: SourceDiscrepancy[] = (currentVaccine.sourceDiscrepancies || []).map(d => ({
-      ...d,
-      status: 'clarification_submitted',
-      resolution: resolutionData
-    }));
-
-    const historyEntry: StatusHistoryEntry = {
-      id: `hist-${Date.now()}`,
-      timestamp: formattedTimestamp,
-      previousStatus: currentVaccine.verificationStatus,
-      newStatus: 'requires_source_clarification',
-      reason: 'Cofnięto ręczne sprawdzenie dokumentu. Status niezgodności powrócił do «Zgłoszono wyjaśnienie», a preparatu do «Wymaga wyjaśnienia źródłowego» (zatwierdzenie ponownie zablokowane).',
-      author: checkerNameAndRole.trim() || 'Personel punktu szczepień'
-    };
-
-    const updated: VaccineProduct = {
-      ...currentVaccine,
-      verificationStatus: 'requires_source_clarification',
-      userVerificationDate: null,
-      userVerificationNotes: null,
-      sourceDiscrepancies: updatedDiscrepancies,
-      statusHistory: [historyEntry, ...(currentVaccine.statusHistory || [])]
-    };
+  const handleConfirmRevokeDocumentCheck = () => {
+    const updated = revokeDocumentCheckToSubmitted(
+      currentVaccine,
+      baselineVaccine,
+      checkerNameAndRole
+    );
 
     setDocOpenedConfirmed(false);
     setDocCheckDate('');
@@ -343,52 +234,21 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
     setCheckerJustification('');
     setDocCheckErrors({});
     setShowDocCheckValidationBanner(false);
+    setShowRevokeDocCheckConfirm(false);
+    setFullChplVerifiedConfirmed(false);
+    setFinalVerifierName('');
+    setFinalVerificationNotes('');
+    setFinalApprovalErrors({});
+    setShowFinalApprovalValidationBanner(false);
     setCurrentVaccine(updated);
     if (onUpdateVaccine) {
       onUpdateVaccine(updated);
     }
   };
 
-  // Cofnięcie wyjaśnienia (powrót do stanu początkowego: Wymaga wyjaśnienia źródłowego, przywrócenie blokady)
-  const handleResetClarification = () => {
-    const now = new Date();
-    const formattedTimestamp = `${now.toLocaleDateString('pl-PL')} r., ${now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}`;
-
-    const updatedDiscrepancies: SourceDiscrepancy[] = (currentVaccine.sourceDiscrepancies || []).map(d => ({
-      ...d,
-      status: 'requires_clarification',
-      resolution: {
-        documentId: '',
-        issuer: '',
-        documentDate: '',
-        receivedDate: '',
-        documentUrlOrLocation: '',
-        verifierJustification: '',
-        isResolved: false,
-        documentCheck: undefined
-      }
-    }));
-
-    const historyEntry: StatusHistoryEntry = {
-      id: `hist-${Date.now()}`,
-      timestamp: formattedTimestamp,
-      previousStatus: currentVaccine.verificationStatus,
-      newStatus: 'requires_source_clarification',
-      reason: 'Cofnięto rejestrację wyjaśnienia urzędowego. Niezgodność powróciła do statusu «Wymaga wyjaśnienia», a zatwierdzenie zostało ponownie zablokowane.',
-      author: 'Pielęgniarka koordynująca punktu szczepień'
-    };
-
-    const updated: VaccineProduct = {
-      ...currentVaccine,
-      verificationStatus: 'requires_source_clarification',
-      clarificationDocument: null,
-      clarificationDate: null,
-      clarificationSource: null,
-      userVerificationDate: null,
-      userVerificationNotes: null,
-      sourceDiscrepancies: updatedDiscrepancies,
-      statusHistory: [historyEntry, ...(currentVaccine.statusHistory || [])]
-    };
+  // Cofnięcie wyjaśnienia (powrót do stanu początkowego po świadomym potwierdzeniu; bez usuwania historii zmian)
+  const handleConfirmResetClarification = () => {
+    const updated = resetVaccineClarificationToInitial(currentVaccine, baselineVaccine);
 
     setDocumentId('');
     setIssuer('');
@@ -398,12 +258,20 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
     setVerifierJustification('');
     setFormErrors({});
     setShowValidationBanner(false);
+    setShowResetClarifConfirm(false);
     setDocOpenedConfirmed(false);
+    setDocSourceLocation('');
     setDocCheckDate('');
     setCheckerNameAndRole('');
     setCheckerJustification('');
     setDocCheckErrors({});
     setShowDocCheckValidationBanner(false);
+    setShowRevokeDocCheckConfirm(false);
+    setFullChplVerifiedConfirmed(false);
+    setFinalVerifierName('');
+    setFinalVerificationNotes('');
+    setFinalApprovalErrors({});
+    setShowFinalApprovalValidationBanner(false);
     setCurrentVaccine(updated);
     if (onUpdateVaccine) {
       onUpdateVaccine(updated);
@@ -461,88 +329,45 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
     });
   };
 
-  // Helper to update verification status across the product and its sections
-  const handleUpdateStatus = (newStatus: VaccineVerificationStatus) => {
-    // Blokada – zatwierdzenie jest dozwolone wyłącznie w stanie ready_for_manual_verification
-    if (newStatus === 'verified_chpl' && currentVaccine.verificationStatus !== 'ready_for_manual_verification') {
-      alert(
-        'Blokada bezpieczeństwa: Zatwierdzenie karty i przejście do statusu «Zweryfikowany na podstawie dokumentacji» jest dozwolone wyłącznie w stanie «Gotowy do ręcznej weryfikacji» (po formalnej rejestracji i ręcznym potwierdzeniu sprawdzenia dokumentu urzędowego).'
-      );
-      return;
-    }
-
-    // Stan „Gotowy do ręcznej weryfikacji” może wystąpić tylko wtedy, gdy wszystkie niezgodności zostały formalnie rozwiązane
-    if (newStatus === 'ready_for_manual_verification' && hasUnresolvedDiscrepancies) {
-      alert('Blokada bezpieczeństwa: Stan «Gotowy do ręcznej weryfikacji» może nastąpić tylko po formalnym wyjaśnieniu i ręcznym potwierdzeniu sprawdzenia dokumentu.');
-      return;
-    }
-
-    const now = new Date();
-    const formattedDate = `${now.toLocaleDateString('pl-PL')} r., ${now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}`;
-    
-    const updateSectionStatus = (sec: ChPLSection): ChPLSection => ({
-      ...sec,
-      verificationStatus: newStatus,
-      verificationNote: newStatus === 'verified_chpl'
-        ? 'Zweryfikowano z oficjalną dokumentacją ChPL przez personel medyczny punktu szczepień.'
-        : sec.verificationNote
+  // ETAP 3 / OSTATECZNE ZATWIERDZENIE CAŁEJ DOKUMENTACJI ChPL (wymaga osobnej ręcznej weryfikacji)
+  const handleApproveFullChpl = () => {
+    const result = applyFinalChplApproval(currentVaccine, {
+      fullChplVerifiedConfirmed,
+      verifierName: finalVerifierName,
+      verificationNotes: finalVerificationNotes
     });
 
-    const historyEntry: StatusHistoryEntry = {
-      id: `hist-${Date.now()}`,
-      timestamp: formattedDate,
-      previousStatus: currentVaccine.verificationStatus,
-      newStatus: newStatus,
-      reason: newStatus === 'verified_chpl'
-        ? 'Świadome zatwierdzenie poprawności karty ChPL przez uprawniony personel medyczny po formalnym wyjaśnieniu rozbieżności i ręcznej kontroli dokumentu.'
-        : 'Ręczne cofnięcie zatwierdzenia karty ChPL przez personel medyczny (powrót do etapu: Gotowy do ręcznej weryfikacji).',
-      author: checkerNameAndRole || 'Pielęgniarka koordynująca punktu szczepień'
-    };
-
-    const updated: VaccineProduct = {
-      ...currentVaccine,
-      verificationStatus: newStatus,
-      userVerificationDate: newStatus === 'verified_chpl' ? formattedDate : null,
-      userVerificationNotes: newStatus === 'verified_chpl'
-        ? verifierJustification || `Zatwierdzono w punkcie szczepień na podstawie oficjalnej ChPL (wersja: ${currentVaccine.chplRevisionDate || 'b.d.'}) po formalnym wyjaśnieniu rozbieżności.`
-        : null,
-      statusHistory: [historyEntry, ...(currentVaccine.statusHistory || [])],
-      chpl: {
-        ...currentVaccine.chpl,
-        name: updateSectionStatus(currentVaccine.chpl.name),
-        composition: updateSectionStatus(currentVaccine.chpl.composition),
-        pharmaceuticalForm: updateSectionStatus(currentVaccine.chpl.pharmaceuticalForm),
-        clinicalParticulars: {
-          indications: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.indications),
-          dosageAndAdministration: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.dosageAndAdministration),
-          contraindications: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.contraindications),
-          warningsAndPrecautions: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.warningsAndPrecautions),
-          interactions: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.interactions),
-          fertilityPregnancyLactation: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.fertilityPregnancyLactation),
-          driveAndMachines: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.driveAndMachines),
-          undesirableEffects: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.undesirableEffects),
-          overdose: updateSectionStatus(currentVaccine.chpl.clinicalParticulars.overdose)
-        },
-        pharmacologicalProperties: {
-          pharmacodynamics: updateSectionStatus(currentVaccine.chpl.pharmacologicalProperties.pharmacodynamics),
-          pharmacokinetics: updateSectionStatus(currentVaccine.chpl.pharmacologicalProperties.pharmacokinetics),
-          preclinicalSafety: updateSectionStatus(currentVaccine.chpl.pharmacologicalProperties.preclinicalSafety)
-        },
-        pharmaceuticalParticulars: {
-          excipients: updateSectionStatus(currentVaccine.chpl.pharmaceuticalParticulars.excipients),
-          incompatibilities: updateSectionStatus(currentVaccine.chpl.pharmaceuticalParticulars.incompatibilities),
-          shelfLife: updateSectionStatus(currentVaccine.chpl.pharmaceuticalParticulars.shelfLife),
-          storageSpecialPrecautions: updateSectionStatus(currentVaccine.chpl.pharmaceuticalParticulars.storageSpecialPrecautions),
-          containerNatureAndContents: updateSectionStatus(currentVaccine.chpl.pharmaceuticalParticulars.containerNatureAndContents),
-          disposalAndHandling: updateSectionStatus(currentVaccine.chpl.pharmaceuticalParticulars.disposalAndHandling)
-        },
-        marketingAuthorisationHolder: updateSectionStatus(currentVaccine.chpl.marketingAuthorisationHolder),
-        marketingAuthorisationNumber: updateSectionStatus(currentVaccine.chpl.marketingAuthorisationNumber),
-        firstAuthorisationAndRenewal: updateSectionStatus(currentVaccine.chpl.firstAuthorisationAndRenewal),
-        revisionDate: updateSectionStatus(currentVaccine.chpl.revisionDate)
+    if (!result.success) {
+      if (result.blockedReason) {
+        setApprovalBlockedNotice(result.blockedReason);
+      } else {
+        setApprovalBlockedNotice(null);
       }
-    };
+      setFinalApprovalErrors(result.errors);
+      setShowFinalApprovalValidationBanner(Object.keys(result.errors).length > 0);
+      return;
+    }
 
+    setApprovalBlockedNotice(null);
+    setFinalApprovalErrors({});
+    setShowFinalApprovalValidationBanner(false);
+    setCurrentVaccine(result.vaccine);
+    if (onUpdateVaccine) {
+      onUpdateVaccine(result.vaccine);
+    }
+  };
+
+  const handleRevokeFinalApproval = () => {
+    const updated = revokeFinalChplApproval(
+      currentVaccine,
+      baselineVaccine,
+      finalVerifierName.trim() || checkerNameAndRole.trim() || undefined
+    );
+
+    setApprovalBlockedNotice(null);
+    setFinalApprovalErrors({});
+    setShowFinalApprovalValidationBanner(false);
+    setFullChplVerifiedConfirmed(false);
     setCurrentVaccine(updated);
     if (onUpdateVaccine) {
       onUpdateVaccine(updated);
@@ -918,7 +743,7 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
             <div className="v-disc-footer-warning">
               <ShieldAlert size={18} className="v-disc-shield-icon" />
               <span>
-                <strong>Blokada statusu weryfikacji:</strong> Dopóki rozbieżność w oficjalnym druku nie zostanie sprostowana przez wytwórcę lub URPL/EMA (status: <code>requires_clarification</code>), nadanie statusu <em>Zweryfikowany na podstawie ChPL</em> jest zablokowane ze względów bezpieczeństwa.
+                <strong>Blokada statusu weryfikacji:</strong> Dopóki rozbieżność w oficjalnym druku nie zostanie sprostowana i potwierdzona (aktualny status niezgodności: <code>{primaryDiscrepancy?.status || 'requires_clarification'}</code>), nadanie statusu <em>Zweryfikowany na podstawie ChPL</em> jest zablokowane ze względów bezpieczeństwa.
               </span>
             </div>
           </div>
@@ -1028,8 +853,12 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
             </div>
             <p className="v-top-anchor-desc">
               {hasUnresolvedDiscrepancies
-                ? 'Wykryto wewnętrzną rozbieżność w druku ChPL (zawartość fenyloalaniny). Zatwierdzenie dokumentacji pozostaje zablokowane do czasu urzędowego sprostowania.'
-                : 'Karta preparatu podlega formalnej kontroli i weryfikacji w punkcie szczepień.'}
+                ? 'Wykryto wewnętrzną rozbieżność w druku ChPL (zawartość fenyloalaniny). Zatwierdzenie dokumentacji pozostaje zablokowane do czasu rejestracji dokumentu i jego ręcznej kontroli.'
+                : hasDiscrepancies
+                  ? currentVaccine.verificationStatus === 'verified_chpl'
+                    ? 'Niezgodność została wyjaśniona i skontrolowana, a cała dokumentacja ChPL (punkty 1–10) zatwierdzona przez personel.'
+                    : 'Niezgodność została wyjaśniona i skontrolowana. Karta ma status «Gotowy do ręcznej weryfikacji» i oczekuje na osobną weryfikację całej ChPL.'
+                  : 'Karta preparatu nie zawiera zgłoszonych rozbieżności ChPL i podlega standardowej kontroli w punkcie szczepień.'}
             </p>
           </div>
         </div>
@@ -1382,6 +1211,36 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
 
         {/* Sekcja statusu i niezgodności */}
         <div className="v-final-verif-body">
+          {storageError && (
+            <div className="v-storage-error-alert" role="alert">
+              <AlertTriangle size={20} className="v-storage-error-icon" />
+              <div className="v-storage-error-content">
+                <strong>Błąd pamięci podręcznej przeglądarki (localStorage):</strong>
+                <p>{storageError}</p>
+              </div>
+              {onDismissStorageError && (
+                <button
+                  type="button"
+                  className="btn-dismiss-storage-error"
+                  onClick={onDismissStorageError}
+                  title="Zamknij komunikat o błędzie pamięci"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          )}
+
+          {approvalBlockedNotice && (
+            <div className="v-form-validation-banner" role="alert">
+              <AlertTriangle size={18} className="v-banner-error-icon" />
+              <div className="v-banner-error-text">
+                <strong>Odmowa zmiany statusu:</strong>
+                <span> {approvalBlockedNotice}</span>
+              </div>
+            </div>
+          )}
+
           {/* Status i liczba niezgodności */}
           <div className="v-final-summary-strip">
             <div className="v-summary-item">
@@ -1478,50 +1337,58 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
           {/* ============================================================== */}
           {/* BLOKADA ZATWIERDZENIA LUB STATUS GOTOWOŚCI DO ZATWIERDZENIA    */}
           {/* ============================================================== */}
-          {hasUnresolvedDiscrepancies ? (
-            <div className="v-final-approval-block-box">
-              <div className="v-block-box-header">
-                <ShieldAlert size={22} className="v-block-shield-icon" />
-                <div>
-                  <h3 className="v-block-title">Blokada zatwierdzenia karty preparatu</h3>
-                  <p className="v-block-subtitle">
-                    Przycisk zatwierdzania został wyszarzony i zablokowany z przyczyn bezpieczeństwa prawnego i medycznego.
-                  </p>
+          {approvalBlocked ? (
+            hasDiscrepancies ? (
+              <div className="v-final-approval-block-box">
+                <div className="v-block-box-header">
+                  <ShieldAlert size={22} className="v-block-shield-icon" />
+                  <div>
+                    <h3 className="v-block-title">Blokada zatwierdzenia karty preparatu</h3>
+                    <p className="v-block-subtitle">
+                      Przycisk zatwierdzania został wyszarzony i zablokowany z przyczyn bezpieczeństwa prawnego i medycznego.
+                    </p>
+                  </div>
+                </div>
+                <div className="v-block-reason-box">
+                  <strong>Powód blokady:</strong>{' '}
+                  {isDiscrepancySubmitted ? (
+                    <span>
+                      Zgłoszono dane wyjaśnienia urzędowego w Etapie 1 (sygnatura: <code>{documentId || primaryDiscrepancy?.resolution?.documentId || 'b.d.'}</code>), lecz dokument ten nie został jeszcze ręcznie skontrolowany przez personel punktu szczepień (status niezgodności: <code>clarification_submitted</code> / <em>Zgłoszono wyjaśnienie</em>).{' '}
+                      Wymagane jest formalne potwierdzenie sprawdzenia dokumentu w Etapie 2. Dopóki kontrola nie zostanie potwierdzona, status preparatu pozostaje <em>requires_source_clarification</em> (<em>Wymaga wyjaśnienia źródłowego</em>), a zatwierdzenie jest zablokowane.
+                    </span>
+                  ) : (
+                    <span>
+                      Wykryto nierozwiązaną niezgodność wewnętrzną tekstu ChPL (status niezgodności: <code>{primaryDiscrepancy?.status || 'requires_clarification'}</code>: zawartość fenyloalaniny w Pkt 2 vs Pkt 4.4 wynosi 0,0289 µg vs 0,0298 µg).{' '}
+                      Brak zarejestrowanego dokumentu urzędowego w Etapie 1. Dopóki oficjalna dokumentacja nie zostanie wyjaśniona dokumentem urzędowym i ręcznie sprawdzona, system uniemożliwia nadanie statusu <em>Zweryfikowany na podstawie dokumentacji (verified_chpl)</em>.
+                    </span>
+                  )}
+                </div>
+                <div className="v-block-actions-row">
+                  <button
+                    type="button"
+                    className="btn-approval-blocked"
+                    disabled
+                    aria-disabled="true"
+                    title="Zatwierdzenie zablokowane: preparat posiada nierozwiązane lub nieskontrolowane niezgodności ChPL"
+                  >
+                    <ShieldAlert size={17} />
+                    <span>Zatwierdzenie zablokowane</span>
+                  </button>
+                  <span className="v-block-hint">
+                    {isDiscrepancySubmitted
+                      ? 'Do zdjęcia blokady wymagane jest ręczne potwierdzenie sprawdzenia dokumentu w Etapie 2 poniżej.'
+                      : 'Do zdjęcia blokady wymagana jest rejestracja wyjaśnienia (Etap 1) oraz ręczna kontrola dokumentu (Etap 2).'}
+                  </span>
                 </div>
               </div>
-              <div className="v-block-reason-box">
-                <strong>Powód blokady:</strong>{' '}
-                {isDiscrepancySubmitted ? (
-                  <span>
-                    Zgłoszono dane wyjaśnienia urzędowego w Etapie 1 (sygnatura: <code>{documentId || primaryDiscrepancy?.resolution?.documentId || 'b.d.'}</code>), lecz dokument ten nie został jeszcze ręcznie skontrolowany przez personel punktu szczepień (status niezgodności: <code>Zgłoszono wyjaśnienie</code>). 
-                    Wymagane jest formalne potwierdzenie sprawdzenia dokumentu w Etapie 2. Dopóki kontrola nie zostanie potwierdzona, status preparatu pozostaje <em>Wymaga wyjaśnienia źródłowego</em>, a zatwierdzenie jest zablokowane.
-                  </span>
-                ) : (
-                  <span>
-                    Wykryto nierozwiązaną niezgodność wewnętrzną tekstu ChPL (status niezgodności: <code>Wymaga wyjaśnienia</code>: zawartość fenyloalaniny w Pkt 2 vs Pkt 4.4 wynosi 0,0289 µg vs 0,0298 µg). 
-                    Brak zarejestrowanego dokumentu urzędowego w Etapie 1. Dopóki oficjalna dokumentacja nie zostanie sprostowana przez wytwórcę (GSK) lub właściwy organ rejestracyjny (URPL / EMA), system uniemożliwia nadanie statusu <em>Zweryfikowany na podstawie dokumentacji (verified_chpl)</em>. 
-                    Niezgodności nie można usunąć samym kliknięciem ani pominąć bez kompletnego dokumentu urzędowego.
-                  </span>
-                )}
-              </div>
-              <div className="v-block-actions-row">
-                <button
-                  type="button"
-                  className="btn-approval-blocked"
-                  disabled
-                  aria-disabled="true"
-                  title="Zatwierdzenie zablokowane: preparat posiada nierozwiązane lub nieskontrolowane niezgodności ChPL"
-                >
-                  <ShieldAlert size={17} />
-                  <span>Zatwierdzenie zablokowane</span>
-                </button>
-                <span className="v-block-hint">
-                  {isDiscrepancySubmitted
-                    ? 'Do zdjęcia blokady wymagane jest ręczne potwierdzenie sprawdzenia dokumentu w Etapie 2 poniżej.'
-                    : 'Do zdjęcia blokady wymagana jest rejestracja wyjaśnienia (Etap 1) oraz ręczna kontrola dokumentu (Etap 2).'}
+            ) : (
+              <div className="v-clarif-unapproved-notice">
+                <Info size={18} className="v-unapproved-info-icon" />
+                <span>
+                  Preparat nie posiada wykrytych niezgodności wewnętrznych ChPL. Bieżący status karty w bazie to: <strong>{statusMeta.label}</strong> (<code>{currentVaccine.verificationStatus}</code>).
                 </span>
               </div>
-            </div>
+            )
           ) : (
             <div className="v-final-approval-ready-box">
               <div className="v-ready-box-header">
@@ -1530,46 +1397,134 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
                   <h3 className="v-ready-title">
                     {currentVaccine.verificationStatus === 'verified_chpl'
                       ? 'Dokumentacja preparatu została zatwierdzona'
-                      : 'Niezgodności zostały formalnie wyjaśnione i skontrolowane – Gotowy do ręcznej weryfikacji'}
+                      : 'Niezgodności wyjaśnione i skontrolowane – Gotowy do ręcznej weryfikacji (Etap 3)'}
                   </h3>
                   <p className="v-ready-subtitle">
                     {currentVaccine.verificationStatus === 'verified_chpl'
-                      ? 'Uprawniony personel medyczny potwierdził zgodność danych z oficjalnym drukiem ChPL.'
-                      : 'Wszystkie niezgodności w druku zostały zarejestrowane dokumentem urzędowym oraz ręcznie skontrolowane przez personel. Karta oczekuje na osobną, świadomą decyzję o autoryzacji ChPL.'}
+                      ? 'Uprawniony personel medyczny potwierdził wykonanie osobnej, ręcznej weryfikacji całej dokumentacji ChPL (punkty 1–10).'
+                      : 'Niezgodność ma status Wyjaśniona dokumentem urzędowym, a preparat przeszedł do etapu Gotowy do ręcznej weryfikacji. Ostateczne zatwierdzenie całej ChPL wymaga osobnej ręcznej weryfikacji i decyzji personelu poniżej.'}
                   </p>
                 </div>
               </div>
-              <div className="v-ready-actions-row">
-                {currentVaccine.verificationStatus === 'verified_chpl' ? (
+              {currentVaccine.verificationStatus === 'verified_chpl' ? (
+                <div className="v-ready-actions-row">
                   <div className="v-approval-done-info">
                     <span className="v-approval-done-badge">
                       <CheckCircle2 size={16} /> Zweryfikowany na podstawie dokumentacji ({currentVaccine.userVerificationDate})
                     </span>
+                    {currentVaccine.userVerificationNotes && (
+                      <p className="v-block-hint" style={{ margin: '4px 0 0 0' }}>
+                        <strong>Uwagi końcowej weryfikacji ChPL:</strong> {currentVaccine.userVerificationNotes}
+                      </p>
+                    )}
                     <button
                       type="button"
                       className="btn-revoke-approval"
-                      onClick={() => handleUpdateStatus('ready_for_manual_verification')}
+                      onClick={handleRevokeFinalApproval}
                       title="Cofnij zatwierdzenie (powrót do stanu: Gotowy do ręcznej weryfikacji)"
                     >
                       <RotateCcw size={15} />
                       <span>Cofnij zatwierdzenie (powrót do: Gotowy do ręcznej weryfikacji)</span>
                     </button>
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn-approve-verified"
-                    onClick={() => handleUpdateStatus('verified_chpl')}
-                    title="Potwierdź zgodność karty ChPL i nadaj status: Zweryfikowany na podstawie dokumentacji"
-                  >
-                    <CheckCircle2 size={17} />
-                    <span>Zatwierdź dokumentację (nadaj status: Zweryfikowany na podstawie dokumentacji)</span>
-                  </button>
-                )}
-              </div>
+                </div>
+              ) : (
+                <>
+                  {showFinalApprovalValidationBanner && (
+                    <div className="v-form-validation-banner" role="alert" style={{ marginBottom: 14 }}>
+                      <AlertTriangle size={18} className="v-banner-error-icon" />
+                      <div className="v-banner-error-text">
+                        <strong>Wymagana osobna ręczna weryfikacja całej dokumentacji ChPL:</strong>
+                        <span> Przed nadaniem statusu verified_chpl potwierdź ręczne sprawdzenie punktów 1–10 ChPL, wskaż osobę weryfikującą oraz wpisz wynik/zakres weryfikacji.</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="v-final-chpl-confirm-grid">
+                    <div className={`v-checkbox-group full-width ${finalApprovalErrors.fullChplVerifiedConfirmed ? 'has-error' : ''}`}>
+                      <label className="v-checkbox-label">
+                        <input
+                          id="final-chpl-verified-checkbox"
+                          type="checkbox"
+                          className="v-checkbox-input"
+                          checked={fullChplVerifiedConfirmed}
+                          onChange={(e) => {
+                            setFullChplVerifiedConfirmed(e.target.checked);
+                            if (finalApprovalErrors.fullChplVerifiedConfirmed) {
+                              clearFinalApprovalError('fullChplVerifiedConfirmed');
+                            }
+                          }}
+                        />
+                        <span>
+                          Potwierdzam przeprowadzenie osobnej, ręcznej weryfikacji całej dokumentacji ChPL (punkty 1–10) z oficjalnym drukiem produktu leczniczego (oświadczenie zapisywane lokalnie w przeglądarce bez uwierzytelniania tożsamości). <span className="req">*</span>
+                        </span>
+                      </label>
+                      {finalApprovalErrors.fullChplVerifiedConfirmed && (
+                        <span className="v-form-field-error" style={{ display: 'block', marginTop: 6, marginLeft: 28 }}>
+                          {finalApprovalErrors.fullChplVerifiedConfirmed}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className={`v-form-group ${finalApprovalErrors.verifierName ? 'has-error' : ''}`}>
+                      <label htmlFor="final-verifier-name" className="v-form-label">
+                        Osoba zatwierdzająca całą ChPL <span className="req">*</span>
+                      </label>
+                      <input
+                        id="final-verifier-name"
+                        type="text"
+                        className={`v-form-input ${finalApprovalErrors.verifierName ? 'input-error' : ''}`}
+                        placeholder="np. lek. Jan Kowalski / mgr piel. Anna Nowak"
+                        value={finalVerifierName}
+                        onChange={(e) => {
+                          setFinalVerifierName(e.target.value);
+                          if (finalApprovalErrors.verifierName) clearFinalApprovalError('verifierName');
+                        }}
+                      />
+                      {finalApprovalErrors.verifierName && (
+                        <span className="v-form-field-error">{finalApprovalErrors.verifierName}</span>
+                      )}
+                    </div>
+
+                    <div className={`v-form-group ${finalApprovalErrors.verificationNotes ? 'has-error' : ''}`}>
+                      <label htmlFor="final-verification-notes" className="v-form-label">
+                        Zakres i wynik ręcznej weryfikacji całej ChPL (pkt 1–10) <span className="req">*</span>
+                      </label>
+                      <input
+                        id="final-verification-notes"
+                        type="text"
+                        className={`v-form-input ${finalApprovalErrors.verificationNotes ? 'input-error' : ''}`}
+                        placeholder="np. Zweryfikowano punkty 1–10 z ChPL GSK z dnia 12.02.2026 oraz orzeczeniem URPL"
+                        value={finalVerificationNotes}
+                        onChange={(e) => {
+                          setFinalVerificationNotes(e.target.value);
+                          if (finalApprovalErrors.verificationNotes) clearFinalApprovalError('verificationNotes');
+                        }}
+                      />
+                      {finalApprovalErrors.verificationNotes && (
+                        <span className="v-form-field-error">{finalApprovalErrors.verificationNotes}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="v-ready-actions-row">
+                    <button
+                      type="button"
+                      className="btn-approve-verified"
+                      onClick={handleApproveFullChpl}
+                      title="Potwierdź zgodność całej karty ChPL i nadaj status: Zweryfikowany na podstawie dokumentacji"
+                    >
+                      <CheckCircle2 size={17} />
+                      <span>Zatwierdź dokumentację (nadaj status: Zweryfikowany na podstawie dokumentacji)</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
+          {hasDiscrepancies && (
+            <>
           {/* ============================================================== */}
           {/* ETAP 1 – REJESTRACJA WYJAŚNIENIA URZĘDOWEGO (6 PÓL)             */}
           {/* ============================================================== */}
@@ -1765,13 +1720,41 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
                   <button
                     type="button"
                     className="btn-revoke-clarification"
-                    onClick={handleResetClarification}
+                    onClick={() => setShowResetClarifConfirm(true)}
                     title="Cofnij rejestrację wyjaśnienia i przywróć status Wymaga wyjaśnienia źródłowego"
                   >
                     <RotateCcw size={14} />
                     <span>Cofnij wyjaśnienie urzędowe (powrót do stanu początkowego)</span>
                   </button>
                 </div>
+
+                {showResetClarifConfirm && (
+                  <div className="v-inline-confirm-box" role="alertdialog" aria-label="Potwierdzenie powrotu do stanu początkowego">
+                    <div className="v-inline-confirm-text">
+                      <strong>Potwierdź przywrócenie stanu początkowego preparatu:</strong>
+                      <p>
+                        Spowoduje to usunięcie danych zarejestrowanego dokumentu wyjaśniającego oraz ewentualnego sprawdzenia dokumentu i przywrócenie statusu <code>requires_clarification</code> / <code>requires_source_clarification</code>. Dotychczasowa lokalna historia zmian zostanie zachowana.
+                      </p>
+                    </div>
+                    <div className="v-inline-confirm-actions">
+                      <button
+                        type="button"
+                        className="btn-confirm-reset-action"
+                        onClick={handleConfirmResetClarification}
+                      >
+                        <RotateCcw size={14} />
+                        <span>Potwierdź powrót do stanu początkowego</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-cancel-reset-action"
+                        onClick={() => setShowResetClarifConfirm(false)}
+                      >
+                        Anuluj
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Zarejestrowane dane w Etapie 1 */}
                 <div className="v-registered-summary-grid">
@@ -1834,7 +1817,7 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
               <div>
                 <strong>Oświadczenie personelu punktu szczepień (zapis lokalny w przeglądarce):</strong>
                 <p style={{ margin: '4px 0 0 0', lineHeight: 1.45 }}>
-                  W obecnej wersji aplikacji VaxNurse jest to oświadczenie zapisywane lokalnie w przeglądarce, bez uwierzytelniania tożsamości użytkownika. Wykonanie tej czynności stanowi formalne poświadczenie przez personel medyczny faktu otwarcia i sprawdzenia dokumentu źródłowego oraz jego adekwatności dla rozstrzygnięcia rozbieżności.
+                  W obecnej wersji aplikacji jest to lokalnie zapisane oświadczenie. Nie ma uwierzytelniania tożsamości użytkownika. Wykonanie czynności „Potwierdź sprawdzenie dokumentu” stanowi oświadczenie personelu o otwarciu lub wskazaniu dokumentu źródłowego, dacie sprawdzenia, osobie sprawdzającej oraz uzasadnieniu rozwiązania tej niezgodności.
                 </p>
               </div>
             </div>
@@ -1851,16 +1834,17 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
                     <AlertTriangle size={18} className="v-banner-error-icon" />
                     <div className="v-banner-error-text">
                       <strong>Niekompletne potwierdzenie kontroli dokumentu:</strong>
-                      <span> Wypełnij wszystkie 4 wymagane elementy (oświadczenie o otwarciu/wskazaniu, datę, osobę sprawdzającą oraz uzasadnienie). Popraw zaznaczone pola poniżej.</span>
+                      <span> Wypełnij wszystkie wymagane elementy (otwarcie/wskazanie dokumentu źródłowego, datę sprawdzenia, osobę sprawdzającą oraz uzasadnienie). Popraw zaznaczone pola poniżej.</span>
                     </div>
                   </div>
                 )}
 
                 <div className="v-doc-check-form-grid">
-                  {/* Wymóg 1: Checkbox potwierdzenia otwarcia / wskazania */}
-                  <div className={`v-checkbox-group ${docCheckErrors.docOpenedConfirmed ? 'has-error' : ''}`}>
+                  {/* Wymóg 1: Otwarcie lub wskazanie dokumentu źródłowego */}
+                  <div className={`v-checkbox-group ${docCheckErrors.docOpenedConfirmed || docCheckErrors.sourceDocumentLocation ? 'has-error' : ''}`}>
                     <label className="v-checkbox-label">
                       <input
+                        id="doc-check-opened-checkbox"
                         type="checkbox"
                         className="v-checkbox-input"
                         checked={docOpenedConfirmed}
@@ -1870,12 +1854,48 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
                         }}
                       />
                       <span>
-                        Oświadczam, że otworzyłem/am i zapoznałem/am się z treścią dokumentu źródłowego lub wskazałem/am jego fizyczną lokalizację w archiwum punktu szczepień. <span className="req">*</span>
+                        Oświadczam, że otworzyłem/am i sprawdziłem/am lub wskazałem/am dokument źródłowy wymieniony poniżej. <span className="req">*</span>
                       </span>
                     </label>
-                    <span className="v-checkbox-hint">
-                      Wskazany dokument: <strong>{documentUrlOrLocation || primaryDiscrepancy?.resolution?.documentUrlOrLocation || 'b.d.'}</strong>
-                    </span>
+                    <div className="v-doc-source-indicator-row" style={{ marginTop: 10, marginLeft: 28 }}>
+                      <label htmlFor="doc-check-source-loc" className="v-form-label" style={{ marginBottom: 4, display: 'block' }}>
+                        Wskazany lub otwarty dokument źródłowy (adres URL lub lokalizacja w archiwum) <span className="req">*</span>
+                      </label>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <input
+                          id="doc-check-source-loc"
+                          type="text"
+                          className={`v-form-input ${docCheckErrors.sourceDocumentLocation ? 'input-error' : ''}`}
+                          style={{ flex: '1 1 280px' }}
+                          placeholder="np. https://... lub Archiwum Punktu Szczepień, segregator URPL/2026"
+                          value={docSourceLocation}
+                          onChange={(e) => {
+                            setDocSourceLocation(e.target.value);
+                            if (docCheckErrors.sourceDocumentLocation) clearDocCheckError('sourceDocumentLocation');
+                          }}
+                        />
+                        {/^https?:\/\//i.test((docSourceLocation || documentUrlOrLocation || primaryDiscrepancy?.resolution?.documentUrlOrLocation || '').trim()) && (
+                          <a
+                            href={(docSourceLocation || documentUrlOrLocation || primaryDiscrepancy?.resolution?.documentUrlOrLocation || '').trim()}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn-open-indicated-doc"
+                            onClick={() => {
+                              setDocOpenedConfirmed(true);
+                              clearDocCheckError('docOpenedConfirmed');
+                            }}
+                          >
+                            <ExternalLink size={14} />
+                            <span>Otwórz wskazany dokument</span>
+                          </a>
+                        )}
+                      </div>
+                      {docCheckErrors.sourceDocumentLocation && (
+                        <span className="v-form-field-error" style={{ display: 'block', marginTop: 6 }}>
+                          {docCheckErrors.sourceDocumentLocation}
+                        </span>
+                      )}
+                    </div>
                     {docCheckErrors.docOpenedConfirmed && (
                       <span className="v-form-field-error" style={{ display: 'block', marginTop: 6, marginLeft: 28 }}>
                         {docCheckErrors.docOpenedConfirmed}
@@ -1977,13 +1997,41 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
                   <button
                     type="button"
                     className="btn-revoke-doc-check"
-                    onClick={handleRevokeDocumentCheck}
+                    onClick={() => setShowRevokeDocCheckConfirm(true)}
                     title="Cofnij sprawdzenie dokumentu (powrót do Etapu 1: Zgłoszono wyjaśnienie)"
                   >
                     <RotateCcw size={14} />
                     <span>Cofnij sprawdzenie dokumentu (powrót do Etapu 1)</span>
                   </button>
                 </div>
+
+                {showRevokeDocCheckConfirm && (
+                  <div className="v-inline-confirm-box" role="alertdialog" aria-label="Potwierdzenie cofnięcia sprawdzenia dokumentu">
+                    <div className="v-inline-confirm-text">
+                      <strong>Potwierdź cofnięcie ręcznego sprawdzenia dokumentu:</strong>
+                      <p>
+                        Niezgodność powróci do statusu <code>clarification_submitted</code>, a preparat do statusu <code>requires_source_clarification</code> (zatwierdzenie karty zostanie ponownie zablokowane). Lokalna historia zmian zostanie zachowana.
+                      </p>
+                    </div>
+                    <div className="v-inline-confirm-actions">
+                      <button
+                        type="button"
+                        className="btn-confirm-reset-action"
+                        onClick={handleConfirmRevokeDocumentCheck}
+                      >
+                        <RotateCcw size={14} />
+                        <span>Potwierdź cofnięcie sprawdzenia</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-cancel-reset-action"
+                        onClick={() => setShowRevokeDocCheckConfirm(false)}
+                      >
+                        Anuluj
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="v-doc-check-confirmed-grid">
                   <div className="v-confirmed-item">
@@ -1995,8 +2043,8 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
                     <span className="v-confirmed-val">{docCheckDate || primaryDiscrepancy?.resolution?.documentCheck?.checkDate || 'b.d.'}</span>
                   </div>
                   <div className="v-confirmed-item">
-                    <span className="v-confirmed-label">Otwarcie / wskazanie dokumentu:</span>
-                    <span className="v-confirmed-val">Potwierdzono zapoznanie się z dokumentem źródłowym</span>
+                    <span className="v-confirmed-label">Otwarty / wskazany dokument źródłowy:</span>
+                    <span className="v-confirmed-val">{primaryDiscrepancy?.resolution?.documentCheck?.sourceDocumentLocation || docSourceLocation || documentUrlOrLocation || 'Potwierdzono zapoznanie się z dokumentem'}</span>
                   </div>
                   <div className="v-confirmed-item">
                     <span className="v-confirmed-label">Czas zarejestrowania w przeglądarce:</span>
@@ -2018,6 +2066,8 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
               </div>
             )}
           </div>
+          </>
+          )}
 
           {/* ============================================================== */}
           {/* ETAP 3 – HIERARCHIA 3 STANÓW STATUSU PREPARATU                 */}
@@ -2048,8 +2098,9 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
                     <span className="v-step-code">requires_source_clarification</span>
                   </div>
                   <p className="v-step-desc">
-                    W oficjalnym druku ChPL stwierdzono rozbieżność (zawartość fenyloalaniny 0,0289 µg w Pkt 2 vs 0,0298 µg w Pkt 4.4). 
-                    Zatwierdzenie karty preparatu jest zablokowane ze względów bezpieczeństwa prawnego i medycznego.
+                    {hasDiscrepancies
+                      ? 'W oficjalnym druku ChPL stwierdzono rozbieżność (zawartość fenyloalaniny 0,0289 µg w Pkt 2 vs 0,0298 µg w Pkt 4.4). Zatwierdzenie karty preparatu jest zablokowane ze względów bezpieczeństwa prawnego i medycznego.'
+                      : 'Status dla preparatów ze stwierdzoną rozbieżnością w druku ChPL wymagającą wyjaśnienia źródłowego przed odblokowaniem weryfikacji.'}
                   </p>
                 </div>
               </div>

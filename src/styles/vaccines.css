@@ -3444,3 +3444,112 @@
   color: var(--navy-900);
 }
 
+
+/* ============================================================================
+ * INLINE CONFIRMATION & STAGE 3 FINAL APPROVAL STYLES
+ * ============================================================================ */
+
+.v-inline-confirm-box {
+  margin-top: 12px;
+  padding: 14px 16px;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.v-inline-confirm-text strong {
+  display: block;
+  font-size: 0.9rem;
+  color: #9a3412;
+  margin-bottom: 4px;
+}
+
+.v-inline-confirm-text p {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: #7c2d12;
+}
+
+.v-inline-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn-confirm-reset-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #c2410c;
+  background: #c2410c;
+  color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-confirm-reset-action:hover {
+  background: #9a3412;
+}
+
+.btn-cancel-reset-action {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-cancel-reset-action:hover {
+  background: #f1f5f9;
+}
+
+.v-final-chpl-confirm-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+  margin-bottom: 14px;
+}
+
+.v-final-chpl-confirm-grid .full-width {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 768px) {
+  .v-final-chpl-confirm-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.btn-open-indicated-doc {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #0284c7;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.btn-open-indicated-doc:hover {
+  background: #bae6fd;
+}
