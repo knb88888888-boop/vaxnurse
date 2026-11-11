@@ -244,9 +244,9 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
               <span className="pso-badge-tag">Oficjalny publikator państwowy</span>
               <span className="pso-date-tag">Komunikat GIS: 28.10.2026 r. • Dz. Urz. Min. Zdrow.: 30.10.2026 r. poz. 77</span>
             </div>
-            <h3 className="pso-banner-title">
+            <h2 className="pso-banner-title">
               Program Szczepień Ochronnych na 2027 rok (Komunikat Głównego Inspektora Sanitarnego)
-            </h3>
+            </h2>
             <p className="pso-banner-desc">
               Każdy rekord zawiera numer części PSO, punkt/tabelę, dokładną stronę PDF oraz status weryfikacji. Wszystkie dane są bezpośrednio cytowane z oficjalnego załącznika aktu prawnego opublikowanego 30.10.2026 r. w Dzienniku Urzędowym Ministra Zdrowia poz. 77.
             </p>

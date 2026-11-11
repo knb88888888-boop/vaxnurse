@@ -159,10 +159,12 @@ export const VaccineCard: React.FC<VaccineCardProps> = ({ vaccine, onOpenDetails
           type="button"
           className="btn-open-vaccine-details"
           onClick={() => onOpenDetails(vaccine)}
-          aria-label={`Otwórz Kartę ChPL dla ${vaccine.tradeName}`}
         >
-          <span>Karta ChPL (punkty 1–10)</span>
-          <ChevronRight size={16} />
+          <span>
+            Otwórz Kartę ChPL{' '}
+            <span className="sr-only">{`dla ${vaccine.tradeName} (punkty 1–10)`}</span>
+          </span>
+          <ChevronRight size={16} aria-hidden="true" />
         </button>
 
         <div className="v-external-links">

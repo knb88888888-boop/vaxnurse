@@ -30,7 +30,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({ module, onSelect }) => {
       type="button"
       className={`module-card category-${module.category} ${placeholder ? 'is-placeholder' : ''}`}
       onClick={() => onSelect(module.id)}
-      aria-label={
+      title={
         placeholder
           ? `Podgląd zakresu planowanego modułu: ${module.label} (W przygotowaniu)`
           : `Otwórz moduł ${module.label}`

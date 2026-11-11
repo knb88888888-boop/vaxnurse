@@ -157,6 +157,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .filter-dropdown-label {
@@ -174,6 +177,9 @@
   color: var(--navy-900);
   font-size: 0.8125rem;
   font-weight: 500;
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
   outline: none;
   cursor: pointer;
   transition: border-color var(--transition-fast);
@@ -224,7 +230,7 @@
 /* Vaccines Cards Grid */
 .vaccines-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(460px, 100%), 1fr));
   gap: 20px;
 }
 
@@ -1499,6 +1505,22 @@
   .btn-verif-reject,
   .btn-verif-revoke {
     justify-content: center;
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .vaccines-search-toolbar {
+    padding: 16px;
+  }
+
+  .filter-dropdown-group {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-dropdown-select {
     width: 100%;
   }
 }
@@ -3552,4 +3574,54 @@
 
 .btn-open-indicated-doc:hover {
   background: #bae6fd;
+}
+
+/* Przełącznik trybów modułu: Katalog vs Stanowisko audytu ChPL */
+.vaccines-mode-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px;
+  background-color: var(--bg-surface-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+}
+
+.vaccines-mode-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--navy-900);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.vaccines-mode-tab-btn:hover {
+  background-color: #ffffff;
+  color: var(--navy-900);
+}
+
+.vaccines-mode-tab-btn.active {
+  background-color: #ffffff;
+  color: var(--blue-700);
+  border-color: var(--blue-600);
+  box-shadow: var(--shadow-xs);
+}
+
+.vaccines-mode-tab-count {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background-color: var(--blue-100);
+  color: var(--navy-900);
+  font-size: 0.75rem;
+  font-weight: 700;
 }

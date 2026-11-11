@@ -406,8 +406,9 @@ textarea:focus-visible {
 }
 
 .nav-item-badge--placeholder {
-  background: rgb(217 119 6 / 0.16);
-  color: #fbbf24;
+  background: var(--amber-100);
+  color: #78350f;
+  border: 1px solid #fde68a;
   font-size: 0.65rem;
 }
 
@@ -905,4 +906,16 @@ button.recent-module-item {
     white-space: normal;
     text-align: center;
   }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

@@ -14,8 +14,8 @@
   --navy-600: #475569;
 
   /* Accent 1: Medical Blue */
-  --blue-700: #0369a1;
-  --blue-600: #0284c7;
+  --blue-700: #075985;
+  --blue-600: #0369a1;
   --blue-500: #0ea5e9;
   --blue-100: #e0f2fe;
   --blue-50: #f0f9ff;
@@ -46,13 +46,13 @@
   /* Text Hierarchy */
   --text-main: #0f172a;
   --text-muted: #475569;
-  --text-tertiary: #64748b;
+  --text-tertiary: #57657a;
   --text-inverse: #ffffff;
 
   /* Borders & Dividers */
   --border-light: #e2e8f0;
   --border-subtle: #f1f5f9;
-  --border-focus: #0284c7;
+  --border-focus: #0369a1;
 
   /* Elevation & Shadows */
   --shadow-xs: 0 1px 2px 0 rgb(15 23 42 / 0.05);

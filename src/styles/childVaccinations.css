@@ -113,7 +113,7 @@
   gap: 0.5rem;
   padding: 0.65rem 1.15rem;
   border-radius: 8px;
-  background-color: #0284c7;
+  background-color: #0369a1;
   color: #ffffff;
   text-decoration: none;
   font-size: 0.85rem;
@@ -189,7 +189,7 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background-color: #0284c7;
+  background-color: #0369a1;
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -462,9 +462,9 @@
 }
 
 .pathogen-btn.active {
-  background-color: #0284c7;
+  background-color: #0369a1;
   color: #ffffff;
-  border-color: #0284c7;
+  border-color: #0369a1;
 }
 
 .current-results-counter {
@@ -555,7 +555,7 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background-color: #0284c7;
+  background-color: #0369a1;
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -1164,7 +1164,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  color: #0284c7;
+  color: #0369a1;
   text-decoration: none;
   font-size: 0.775rem;
   font-weight: 600;
@@ -1218,7 +1218,7 @@
 .btn-reset-search {
   padding: 0.65rem 1.25rem;
   border-radius: 8px;
-  background-color: #0284c7;
+  background-color: #0369a1;
   color: #ffffff;
   border: none;
   font-size: 0.85rem;
@@ -1669,7 +1669,7 @@
 .principle-point-badge {
   padding: 0.25rem 0.65rem;
   border-radius: 6px;
-  background-color: #0284c7;
+  background-color: #0369a1;
   color: #ffffff;
   font-size: 0.8rem;
   font-weight: 700;
@@ -1794,8 +1794,8 @@
 }
 
 .catchup-subtabs-bar .subtab-btn.active {
-  background-color: #0284c7;
-  border-color: #0284c7;
+  background-color: #0369a1;
+  border-color: #0369a1;
   color: #ffffff;
   box-shadow: 0 2px 4px rgba(2, 132, 199, 0.25);
 }

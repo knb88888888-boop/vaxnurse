@@ -108,7 +108,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             type="button"
             className="brand-logo"
             onClick={() => handleItemClick('dashboard')}
-            aria-label="Powrót do Pulpitu VaxNurse"
+            aria-label={isCollapsed ? 'VaxNurse — Powrót do Pulpitu' : undefined}
+            title="Powrót do Pulpitu VaxNurse"
           >
             <span className="brand-icon-box" aria-hidden="true">
               <Syringe className="brand-logo-icon" size={22} />

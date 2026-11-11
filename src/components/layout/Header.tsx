@@ -194,8 +194,11 @@ export const Header: React.FC<HeaderProps> = ({
                 }
               }}
               aria-label="Szukaj modułów i sekcji VaxNurse"
-              aria-expanded={isDesktopSearchOpen && searchQuery.trim().length > 0}
-              aria-controls="desktop-global-search-results"
+              aria-controls={
+                isDesktopSearchOpen && searchQuery.trim().length > 0
+                  ? 'desktop-global-search-results'
+                  : undefined
+              }
             />
             {searchQuery && (
               <button
@@ -220,7 +223,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="mobile-search-trigger"
             onClick={() => setIsMobileSearchOpen(prev => !prev)}
             aria-expanded={isMobileSearchOpen}
-            aria-controls="mobile-global-search-panel"
+            aria-controls={isMobileSearchOpen ? 'mobile-global-search-panel' : undefined}
             aria-label={
               isMobileSearchOpen
                 ? 'Zamknij wyszukiwarkę modułów'
@@ -249,10 +252,9 @@ export const Header: React.FC<HeaderProps> = ({
             className="header-quick-btn is-placeholder-link"
             title="Podgląd zakresu planowanego modułu: Sytuacje szczególne (w przygotowaniu)"
             onClick={() => onNavigateToModule('special-situations')}
-            aria-label="Sytuacje szczególne (w przygotowaniu)"
           >
             <ShieldAlert size={16} className="quick-btn-icon" aria-hidden="true" />
-            <span className="quick-btn-text">Sytuacje szczeg. (w przygotowaniu)</span>
+            <span className="quick-btn-text">Sytuacje szczególne (w przygotowaniu)</span>
             <Clock size={12} className="quick-btn-clock" aria-hidden="true" />
           </button>
         </div>

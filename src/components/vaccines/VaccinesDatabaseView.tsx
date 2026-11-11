@@ -8,7 +8,8 @@ import {
   AlertCircle,
   AlertTriangle,
   FileCheck,
-  RotateCcw
+  RotateCcw,
+  ClipboardCheck
 } from 'lucide-react';
 import type { ModuleDefinition } from '../../types/navigation';
 import type {
@@ -36,6 +37,12 @@ import { ModuleErrorBoundary } from '../common/ModuleErrorBoundary';
 const LazyVaccineDetailView = React.lazy(() =>
   import('./VaccineDetailView').then(mod => ({
     default: mod.VaccineDetailView
+  }))
+);
+
+const LazyChplAuditWorkbenchView = React.lazy(() =>
+  import('./ChplAuditWorkbenchView').then(mod => ({
+    default: mod.ChplAuditWorkbenchView
   }))
 );
 
@@ -91,6 +98,8 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
   const [storageError, setStorageError] = useState<string | null>(initialLoad.error);
   const [showResetCatalogConfirm, setShowResetCatalogConfirm] = useState(false);
   const [detailRetryKey, setDetailRetryKey] = useState(0);
+  const [activeMode, setActiveMode] = useState<'catalog' | 'workbench'>('catalog');
+  const [workbenchRetryKey, setWorkbenchRetryKey] = useState(0);
 
   const [activeVaccineDetail, setActiveVaccineDetail] = useState<VaccineProduct | null>(() => {
     try {
@@ -125,6 +134,13 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
       getBrowserStorage()?.setItem(VAX_ACTIVE_ID_KEY, vac.id);
     } catch (e) {
       console.warn('Błąd zapisu aktywnego ID preparatu w localStorage:', e);
+    }
+  };
+
+  const handleOpenVaccineById = (vaccineId: string) => {
+    const target = vaccines.find((v) => v.id === vaccineId);
+    if (target) {
+      handleOpenDetails(target);
     }
   };
 
@@ -288,8 +304,40 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
         </div>
       </div>
 
-      {/* Official Registry Reference Alert Banner */}
-      <section className="vaccines-official-banner" aria-label="Ważne informacje o źródłach rejestrowych">
+      {/* Mode Switcher: Katalog preparatów vs Stanowisko audytu ChPL (READ-ONLY) */}
+      <div
+        className="vaccines-mode-tabs"
+        role="group"
+        aria-label="Tryb widoku modułu Baza preparatów i ChPL"
+      >
+        <button
+          type="button"
+          className={`vaccines-mode-tab-btn ${activeMode === 'catalog' ? 'active' : ''}`}
+          aria-pressed={activeMode === 'catalog'}
+          data-testid="vaccines-mode-catalog"
+          onClick={() => setActiveMode('catalog')}
+        >
+          <Syringe size={16} aria-hidden="true" />
+          <span>Katalog preparatów</span>
+          <span className="vaccines-mode-tab-count">{vaccines.length}</span>
+        </button>
+        <button
+          type="button"
+          className={`vaccines-mode-tab-btn ${activeMode === 'workbench' ? 'active' : ''}`}
+          aria-pressed={activeMode === 'workbench'}
+          data-testid="vaccines-mode-workbench"
+          onClick={() => setActiveMode('workbench')}
+        >
+          <ClipboardCheck size={16} aria-hidden="true" />
+          <span>Stanowisko audytu ChPL</span>
+          <span className="vaccines-mode-tab-count">Etap B1 · READ-ONLY</span>
+        </button>
+      </div>
+
+      {activeMode === 'catalog' ? (
+        <>
+          {/* Official Registry Reference Alert Banner */}
+          <section className="vaccines-official-banner" aria-label="Ważne informacje o źródłach rejestrowych">
         <div className="v-banner-icon-box">
           <FileCheck size={26} className="v-banner-icon" />
         </div>
@@ -504,6 +552,25 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
             Pokaż wszystkie preparaty
           </button>
         </div>
+      )}
+        </>
+      ) : (
+        <ModuleErrorBoundary
+          resetKey={`workbench-${workbenchRetryKey}`}
+          onBackToDashboard={onBackToDashboard}
+          onRetry={() => setWorkbenchRetryKey((prev) => prev + 1)}
+        >
+          <Suspense
+            fallback={
+              <ModuleLoadingFallback label="Ładowanie stanowiska audytu ChPL (tryb wyłącznie do odczytu)…" />
+            }
+          >
+            <LazyChplAuditWorkbenchView
+              vaccines={vaccines}
+              onOpenVaccineById={handleOpenVaccineById}
+            />
+          </Suspense>
+        </ModuleErrorBoundary>
       )}
 
       {/* Footer Navigation Back */}

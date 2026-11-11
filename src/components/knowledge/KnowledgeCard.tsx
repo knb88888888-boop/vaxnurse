@@ -144,10 +144,12 @@ export const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ source }) => {
             target="_blank"
             rel="noopener noreferrer"
             className="btn-open-info-page"
-            aria-label={`Otwórz stronę informacyjną gov.pl dla ${source.title}`}
           >
-            <span>Strona informacyjna gov.pl</span>
-            <ExternalLink size={14} />
+            <span>
+              Strona informacyjna gov.pl{' '}
+              <span className="sr-only">{`dla ${source.title} (otwiera się w nowym oknie)`}</span>
+            </span>
+            <ExternalLink size={14} aria-hidden="true" />
           </a>
         )}
       </div>
