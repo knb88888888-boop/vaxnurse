@@ -4,6 +4,9 @@ import type {
   ChplAuditSectionNumber,
   ChplContentAuditRecord,
   ChplContentVerificationStatus,
+  ChplManualQueueGroup,
+  ChplManualQueueItem,
+  ChplManualQueuePriority,
   ChplReferenceStatus,
   ChplSectionAuditEntry,
   ChplVerificationStatus,
@@ -585,6 +588,32 @@ export function validateChildVaccineStatusInvariants(
           `[${item.id}] Zakres '${scope.scopeId}' nie może prezentować niedostępnego w Polsce preparatu Fluenz jako aktywnej opcji 'verified_self_funded' (100% odpłatny).`
         );
       }
+      if (scope.scopeId === 'flu-pediatric-under18-fluenz') {
+        const fluenzTetraCheck = `${scope.label} ${scope.productScope} ${scope.unconfirmedAvailabilityNote ?? ''}`;
+        if (!fluenzTetraCheck.includes('Fluenz Tetra') || !fluenzTetraCheck.includes('14.07.2025')) {
+          errors.push(
+            `[${item.id}] Historyczny wpis 'flu-pediatric-under18-fluenz' musi jednoznacznie identyfikować wycofaną szczepionkę Fluenz Tetra oraz datę 14.07.2025 r.`
+          );
+        }
+      }
+    }
+    if (scope.scopeId === 'flu-pregnancy-puerperium-reference' && scope.fundingStatus === 'verified_reimbursement') {
+      const condLower = scope.conditionsAndExceptions.toLowerCase();
+      const pharmLower = scope.mechanismBreakdown.pharmacyReimbursement.toLowerCase();
+      const servLower = scope.mechanismBreakdown.serviceExecutionFunding.toLowerCase();
+      if (
+        !condLower.includes('43b') ||
+        !condLower.includes('6 tygodni') ||
+        !condLower.includes('15 dni') ||
+        !condLower.includes('połogu') ||
+        !pharmLower.includes('recepta farmaceutyczna') ||
+        !servLower.includes('poz') ||
+        !servLower.includes('18')
+      ) {
+        errors.push(
+          `[${item.id}] Warunkowe finansowanie ciąży/połogu ('verified_reimbursement') musi jawnie zachowywać limit art. 43b (6 tyg. po +15 dniach), rozdział POZ vs apteka >=18 oraz zakaz kodu C na recepcie farmaceutycznej.`
+        );
+      }
     }
     if (scope.scopeId === 'hpv-under18-cervarix-d1') {
       const lowerCheck = `${scope.ageGroup} ${scope.minAgeDescription ?? ''}`.toLowerCase();
@@ -786,4 +815,159 @@ export function auditChildVaccinesCatalogSummary(
     },
     invariantViolations,
   };
+}
+
+const GROUP_D_PROCEDURAL_EXCEPTION_IDS = new Set<string>([
+  'pso-risk-preterm-dtap',
+  'pso-risk-preterm-pcv',
+  'pso-rv-3',
+  'pso-ipv-boost-6',
+  'pso-hepb-dialysis-primary',
+  'pso-hepb-dialysis-booster',
+  'pso-rec-hpv-9',
+  'pso-rec-hpv-catchup',
+]);
+
+const GROUP_E_SEASONAL_LEGACY_IDS = new Set<string>([
+  'pso-rec-influenza-1',
+  'pso-rec-covid-pediatric',
+]);
+
+const CHPL_QUEUE_GROUP_LABELS: Record<ChplManualQueueGroup, string> = {
+  A: 'Grupa A – Częściowo zweryfikowana ChPL (dokument źródłowy pobrany, otwarte punkty kontrolne)',
+  B: 'Grupa B – Otwarta rozbieżność ChPL (Infanrix hexa: disc-phenylalanine-content-01)',
+  C: 'Grupa C – Procedury z samym odwołaniem referencyjnym (brak pobranego pliku ChPL do audytu 1–10)',
+  D: 'Grupa D – Procedury o szczególnych regułach dawkowania, grup ryzyka lub finansowaniu warunkowym',
+  E: 'Grupa E – Procedury sezonowe / historyczne i niezweryfikowane źródła handlowe lub GTIN',
+};
+
+function collectOfficialChplSources(item: ChildVaccineItem, linkedProducts: VaccineProduct[]): string[] {
+  const sources: string[] = [];
+  if (item.chplOfficialSourceUrl) {
+    sources.push(item.chplOfficialSourceUrl);
+  }
+  if (item.alternativeProductDetails?.officialChplUrl) {
+    sources.push(item.alternativeProductDetails.officialChplUrl);
+  }
+  for (const product of linkedProducts) {
+    if (product.currentChplUrl && !sources.includes(product.currentChplUrl)) {
+      sources.push(product.currentChplUrl);
+    }
+    if (product.rplRecordUrl && !sources.includes(product.rplRecordUrl)) {
+      sources.push(product.rplRecordUrl);
+    }
+  }
+  return sources;
+}
+
+/**
+ * Buduje deterministyczną, wyłącznie odczytową kolejkę ręcznego audytu ChPL
+ * dla wszystkich procedur w katalogu PSO 2027 (Zadanie 4 PROMPT 23: Grupy A–E).
+ */
+export function getChplManualVerificationQueue(
+  catalog: ChildVaccineItem[],
+  catalogVaccines: VaccineProduct[] = []
+): ChplManualQueueItem[] {
+  const productById = new Map(catalogVaccines.map(v => [v.id, v]));
+
+  return catalog.map(item => {
+    const linkedProducts = item.linkedVaccineIds
+      .map(id => productById.get(id))
+      .filter((v): v is VaccineProduct => Boolean(v));
+    const officialChplSources = collectOfficialChplSources(item, linkedProducts);
+
+    let queueGroup: ChplManualQueueGroup;
+    let priority: ChplManualQueuePriority;
+    let missingDocumentsOrActions: string[];
+    let auditReason: string;
+
+    if (GROUP_E_SEASONAL_LEGACY_IDS.has(item.id)) {
+      queueGroup = 'E';
+      priority = 'critical';
+      if (item.id === 'pso-rec-influenza-1') {
+        missingDocumentsOrActions = [
+          'Audyt pełnych sekcji 1–10 (w tym 4.1–4.9) pobranych ChPL RPL 2026/2027: Influvac (ID 49462, poz. 28478, rew. 06/2026) i Vaxigrip (ID 50032, poz. 28778, rew. 08/2026)',
+          'Utworzenie kart trójwalentnych preparatów 2026/2027 w VACCINES_CATALOG z zachowaniem historycznej karty vac-vaxigrip-tetra wyłącznie jako archiwalnej/ostrzeżenia',
+          'Potwierdzenie w kolejnym sezonie statusu wycofanej Fluenz Tetra (EMEA/H/C/002617, wycof. 14.07.2025) vs niedostępnej w Polsce 3-walentnej Fluenz (EMEA/H/C/006514)',
+        ];
+        auditReason =
+          'Zidentyfikowano i pobrano oficjalne ChPL RPL 2026/2027 (Influvac 49462, Vaxigrip 50032), lecz wymagają one audytu sekcji 1–10 oraz rozgraniczenia od historycznej VaxigripTetra i niedostępnej Fluenz/wycofanej Fluenz Tetra.';
+      } else {
+        missingDocumentsOrActions = [
+          'Oficjalny ChPL / EPAR EMA dla Spikevax LP.8.1 / Spikevax XFG potwierdzający konkretne opakowania i GTIN (00380777714110 oraz 00380777712024)',
+          'Przeprowadzenie pełnego audytu sekcji 1–10 (w tym 4.1–4.9) po publikacji wiążącej ChPL i powiązanie wariantu dziecięcego w VACCINES_CATALOG',
+        ];
+        auditReason =
+          'Kody GTIN potwierdzone operacyjnie w RARS/MZ, lecz bez potwierdzenia w polskiej RPL/EMA EPAR i bez pełnej ChPL dla wariantu 2026/2027.';
+      }
+    } else if (item.linkedVaccineIds.includes('vac-infanrix-hexa')) {
+      queueGroup = 'B';
+      priority = 'critical';
+      missingDocumentsOrActions = [
+        'Rozstrzygnięcie otwartej niezgodności disc-phenylalanine-content-01 w sekcjach 2 i 4.4 ChPL Infanrix hexa (GSK, 12.02.2026)',
+        'Osobna weryfikacja ChPL alternatywnych preparatów jednoskładnikowych / nieskojarzonych używanych w wariancie standardowym I.A.1 (DTaP/DTPw, HBV, IPV, Hib)',
+      ];
+      auditReason =
+        'Powiązana karta vac-infanrix-hexa posiada otwartą rozbieżność disc-phenylalanine-content-01; po jej rozstrzygnięciu wymagana kontrola pełna 1–10 oraz odrębne ChPL wariantu nieskojarzonego I.A.1.';
+    } else if (item.id === 'pso-bcg-0') {
+      queueGroup = 'A';
+      priority = 'high';
+      missingDocumentsOrActions = [
+        'Pełna kontrola kliniczna sekcji 2, 4 (4.1–4.9), 5 (5.1–5.3) i 6 pobranej ChPL Szczepionka przeciwgruźlicza BCG 10 (RPL ID 19535, R/0210)',
+        'Potwierdzenie braku daty w pkt 10 dokumentu BCG 10 w RPL oraz potwierdzenie dostępności rynkowej BCG Szczepionka AJVaccines (RPL ID 20376) w Polsce',
+      ];
+      auditReason =
+        'Zidentyfikowano dokumenty RPL (19535 oraz alternatywny 20376) i wykonano częściowy przegląd (sekcje 1, 3, 7–10); blokada verification_full przez niezaudytowaną sekcję 4 i brak daty w pkt 10.';
+    } else if (GROUP_D_PROCEDURAL_EXCEPTION_IDS.has(item.id)) {
+      queueGroup = 'D';
+      priority = 'high';
+      missingDocumentsOrActions = [
+        `Pobranie oficjalnych plików PDF ChPL z RPL/EMA dla wszystkich dopuszczonych produktów handlowych procedury ${item.shortCode}`,
+        'Weryfikacja sekcji 4.1–4.9 ChPL względem szczególnych reguł PSO (wcześniactwo, dializoterapia, granice wieku / 2–3 dawki RV / HPV 2- vs 3-dawkowe) z zachowaniem rozdziału procedury od pojedynczej karty handlowej',
+      ];
+      auditReason =
+        'Procedura o szczególnych warunkach klinicznych, wiekowych, schematowych (np. 3w1 vs 6w1, RV3, IPV-6, HPV 9–14/9–18, dializy) wymagająca kontroli wielu ChPL lub wariantów bez utożsamiania reguły z jednym preparatem.';
+    } else {
+      queueGroup = 'C';
+      priority = item.obligationType === 'obowiazkowe' ? 'medium' : 'standard';
+      missingDocumentsOrActions = [
+        `Pobranie oficjalnego pliku PDF ChPL z RPL/EMA dla preparatu referencyjnego (${item.chplReference ?? item.shortCode})`,
+        'Utworzenie/uzupełnienie karty produktu w VACCINES_CATALOG i wykonanie dowodowego audytu sekcji 1–10 (w tym 4.1–4.9)',
+      ];
+      auditReason =
+        'Procedura posiada wyłącznie nazwę orientacyjną (reference_name_only) bez pobranego pliku ChPL i audytu sekcji 1–10.';
+    }
+
+    return {
+      procedureId: item.id,
+      aliasId: item.aliasId,
+      shortCode: item.shortCode,
+      disease: item.disease,
+      obligationType: item.obligationType,
+      psoPartAndPage: `${item.sourcePart} (str. ${item.sourcePrintedPage}, PDF str. ${item.sourcePdfPage})`,
+      queueGroup,
+      queueGroupLabel: CHPL_QUEUE_GROUP_LABELS[queueGroup],
+      priority,
+      currentChplReferenceStatus: item.chplReferenceStatus,
+      currentChplContentStatus: item.chplContentVerificationStatus,
+      currentChplVerificationStatus: item.chplVerificationStatus,
+      currentProductLinkageStatus: item.productLinkageStatus,
+      linkedVaccineIds: [...item.linkedVaccineIds],
+      officialChplSources,
+      missingDocumentsOrActions,
+      auditReason,
+    };
+  });
+}
+
+export function getChplManualQueueGroupCounts(
+  queue: ChplManualQueueItem[]
+): Record<ChplManualQueueGroup, number> {
+  return queue.reduce<Record<ChplManualQueueGroup, number>>(
+    (acc, entry) => {
+      acc[entry.queueGroup] += 1;
+      return acc;
+    },
+    { A: 0, B: 0, C: 0, D: 0, E: 0 }
+  );
 }

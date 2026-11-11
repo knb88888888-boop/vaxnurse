@@ -26,6 +26,8 @@ import {
   validateChildVaccineStatusInvariants,
   auditVariantA2IpvCoverage,
   auditChildVaccinesCatalogSummary,
+  getChplManualVerificationQueue,
+  getChplManualQueueGroupCounts,
 } from '../src/utils/childVaccineAudit.ts';
 
 const SECTION_4_VERIFIED_SUBPOINTS = REQUIRED_SECTION_4_SUBPOINTS.map(subpointId => ({
@@ -497,12 +499,12 @@ const linkedCount = CHILD_VACCINES_CATALOG.filter(it => it.productLinkageStatus 
 const conditionalAltCount = CHILD_VACCINES_CATALOG.filter(it => it.productLinkageStatus === 'conditional_alternative').length;
 const pendingCatalogCount = CHILD_VACCINES_CATALOG.filter(it => it.productLinkageStatus === 'pending_catalog_entry').length;
 
-assert.equal(identifiedDocCount, 13, 'Dokładnie 13 procedur posiada zidentyfikowany oficjalny dokument ChPL (BCG 10 + 12 Infanrix hexa)');
-assert.equal(refNameOnlyCount, 30, 'Dokładnie 30 procedur zawiera jedynie orientacyjną nazwę handlową produktu');
+assert.equal(identifiedDocCount, 14, 'Dokładnie 14 procedur posiada zidentyfikowany oficjalny dokument ChPL (BCG 10 + 12 Infanrix hexa + grypa 2026/2027 Influvac 49462 / Vaxigrip 50032)');
+assert.equal(refNameOnlyCount, 29, 'Dokładnie 29 procedur zawiera jedynie orientacyjną nazwę handlową produktu');
 assert.equal(trulyVerifiedChplCount, 0, 'Żadna procedura nie może być oznaczona jako w pełni zweryfikowana ChPL bez zamknięcia niezgodności i pełnego audytu');
 assert.equal(analyzedDiscrepancyCount, 12, '12 procedur kalendarzowych powiązanych z Infanrix hexa ma status analyzed_with_discrepancy');
-assert.equal(pendingAuditCount, 1, 'Wyłącznie 1 procedura z dokumentem RPL (pso-bcg-0) ma status pending_content_audit');
-assert.equal(notVerifiedContentCount, 30, 'Wszystkie 30 procedur z samym odwołaniem referencyjnym mają status not_verified (spójność z brakiem dokumentu)');
+assert.equal(pendingAuditCount, 2, 'Wyłącznie 2 procedury ze zidentyfikowanym oficjalnym ChPL bez ukończonego audytu (pso-bcg-0, pso-rec-influenza-1) mają status pending_content_audit');
+assert.equal(notVerifiedContentCount, 29, 'Wszystkie 29 procedur z samym odwołaniem referencyjnym mają status not_verified (spójność z brakiem dokumentu)');
 assert.equal(linkedCount, 12, 'Dokładnie 12 procedur kalendarzowych (Wariant A.2) ma bezpośrednie powiązanie w katalogu (vac-infanrix-hexa)');
 assert.equal(conditionalAltCount, 1, 'Dokładnie 1 procedura (pso-risk-preterm-dtap) ma status conditional_alternative (III.E.2 vs III.E.3)');
 assert.equal(pendingCatalogCount, 30, 'Dokładnie 30 procedur oczekuje na wprowadzenie do katalogu handlowego');
@@ -526,7 +528,7 @@ for (const ipvId of ['pso-ipv-1', 'pso-ipv-2', 'pso-ipv-3']) {
 const hbv2 = findChildVaccine('pso-hbv-2');
 assert.ok(hbv2?.linkageAuditNote?.includes('Wariant A.2 (6w1)'), 'pso-hbv-2 musi zawierać uwagę o pokryciu dawki przez Infanrix hexa');
 
-console.log('   ✓ SCENARIUSZ 12 ZALICZONY: Rozdzielono identyfikację dokumentu ChPL (13), weryfikację treści (0 verified_full, 12 discrepancy, 1 pending_audit, 30 not_verified) i warunkową alternatywę DTaP 3w1/6w1.\n');
+console.log('   ✓ SCENARIUSZ 12 ZALICZONY: Rozdzielono identyfikację dokumentu ChPL (14), weryfikację treści (0 verified_full, 12 discrepancy, 2 pending_audit, 29 not_verified) i warunkową alternatywę DTaP 3w1/6w1.\n');
 
 console.log('13. Weryfikacja wymogów PROMPT 19: niezmienniki statusowe, bramka verified_full, IPV w A.2, BCG/AJVaccines oraz finansowanie...');
 
@@ -960,11 +962,21 @@ assert.ok(
   fluUnconfirmedScopes.some(
     s =>
       s.scopeId === 'flu-pediatric-under18-fluenz' &&
+      s.productScope.includes('Fluenz Tetra') &&
+      s.productScope.includes('14.07.2025') &&
       s.isPediatricSelectable === false &&
       s.seasonalAvailabilityStatus === 'unconfirmed_for_season' &&
       s.fundingStatus === 'pending_clarification'
-  ),
-  '15.6: Fluenz w sezonie 2026/2027 jest wyłączony z wyboru (niedostępny wg PZH / wycofanie Fluenz Tetra KE 14.07.2025)'
+  ) &&
+    fluUnconfirmedScopes.some(
+      s =>
+        s.scopeId === 'flu-pediatric-under18-fluenz-trivalent' &&
+        s.productScope.includes('EMEA/H/C/006514') &&
+        s.isPediatricSelectable === false &&
+        s.seasonalAvailabilityStatus === 'unconfirmed_for_season' &&
+        s.fundingStatus === 'pending_clarification'
+    ),
+  '15.6: Wycofana Fluenz Tetra (KE 14.07.2025) i niedostępna w Polsce 3-walentna Fluenz (EMEA/H/C/006514) są rozdzielone i wyłączone z wyboru'
 );
 assert.equal(fluAdultScopes.length, 3, '15.6: Zakresy dorosłych/szczególne dla grypy muszą rozdzielać 18–64, >=65 oraz ciąża/połóg');
 assert.ok(
@@ -974,10 +986,12 @@ assert.ok(
 const fluPregnancy = fluAdultScopes.find(s => s.scopeId === 'flu-pregnancy-puerperium-reference');
 assert.ok(
   fluPregnancy?.sourceRef.includes('E (poz. 395, 397)') &&
-    fluPregnancy.fundingStatus === 'pending_clarification' &&
+    fluPregnancy.fundingStatus === 'verified_reimbursement' &&
     fluPregnancy.conditionsAndExceptions.includes('43b') &&
-    fluPregnancy.conditionsAndExceptions.includes('połogu'),
-  '15.6: Zakres ciąża i połóg musi dokumentować art. 43b + wykaz E + PZH oraz zachować pending_clarification do zatwierdzenia audytora'
+    fluPregnancy.conditionsAndExceptions.includes('połogu') &&
+    fluPregnancy.conditionsAndExceptions.includes('6 tygodni') &&
+    fluPregnancy.conditionsAndExceptions.includes('recepta farmaceutyczna'),
+  '15.6: Zakres ciąża i połóg musi mieć warunkowy verified_reimbursement z art. 43b (6 tyg. + 15 dni), wykazem E, PZH oraz granicami POZ vs apteka'
 );
 
 // 15.7 Wykluczenie preparatu Efluelda z modułu wyboru dziecięcego i widoku ChildVaccineCard
@@ -1258,17 +1272,18 @@ assert.ok(
   '16.9: Karta grypy musi jawnie ostrzegać przed użyciem historycznej 4-walentnej VaxigripTetra / Influvac Tetra jako dowodu dla trójwalentnych preparatów 2026/2027'
 );
 
-// 16.10 Rozbieżność w połogu dla grypy udokumentowana źródłowo (art. 43b ust. 1–4 Dz.U. 2025 poz. 1461 + kod C Dz.U. 2025 poz. 604 + 84W Arkusz E vs PZH 02.10.2026) i otwarta do audytu
+// 16.10 Warunkowe finansowanie grypy w ciąży/połogu z pełną zgodnością źródeł (art. 43b ust. 1–4 Dz.U. 2025 poz. 1461 + kod C Dz.U. 2025 poz. 604 + 84W E + NIZP PZH 02.10.2026) i rozdziałem POZ vs apteka
 assert.ok(
   fluPregnancy &&
-    fluPregnancy.fundingStatus === 'pending_clarification' &&
+    fluPregnancy.fundingStatus === 'verified_reimbursement' &&
     fluPregnancy.sourceRef.includes('Dz.U. 2025 poz. 1461') &&
     fluPregnancy.sourceRef.includes('Dz.U. 2025 poz. 604') &&
-    fluPregnancy.sourceRef.includes('PZH (02.10.2026)') &&
+    fluPregnancy.sourceRef.includes('NIZP PZH (02.10.2026)') &&
     fluPregnancy.conditionsAndExceptions.includes('6 tygodni') &&
     fluPregnancy.conditionsAndExceptions.includes('15 dni') &&
-    fluPregnancy.boundaryInclusivity?.includes('OTWARTA ROZBIEŻNOŚĆ'),
-  '16.10: Zakres ciąża/połóg musi dokumentować ustawowy art. 43b (6 tyg. po +15 dniach), kod C, arkusz E 84W i PZH bez automatycznego rozstrzygnięcia'
+    !fluPregnancy.boundaryInclusivity?.includes('OTWARTA ROZBIEŻNOŚĆ') &&
+    !fluPregnancy.conditionsAndExceptions.includes('ROZBIEŻNOŚĆ'),
+  '16.10: Zakres ciąża/połóg musi warunkowo potwierdzać kod C (6 tyg. po +15 dniach), rozdział POZ/apteka i usuwać nieuzasadnioną otwartą rozbieżność'
 );
 
 // 16.11 Kontrola widoku ChildVaccineCard.tsx: ukrycie Fluenz z listy wyboru, prezentacja granic wieku i rozdzielenie źródeł GTIN
@@ -1295,6 +1310,98 @@ assert.equal(catalogSummary.verifiedFull, 0);
 
 console.log('   ✓ SCENARIUSZ 16 ZALICZONY: Wszystkie 13 testów końcowych PROMPT 22 zaliczone bez błędów.\n');
 
+console.log('17. SCENARIUSZ 17: Kontrola końcowa finansowania połogu, ChPL Influvac/Vaxigrip 2026/2027, rozdzielenia Fluenz Tetra/Fluenz oraz kolejki audytu 43 procedur (PROMPT 23)...');
+
+// 17.1 Warunkowe finansowanie połogu: art. 43b + NFZ 74/2025/DGL i 9/2026/DGL + blokada utraty warunków przez walidator
+assert.ok(
+  fluPregnancy.mechanismBreakdown.serviceExecutionFunding.includes('74/2025/DGL') &&
+    fluPregnancy.mechanismBreakdown.serviceExecutionFunding.includes('9/2026/DGL') &&
+    fluPregnancy.mechanismBreakdown.serviceExecutionFunding.includes('położnej') &&
+    fluPregnancy.mechanismBreakdown.serviceExecutionFunding.includes('<18') &&
+    fluPregnancy.mechanismBreakdown.pharmacyReimbursement.includes('recepta farmaceutyczna nie nadaje kodu „C”'),
+  '17.1: Zakres ciąża/połóg musi rozdzielać POZ (w tym położna u dorosłych, lekarz <18) od apteki NFZ (>=18 r.ż., zarządzenia 74/2025/DGL i 9/2026/DGL) oraz zakaz kodu C na recepcie farmaceutycznej'
+);
+
+const invalidUnconditionalPostpartum = {
+  ...flu,
+  fundingAuditDetails: {
+    ...flu.fundingAuditDetails,
+    adultAndSpecialReferenceScopes: flu.fundingAuditDetails.adultAndSpecialReferenceScopes.map(s =>
+      s.scopeId === 'flu-pregnancy-puerperium-reference'
+        ? { ...s, conditionsAndExceptions: 'Bezwarunkowo 0 zł dla każdej kobiety w połogu.', fundingStatus: 'verified_reimbursement' }
+        : s
+    ),
+  },
+};
+assert.ok(
+  validateChildVaccineStatusInvariants(invalidUnconditionalPostpartum, VACCINES_CATALOG).length > 0,
+  '17.1: Walidator musi zablokować bezwarunkowe zapisanie refundacji w połogu bez limitu art. 43b (6 tyg. po +15 dniach) i ograniczeń recepty farmaceutycznej'
+);
+
+// 17.2 Oficjalne ChPL RPL trójwalentnych preparatów 2026/2027 (Influvac 49462 + Vaxigrip 50032) bez awansu do verified_full i z zachowaniem ostrzeżenia VaxigripTetra
+assert.equal(flu.chplOfficialSourceUrl, 'https://rejestrymedyczne.ezdrowie.gov.pl/api/rpl/medicinal-products/49462/characteristic');
+assert.equal(flu.chplAuthorizationNumber, '28478');
+assert.equal(flu.chplMarketingAuthorizationHolder, 'Viatris Healthcare Limited');
+assert.equal(flu.alternativeProductDetails?.rplId, 50032);
+assert.equal(flu.alternativeProductDetails?.officialChplUrl, 'https://rejestrymedyczne.ezdrowie.gov.pl/api/rpl/medicinal-products/50032/characteristic');
+assert.equal(flu.alternativeProductDetails?.authorizationNumber, '28778');
+assert.equal(flu.alternativeProductDetails?.chplRevisionDate, '08/2026');
+assert.equal(flu.alternativeProductDetails?.marketAvailabilityStatus, 'confirmed_for_season_2026_2027');
+assert.equal(flu.chplReferenceStatus, 'official_document_identified');
+assert.equal(flu.chplContentVerificationStatus, 'pending_content_audit');
+assert.equal(flu.chplVerificationStatus, 'pending_chpl_verification');
+assert.equal(flu.linkedVaccineIds.length, 0);
+assert.equal(flu.productLinkageStatus, 'pending_catalog_entry');
+assert.ok(
+  flu.chplAudit?.verifiedSectionsScope.includes('pkt 10') &&
+    flu.chplAudit.sectionReviews?.some(s => s.sectionNumber === '2' && s.verificationNote?.includes('2026/2027')) &&
+    flu.linkageAuditNote?.includes('VaxigripTetra'),
+  '17.2: Audyt grypy musi dokumentować skład 2026/2027 obu trójwalentnych ChPL (49462/50032) przy blokadzie verified_full i zachowaniu ostrzeżenia VaxigripTetra'
+);
+
+// 17.3 Jednoznaczne rozróżnienie wycofanej Fluenz Tetra (EMEA/H/C/002617, 14.07.2025) od aktualnej 3-walentnej Fluenz (EMEA/H/C/006514)
+const fluenzTetraScope = fluUnconfirmedScopes.find(s => s.scopeId === 'flu-pediatric-under18-fluenz');
+const fluenzTrivalentScope = fluUnconfirmedScopes.find(s => s.scopeId === 'flu-pediatric-under18-fluenz-trivalent');
+assert.ok(
+  fluenzTetraScope?.sourceRef.includes('EMEA/H/C/002617') &&
+    fluenzTetraScope.sourceRef.includes('30973') &&
+    fluenzTetraScope.isPediatricSelectable === false &&
+    fluenzTrivalentScope?.sourceRef.includes('EMEA/H/C/006514') &&
+    fluenzTrivalentScope.sourceRef.includes('49836') &&
+    fluenzTrivalentScope.isPediatricSelectable === false,
+  '17.3: Katalog musi osobno dokumentować wycofaną Fluenz Tetra (002617/30973) i niedostępną w Polsce 3-walentną Fluenz (006514/49836) bez wybieralności'
+);
+
+// 17.4 Ustrukturyzowana kolejka ręcznego audytu ChPL dla wszystkich 43 procedur (Grupy A–E)
+const chplQueue = getChplManualVerificationQueue(CHILD_VACCINES_CATALOG, VACCINES_CATALOG);
+const queueCounts = getChplManualQueueGroupCounts(chplQueue);
+assert.equal(chplQueue.length, 43, '17.4: Kolejka audytu ChPL musi obejmować dokładnie wszystkie 43 procedury bez pominięć i duplikatów');
+assert.equal(new Set(chplQueue.map(q => q.procedureId)).size, 43, '17.4: Identyfikatory procedur w kolejce audytu ChPL muszą być unikalne');
+assert.deepEqual(
+  queueCounts,
+  { A: 1, B: 12, C: 20, D: 8, E: 2 },
+  '17.4: Podział 43 procedur w kolejce audytu ChPL musi tworzyć dokładne grupy A(1), B(12), C(20), D(8), E(2)'
+);
+assert.ok(
+  chplQueue.every(
+    q =>
+      q.psoPartAndPage.trim().length > 0 &&
+      q.missingDocumentsOrActions.length > 0 &&
+      q.auditReason.trim().length > 0
+  ),
+  '17.4: Każda pozycja kolejki ChPL musi wskazywać część PSO, brakujące dokumenty/działania oraz uzasadnienie priorytetu'
+);
+
+// 17.5 Potwierdzenie nienaruszalności stanu końcowego PROMPT 23
+assert.equal(CHILD_VACCINES_CATALOG.length, 43);
+assert.equal(catalogSummary.invariantViolations.length, 0);
+assert.equal(catalogSummary.verifiedFull, 0);
+assert.equal(infanrixProduct?.id, 'vac-infanrix-hexa');
+assert.equal(infanrixProduct?.sourceDiscrepancies?.[0]?.id, 'disc-phenylalanine-content-01');
+assert.equal(infanrixProduct?.sourceDiscrepancies?.[0]?.status, 'requires_clarification');
+
+console.log('   ✓ SCENARIUSZ 17 ZALICZONY: Wszystkie testy końcowe PROMPT 23 (połóg kod C, Influvac/Vaxigrip 2026/2027, Fluenz Tetra/Fluenz, kolejka 43 ChPL) zaliczone.\n');
+
 console.log('================================================================');
-console.log(' WYNIK KOŃCOWY: 16/16 SCENARIUSZY AUDYTU ZALICZONYCH (100%)    ');
+console.log(' WYNIK KOŃCOWY: 17/17 SCENARIUSZY AUDYTU ZALICZONYCH (100%)    ');
 console.log('================================================================\n');

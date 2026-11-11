@@ -125,7 +125,7 @@ export interface AlternativeProductDetails {
   officialChplUrl: string;
   chplRevisionDate: string;
   searchApiDownloadableFlagNote: string;
-  marketAvailabilityStatus: 'unconfirmed_in_poland';
+  marketAvailabilityStatus: 'unconfirmed_in_poland' | 'confirmed_for_season_2026_2027';
   marketAvailabilityNote: string;
 }
 
@@ -425,4 +425,30 @@ export interface CombinedVaccineVariant {
   scheduleDetails: string;
   interchangeabilityWarning: string;
   chplCrossReference: string;
+}
+
+export type ChplManualQueueGroup = 'A' | 'B' | 'C' | 'D' | 'E';
+export type ChplManualQueuePriority = 'critical' | 'high' | 'medium' | 'standard';
+
+/**
+ * Pozycja w ustrukturyzowanej kolejce ręcznego audytu dokumentacji ChPL (Zadanie 4 PROMPT 23).
+ */
+export interface ChplManualQueueItem {
+  procedureId: string;
+  aliasId?: string;
+  shortCode: string;
+  disease: string;
+  obligationType: VaccineObligationType;
+  psoPartAndPage: string;
+  queueGroup: ChplManualQueueGroup;
+  queueGroupLabel: string;
+  priority: ChplManualQueuePriority;
+  currentChplReferenceStatus: ChplReferenceStatus;
+  currentChplContentStatus: ChplContentVerificationStatus;
+  currentChplVerificationStatus: ChplVerificationStatus;
+  currentProductLinkageStatus: ProductLinkageStatus;
+  linkedVaccineIds: string[];
+  officialChplSources: string[];
+  missingDocumentsOrActions: string[];
+  auditReason: string;
 }
