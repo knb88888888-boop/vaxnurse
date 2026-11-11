@@ -35,6 +35,9 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
 
   const isObligatory = item.obligationType === 'obowiazkowe';
   const linkedProducts = catalogVaccines.filter(v => item.linkedVaccineIds.includes(v.id));
+  const linkages = item.productLinkages ?? [];
+  const conditionalLinkages = linkages.filter(l => l.relationType === 'conditional_alternative');
+  const variantOrDirectLinkages = linkages.filter(l => l.relationType !== 'conditional_alternative');
 
   return (
     <div
@@ -104,22 +107,22 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
           {item.chplContentVerificationStatus === 'verified_full' ? (
             <span className="verification-chpl-chip" title={`ChPL w pełni zweryfikowana i zatwierdzona: ${item.chplReference || 'Zgodne'}`}>
               <span className="dot-pulse-green"></span>
-              <span>ChPL zweryfikowana</span>
+              <span>ChPL: w pełni zweryfikowana</span>
             </span>
           ) : item.chplContentVerificationStatus === 'analyzed_with_discrepancy' ? (
-            <span className="verification-chpl-discrepancy-chip" title="Treść ChPL przeanalizowana, ale istnieje otwarta rozbieżność źródłowa (fenyloalanina)">
+            <span className="verification-chpl-discrepancy-chip" title="Dokument ChPL pobrany i przeanalizowany, ale istnieje otwarta rozbieżność źródłowa (fenyloalanina)">
               <span className="dot-pulse-red"></span>
               <span>ChPL: niezgodność źródłowa</span>
             </span>
           ) : item.chplReferenceStatus === 'official_document_identified' ? (
-            <span className="verification-chpl-identified-chip" title={`Zidentyfikowano oficjalny dokument RPL/ChPL (${item.chplAuthorizationNumber || 'RPL'}). Treść oczekuje na pełny audyt.`}>
+            <span className="verification-chpl-identified-chip" title={`Zidentyfikowano oficjalny dokument RPL/ChPL (${item.chplAuthorizationNumber || 'RPL'}). Sam dokument nie oznacza jeszcze ukończonego audytu treści.`}>
               <span className="dot-pulse-blue"></span>
-              <span>ChPL: dokument zidentyfikowany</span>
+              <span>ChPL: dokument w RPL (audyt treści w toku)</span>
             </span>
           ) : (
-            <span className="verification-chpl-pending-chip" title="Wyłącznie orientacyjne odwołanie do nazwy handlowej; pełna treść ChPL oczekuje na weryfikację">
+            <span className="verification-chpl-pending-chip" title="Wyłącznie orientacyjna nazwa handlowa produktu; oficjalny dokument ChPL nie został jeszcze zidentyfikowany ani zweryfikowany">
               <span className="dot-pulse-amber"></span>
-              <span>ChPL: do weryfikacji</span>
+              <span>ChPL: wyłącznie nazwa referencyjna</span>
             </span>
           )}
           <span className="verification-pso-chip" title={`Weryfikacja z PSO 2027: Komunikat GIS z ${item.psoGisAnnouncementDate || '28.10.2026'}, Dz. Urz. MZ z ${item.psoJournalPublicationDate || '30.10.2026'}`}>
@@ -179,39 +182,88 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
         </div>
       </div>
 
-      {/* Linked Preparations Snippet (Quick jump to SmPC) */}
-      {linkedProducts.length > 0 && (
+      {/* Linked Preparations Snippet (Variant A.2 vs Conditional Alternative) */}
+      {(variantOrDirectLinkages.length > 0 || (linkages.length === 0 && linkedProducts.length > 0)) && (
         <div className="linked-products-summary">
           <div className="linked-header">
             <Syringe size={14} className="linked-icon" />
-            <span>Preparaty w Bazie VaxNurse (Karta ChPL):</span>
+            <span>
+              {variantOrDirectLinkages.some(l => l.relationType === 'variant_a2_6in1')
+                ? 'Powiązanie z Wariantem A.2 (6w1, opcjonalny – co do zasady odpłatny wg cz. IV):'
+                : 'Preparaty w Bazie VaxNurse (Karta ChPL):'}
+            </span>
           </div>
           <div className="linked-pills-list">
-            {linkedProducts.map(prod => {
+            {(variantOrDirectLinkages.length > 0 ? variantOrDirectLinkages : linkedProducts.map(p => ({ vaccineId: p.id, relationType: 'direct_primary' as const, variantA2Dose: null, standardCalendarDose: null, isVariantPatientFunded: false }))).map(link => {
+              const prod = catalogVaccines.find(v => v.id === link.vaccineId);
+              if (!prod) return null;
               const meta = VERIFICATION_STATUS_META[prod.verificationStatus];
               const isBlocked = prod.sourceDiscrepancies?.some(
                 d => d.status === 'requires_clarification'
               );
 
               return (
+                <div key={prod.id} className="linked-linkage-row">
+                  <button
+                    type="button"
+                    className="linked-product-chip"
+                    onClick={() => onSelectVaccineProduct?.(prod.id)}
+                    title={`Kliknij, aby otworzyć oficjalną Kartę ChPL preparatu ${prod.tradeName}`}
+                  >
+                    <span className="prod-name">{prod.tradeName}</span>
+                    <span className="prod-substance">({prod.activeSubstance})</span>
+                    {link.relationType === 'variant_a2_6in1' && (
+                      <span className="prod-variant-tag">Wariant A.2 (6w1)</span>
+                    )}
+                    {isBlocked ? (
+                      <span className="prod-status-blocked" title="Nierozwiązana rozbieżność źródłowa ChPL">
+                        Wyjaśnienie ChPL
+                      </span>
+                    ) : (
+                      <span className={`prod-status-tag ${meta.badgeClass}`}>
+                        {meta.label}
+                      </span>
+                    )}
+                    <ArrowRight size={13} className="chip-arrow" />
+                  </button>
+                  {link.variantA2Dose && (
+                    <div className="linkage-dose-comparison">
+                      <span className="dose-map-pill">
+                        <strong>Mapowanie 6w1:</strong> {link.variantA2Dose}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {conditionalLinkages.length > 0 && (
+        <div className="conditional-alternative-summary">
+          <div className="conditional-header">
+            <AlertCircle size={14} className="warn-icon" />
+            <span>Powiązanie warunkowe / alternatywne (Część III.E.3 PSO) — nie zastępuje domyślnie bezpłatnej DTaP 3w1 (Część III.E.2):</span>
+          </div>
+          <p className="conditional-subnote">
+            Podstawowa 3-walentna szczepionka DTaP (cz. III.E.2) nie ma jeszcze karty w Bazie preparatów VaxNurse. Wskazany preparat 6w1 stanowi wyłącznie alternatywę warunkową:
+          </p>
+          <div className="linked-pills-list">
+            {conditionalLinkages.map(link => {
+              const prod = catalogVaccines.find(v => v.id === link.vaccineId);
+              if (!prod) return null;
+              return (
                 <button
                   key={prod.id}
                   type="button"
-                  className="linked-product-chip"
+                  className="linked-product-chip linked-product-chip-conditional"
                   onClick={() => onSelectVaccineProduct?.(prod.id)}
-                  title={`Kliknij, aby otworzyć oficjalną Kartę ChPL preparatu ${prod.tradeName}`}
+                  title={`Powiązanie warunkowe (cz. III.E.3 PSO) — otwórz Kartę ChPL ${prod.tradeName}`}
                 >
                   <span className="prod-name">{prod.tradeName}</span>
-                  <span className="prod-substance">({prod.activeSubstance})</span>
-                  {isBlocked ? (
-                    <span className="prod-status-blocked" title="Nierozwiązana rozbieżność źródłowa ChPL">
-                      Wyjaśnienie ChPL
-                    </span>
-                  ) : (
-                    <span className={`prod-status-tag ${meta.badgeClass}`}>
-                      {meta.label}
-                    </span>
-                  )}
+                  <span className="prod-conditional-tag">Alternatywa warunkowa 6w1 (III.E.3)</span>
+                  <span className="prod-status-blocked">Wyjaśnienie ChPL</span>
                   <ArrowRight size={13} className="chip-arrow" />
                 </button>
               );
@@ -303,15 +355,58 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                 </div>
               )}
 
+              {item.chplAudit && (
+                <div className="chpl-audit-meta-box">
+                  <div><strong>Audyt treści ChPL:</strong> {item.chplAudit.productName} ({item.chplAudit.documentIdOrAuthorizationNumber})</div>
+                  <div><strong>Data / wersja dokumentu:</strong> {item.chplAudit.documentVersionOrDate}</div>
+                  <div><strong>Zakres sekcji:</strong> {item.chplAudit.verifiedSectionsScope.join(', ')} | <strong>Data audytu:</strong> {item.chplAudit.auditDate} ({item.chplAudit.auditor})</div>
+                  <div>
+                    <strong>Wynik kontroli:</strong>{' '}
+                    {item.chplAudit.auditOutcome === 'compliant' && 'Zgodna'}
+                    {item.chplAudit.auditOutcome === 'discrepancy_detected' && `Wykryto rozbieżności (${item.chplAudit.unresolvedDiscrepanciesCount} otwarte) — awans do w pełni zweryfikowanej ChPL zablokowany`}
+                    {item.chplAudit.auditOutcome === 'pending_review' && 'Oczekuje na pełny audyt treści i utworzenie karty produktu'}
+                  </div>
+                </div>
+              )}
+
               {item.alternativeProductLabel && (
                 <div className="alternative-product-notice">
                   <strong>Informacja o produkcie alternatywnym ({item.alternativeProductStatus}):</strong> {item.alternativeProductLabel}
+                  {item.alternativeProductDetails && (
+                    <div className="alt-rpl-details">
+                      <div>
+                        <strong>RPL:</strong> {item.alternativeProductDetails.rplProductName} (ID {item.alternativeProductDetails.rplId}, poz. {item.alternativeProductDetails.authorizationNumber}, {item.alternativeProductDetails.marketingAuthorizationHolder}, ważność: {item.alternativeProductDetails.authorizationValidity}, rewizja ChPL pkt 10: {item.alternativeProductDetails.chplRevisionDate})
+                      </div>
+                      <div className="alt-market-warning">
+                        <strong>Rozróżnienie ChPL vs dostępność:</strong> {item.alternativeProductDetails.marketAvailabilityNote}
+                      </div>
+                      <a
+                        href={item.alternativeProductDetails.officialChplUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="chpl-direct-doc-btn"
+                      >
+                        <span>Otwórz ChPL produktu alternatywnego w RPL (ID {item.alternativeProductDetails.rplId})</span>
+                        <ExternalLink size={13} />
+                      </a>
+                    </div>
+                  )}
                 </div>
               )}
 
               {item.linkageAuditNote && (
                 <div className="linkage-audit-notice">
                   <strong>Uwaga z kontroli powiązania handlowego:</strong> {item.linkageAuditNote}
+                </div>
+              )}
+
+              {item.fundingAuditDetails && (
+                <div className="funding-audit-notice">
+                  <div><strong>Audyt finansowania (odrębny od samego wpisu do PSO):</strong></div>
+                  <div><strong>Podstawa prawna:</strong> {item.fundingAuditDetails.legalBasis}</div>
+                  <div><strong>Grupa docelowa:</strong> {item.fundingAuditDetails.targetGroup}</div>
+                  <div><strong>Warunki i zastrzeżenia:</strong> {item.fundingAuditDetails.conditions}</div>
+                  <div><strong>Stan weryfikacji / ważność:</strong> {item.fundingAuditDetails.validityOrVerifiedDate}</div>
                 </div>
               )}
             </div>
@@ -382,17 +477,36 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
               </div>
               <div className="verification-item">
                 <span className="v-label">Weryfikacja finansowania:</span>
-                <span className="v-val status-ok">
-                  {item.fundingVerificationStatus === 'verified_public_free' && 'Potwierdzone: bezpłatne (budżet MZ)'}
+                <span
+                  className={`v-val ${
+                    item.fundingVerificationStatus === 'verified_public_free'
+                      ? 'status-ok'
+                      : item.fundingVerificationStatus === 'verified_self_funded'
+                        ? 'status-muted'
+                        : 'status-pending'
+                  }`}
+                >
+                  {item.fundingVerificationStatus === 'verified_public_free' && 'Potwierdzone: bezpłatne (zakup MZ / NFZ)'}
                   {item.fundingVerificationStatus === 'verified_reimbursement' && 'Potwierdzone: refundacja wg odrębnych przepisów'}
                   {item.fundingVerificationStatus === 'verified_self_funded' && 'Potwierdzone: odpłatne (środki pacjenta/rodziców)'}
-                  {item.fundingVerificationStatus === 'pending_clarification' && 'Wymaga doprecyzowania'}
+                  {item.fundingVerificationStatus === 'pending_clarification' && 'Wymaga doprecyzowania (odrębne obwieszczenia/komunikaty)'}
                 </span>
               </div>
               <div className="verification-item">
                 <span className="v-label">Katalog handlowy VaxNurse:</span>
-                <span className={`v-val ${item.productLinkageStatus === 'linked_catalog' ? 'status-ok' : 'status-muted'}`}>
-                  {item.productLinkageStatus === 'linked_catalog' ? `Powiązany preparat w bazie (${item.linkedVaccineIds.join(', ')})` : 'Oczekuje na utworzenie karty handlowej'}
+                <span
+                  className={`v-val ${
+                    item.productLinkageStatus === 'linked_catalog'
+                      ? 'status-ok'
+                      : item.productLinkageStatus === 'conditional_alternative'
+                        ? 'status-pending'
+                        : 'status-muted'
+                  }`}
+                >
+                  {item.productLinkageStatus === 'linked_catalog' && `Powiązanie z Wariantem A.2 / 6w1 (${item.linkedVaccineIds.join(', ')})`}
+                  {item.productLinkageStatus === 'conditional_alternative' && 'Brak karty podstawowej 3w1 (oczekuje); warunkowa alternatywa 6w1 (cz. III.E.3)'}
+                  {item.productLinkageStatus === 'pending_catalog_entry' && 'Oczekuje na utworzenie karty handlowej'}
+                  {item.productLinkageStatus === 'not_applicable' && 'Nie dotyczy'}
                 </span>
               </div>
             </div>

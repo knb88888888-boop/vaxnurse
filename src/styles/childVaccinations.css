@@ -1979,6 +1979,212 @@
   border-top: 1px dashed #e2e8f0;
 }
 
+/* ==========================================================================
+   PROMPT 19: Audit Transparency, Conditional Linkages & IPV Mapping Table
+   ========================================================================== */
+
+.audit-transparency-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.audit-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.725rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.audit-pill.ok {
+  background-color: #ecfdf5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+
+.audit-pill.info {
+  background-color: #eff6ff;
+  color: #1e40af;
+  border-color: #bfdbfe;
+}
+
+.audit-pill.warn {
+  background-color: #fffbeb;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+.audit-pill.neutral {
+  background-color: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.linked-linkage-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.prod-variant-tag {
+  background-color: #e0e7ff;
+  color: #3730a3;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
+}
+
+.linkage-dose-comparison {
+  padding-left: 0.25rem;
+}
+
+.dose-map-pill {
+  display: inline-block;
+  font-size: 0.74rem;
+  color: #1e3a8a;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  line-height: 1.4;
+}
+
+.conditional-alternative-summary {
+  margin-top: 0.75rem;
+  background-color: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.conditional-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #92400e;
+  line-height: 1.4;
+}
+
+.conditional-subnote {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #78350f;
+  line-height: 1.4;
+}
+
+.linked-product-chip-conditional {
+  border-color: #f59e0b;
+  background-color: #ffffff;
+}
+
+.prod-conditional-tag {
+  background-color: #fef3c7;
+  color: #92400e;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
+}
+
+.chpl-audit-meta-box,
+.funding-audit-notice {
+  margin-top: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.chpl-audit-meta-box {
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.funding-audit-notice {
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #0c4a6e;
+}
+
+.alt-rpl-details {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.alt-market-warning {
+  color: #92400e;
+  background-color: #fef3c7;
+  padding: 0.35rem 0.55rem;
+  border-radius: 4px;
+}
+
+.variant-ipv-mapping-card {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ipv-mapping-title {
+  margin: 0;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.ipv-mapping-desc {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.ipv-mapping-table-wrapper {
+  overflow-x: auto;
+}
+
+.ipv-mapping-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.ipv-mapping-table th,
+.ipv-mapping-table td {
+  border: 1px solid #e2e8f0;
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.ipv-mapping-table th {
+  background-color: #f8fafc;
+  color: #1e293b;
+  font-weight: 700;
+}
+
 @keyframes slideDown {
   from {
     opacity: 0;

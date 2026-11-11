@@ -32,6 +32,10 @@ import {
   COMBINED_VACCINES_VARIANTS_PART_III_M
 } from '../../data/childVaccinesData';
 import { VACCINES_CATALOG } from '../../data/vaccinesCatalog';
+import {
+  auditChildVaccinesCatalogSummary,
+  auditVariantA2IpvCoverage,
+} from '../../utils/childVaccineAudit';
 import { ChildVaccineCard } from './ChildVaccineCard';
 
 interface ChildVaccinationsViewProps {
@@ -108,14 +112,20 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
         const matchesNotes = item.clinicalNotes.toLowerCase().includes(q);
         const matchesSection = item.psoSection.toLowerCase().includes(q);
 
-        // Also search in linked vaccine names
-        const matchesLinkedVaccines = item.linkedVaccineIds.some(id => {
+        // Also search in linked vaccine names and structured linkages
+        const allLinkedIds = new Set<string>([
+          ...item.linkedVaccineIds,
+          ...(item.productLinkages?.map(l => l.vaccineId) ?? [])
+        ]);
+        const matchesLinkedVaccines = Array.from(allLinkedIds).some(id => {
           const v = catalogVaccines.find(vac => vac.id === id);
           return v && (
             v.tradeName.toLowerCase().includes(q) ||
             v.activeSubstance.toLowerCase().includes(q)
           );
-        });
+        }) || (item.productLinkages ?? []).some(
+          l => l.productLabel.toLowerCase().includes(q) || l.psoBasis.toLowerCase().includes(q)
+        );
 
         if (
           !matchesDisease &&
@@ -160,6 +170,15 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
 
   const currentMandatoryCount = filteredItems.filter(i => i.obligationType === 'obowiazkowe').length;
   const currentRecommendedCount = filteredItems.filter(i => i.obligationType === 'zalecane').length;
+
+  const catalogAuditSummary = useMemo(
+    () => auditChildVaccinesCatalogSummary(CHILD_VACCINES_CATALOG, catalogVaccines),
+    [catalogVaccines]
+  );
+  const variantA2IpvAudit = useMemo(
+    () => auditVariantA2IpvCoverage(CHILD_VACCINES_CATALOG),
+    []
+  );
 
   const hasActiveFilters =
     searchQuery.trim() !== '' ||
@@ -376,6 +395,25 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                   <span>Wyczyść filtry</span>
                 </button>
               )}
+            </div>
+
+            {/* Transparent Prompt 19 Audit Status Strip */}
+            <div className="audit-transparency-strip">
+              <span className="audit-pill ok">
+                PSO 2027: {catalogAuditSummary.totalProcedures}/{catalogAuditSummary.totalProcedures}
+              </span>
+              <span className="audit-pill info">
+                Dokumenty ChPL w RPL/GSK: {catalogAuditSummary.officialDocumentIdentified} ({catalogAuditSummary.analyzedWithDiscrepancy} niezgodność, {catalogAuditSummary.pendingContentAudit} audyt w toku)
+              </span>
+              <span className="audit-pill neutral">
+                W pełni zweryfikowane ChPL: {catalogAuditSummary.verifiedFull}
+              </span>
+              <span className="audit-pill warn">
+                Alternatywa warunkowa 3w1/6w1: {catalogAuditSummary.conditionalAlternativeLinkages}
+              </span>
+              <span className="audit-pill warn">
+                Finansowanie do doprecyzowania: {catalogAuditSummary.fundingCounts.pending_clarification}
+              </span>
             </div>
 
             {/* Age Stage Group Selector Chips */}
@@ -833,6 +871,37 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                 </div>
               </div>
             ))}
+          </div>
+
+          <div className="variant-ipv-mapping-card">
+            <h4 className="ipv-mapping-title">
+              Audyt mapowania dawek IPV w Wariancie A.2 (6w1, Część I.A.2 str. 11–12) vs kalendarz standardowy (I.A.1)
+            </h4>
+            <p className="ipv-mapping-desc">
+              W standardowym kalendarzu (I.A.1) pierwsza dawka IPV wypada w 4. m.ż., dlatego w 2. m.ż. nie figuruje odrębna procedura IPV. Przy wyborze szczepionki 6w1 (Wariant A.2) pierwsza dawka IPV jest podawana już w 2. m.ż. w składzie 1. dawki 6w1:
+            </p>
+            <div className="ipv-mapping-table-wrapper">
+              <table className="ipv-mapping-table">
+                <thead>
+                  <tr>
+                    <th>Dawka 6w1 / IPV w A.2</th>
+                    <th>Wiek</th>
+                    <th>Powiązane procedury PSO</th>
+                    <th>Przebieg i mapowanie kliniczne</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {variantA2IpvAudit.doses.map(dose => (
+                    <tr key={dose.variantDoseNumber}>
+                      <td><strong>{dose.variantDoseNumber}. dawka 6w1 (IPV #{dose.variantDoseNumber})</strong></td>
+                      <td>{dose.ageLabel}</td>
+                      <td><code>{dose.coveredByProcedureIds.join(', ')}</code></td>
+                      <td>{dose.ipvMappingSummary}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
