@@ -2,7 +2,10 @@ import fs from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 import {
   EMPTY_QUESTION_EVIDENCE_MESSAGE,
-  INFORMAL_WORKING_NOTE_DISCLAIMER
+  EVIDENCE_LEDGER_STORAGE_KEY,
+  HISTORICAL_DOCUMENT_NOTICE,
+  INFORMAL_WORKING_NOTE_DISCLAIMER,
+  SOURCE_QUALITY_DISCLAIMER
 } from '../src/utils/chplEvidenceLedger';
 import { attachRuntimeMonitor, navigateViaSidebarOrHeader, runAxeAudit } from './helpers';
 
@@ -192,8 +195,182 @@ test.describe('E2E — Etap B2: Rejestr Źródeł, Łańcuch Dowodów QRD/PDF, N
 
     const compactAudit = await runAxeAudit(page, 'Workbench Etap B2 (compact + large)', axeErrors);
     expect(compactAudit.wcagViolationsCount).toBe(0);
+    expect(compactAudit.wcagIncompleteCount).toBe(0);
     expect(axeErrors).toEqual([]);
 
+    monitor.assertClean();
+  });
+
+  test('Etap B3 w Chromium: Quality Dashboard (12 metryk), 4 osie źródeł, kontrola kwalifikacji, degradacja importu i migracja MASTER 04', async ({
+    page
+  }) => {
+    const monitor = attachRuntimeMonitor(page);
+    const axeErrors: string[] = [];
+
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto('/');
+    await navigateViaSidebarOrHeader(page, /Baza preparatów/i);
+    await page.getByTestId('vaccines-mode-workbench').click();
+
+    // 1. Quality Dashboard + disclaimer + początkowe 12 metryk
+    const dash = page.getByTestId('b3-quality-dashboard');
+    await expect(dash).toBeVisible();
+    await expect(dash.getByTestId('b3-quality-disclaimer')).toContainText(SOURCE_QUALITY_DISCLAIMER);
+    await expect(dash.getByTestId('b3-metric-total-sources')).toContainText('9');
+    await expect(dash.getByTestId('b3-metric-acquired')).toContainText('1');
+    await expect(dash.getByTestId('b3-metric-registry-only')).toContainText('3');
+    await expect(dash.getByTestId('b3-metric-failed-attempts')).toContainText('1');
+    await expect(dash.getByTestId('b3-metric-historical')).toContainText('1');
+    await expect(dash.getByTestId('b3-metric-no-sha')).toContainText('1');
+    await expect(dash.getByTestId('b3-metric-calc-sha')).toContainText('8');
+    await expect(dash.getByTestId('b3-metric-verified-excerpts')).toContainText('0');
+    await expect(dash.getByTestId('b3-metric-open-questions')).toContainText('8');
+
+    // 2. Dokument historyczny + rozbudowa <details> historii artefaktów i prób pobrania
+    const histCard = page.getByTestId('source-card-doc-rpl-vaxigrip-tetra-35346-hist');
+    await expect(histCard).toContainText(HISTORICAL_DOCUMENT_NOTICE);
+    const psoCard = page.getByTestId('source-card-doc-mz-pso-2027-akt');
+    await expect(psoCard).toContainText(/48 str\./i);
+    await psoCard.locator('summary.wb-b3-details-summary').click();
+    await expect(psoCard.locator('.wb-b3-details-body')).toBeVisible();
+
+    const endpointCard = page.getByTestId('source-card-doc-rpl-spikevax-cen-endpoints');
+    await endpointCard.locator('summary.wb-b3-details-summary').click();
+    await expect(endpointCard).toContainText(/HTTP 400/i);
+
+    // 3. Filtr typu obiektu źródłowego + powrót z Łańcucha dowodowego do Rejestru Źródeł
+    const typeSelect = page.locator('#b3-src-object-type');
+    await typeSelect.selectOption('local_reference_document');
+    await expect(psoCard).toBeVisible();
+    await expect(endpointCard).toHaveCount(0);
+    await typeSelect.selectOption('all');
+
+    await page.getByRole('button', { name: /Pokaż dokument w Rejestrze Źródeł/i }).first().click();
+
+    // 4. Próba ręcznego awansu do source_excerpt_reviewed bez checkboxa -> blokada -> potem świadomy zapis
+    const evForm = page.getByTestId('b2-add-evidence-form');
+    await evForm.locator('#ev-form-document').selectOption('doc-rpl-bcg10-19535');
+    await evForm.getByLabel(/Indeks strony PDF/i).fill('3');
+    await evForm
+      .getByLabel(/Krótki fragment \/ odniesienie źródłowe/i)
+      .fill('Pkt 4.2 ChPL BCG 10 (str. 3 PDF)');
+    await evForm
+      .getByLabel(/Obserwacja robocza audytora/i)
+      .fill('Sprawdzono ręcznie z dokumentem ChPL w trybie B3.');
+    await evForm.locator('#ev-form-qualification').selectOption('source_excerpt_reviewed');
+    await evForm.getByRole('button', { name: /Zapisz roboczy ślad dowodowy/i }).click();
+    await expect(evForm.getByRole('alert')).toContainText(/rzeczywistego pliku PDF/i);
+
+    // Audyt axe stanu błędu walidacji i otwartych <details>
+    const errStateAudit = await runAxeAudit(page, 'Workbench Etap B3 (details + form error)', axeErrors);
+    expect(errStateAudit.wcagViolationsCount).toBe(0);
+    expect(errStateAudit.wcagIncompleteCount).toBe(0);
+
+    await evForm.locator('#ev-form-confirm-pdf').check();
+    await evForm.getByRole('button', { name: /Zapisz roboczy ślad dowodowy/i }).click();
+    await expect(dash.getByTestId('b3-metric-verified-excerpts')).toContainText('1');
+    await expect(dash.getByTestId('b3-metric-open-questions')).toContainText('7');
+
+    // Filtr kwalifikacji w Łańcuchu dowodów -> source_excerpt_reviewed
+    await page.locator('#b3-ev-qual').selectOption('source_excerpt_reviewed');
+    await expect(page.locator('[data-testid="b2-evidence-chain-list"] article')).toHaveCount(1);
+    await page.getByRole('button', { name: /Resetuj filtry dowodów/i }).click();
+
+    // 5. Eksport JSON z twierdzeniem source_excerpt_reviewed, usunięcie lokalne i re-import -> degradacja!
+    const ioBox = page.getByTestId('b2-evidence-import-export');
+    const dlPromise = page.waitForEvent('download');
+    await ioBox.getByRole('button', { name: /Eksportuj rejestr dowodów JSON/i }).click();
+    const dl = await dlPromise;
+    const dlPath = (await dl.path()) as string;
+
+    await page.getByRole('button', { name: /Usuń lokalny wpis dowodowy/i }).first().click();
+    await expect(dash.getByTestId('b3-metric-verified-excerpts')).toContainText('0');
+
+    const fileInput = ioBox.getByTestId('b2-evidence-import-input');
+    await fileInput.setInputFiles(dlPath);
+    const preview = page.getByTestId('b2-import-preview-card');
+    await expect(preview).toContainText(/Deklaracje weryfikacji pochodzące z importu JSON:\s*1/i);
+
+    const previewAudit = await runAxeAudit(page, 'Workbench Etap B3 (import preview)', axeErrors);
+    expect(previewAudit.wcagViolationsCount).toBe(0);
+    expect(previewAudit.wcagIncompleteCount).toBe(0);
+
+    await preview.getByRole('button', { name: /Zastosuj podglądany import dowodów/i }).click();
+    await expect(dash.getByTestId('b3-metric-verified-excerpts')).toContainText('0');
+    await expect(page.getByTestId('b2-evidence-ledger-panel')).toContainText(
+      /Z importu JSON \(niepotwierdzone lokalnie\)/i
+    );
+
+    // 6. Symulacja migracji starego wpisu MASTER 04 w localStorage po przeładowaniu
+    const fs = await import('fs');
+    const parsedExport = JSON.parse(fs.readFileSync(dlPath, 'utf8')) as {
+      sources: Array<{ documentId: string; sha256: string | null; officialSourceUrl: string }>;
+    };
+    const bcgSourceMeta = parsedExport.sources.find((s) => s.documentId === 'doc-rpl-bcg10-19535');
+    expect(bcgSourceMeta?.sha256).toBeTruthy();
+
+    await page.evaluate(
+      ({ storageKey, bcgHash, bcgUrl }) => {
+        const legacy = [
+          {
+            evidenceId: 'ev-work-e2e-legacy-m04',
+            questionId: 'dec-bcg-42-injection-site',
+            productKey: 'bcg_10',
+            productLabel: 'BCG 10',
+            documentId: 'doc-rpl-bcg10-19535',
+            documentTitle: 'RPL 19535 BCG 10',
+            officialSourceUrl: bcgUrl,
+            sourceDocumentHash: bcgHash,
+            sha256Basis: 'calculated_local',
+            location: {
+              qrdSection: '4.2',
+              qrdSectionTitle: '4.2 Dawkowanie i sposób podawania',
+              pdfPageIndex: 3,
+              pdfPageRangeLabel: 'PDF str. 3',
+              printedPageNumber: null,
+              pageNumberingType: 'pdf_page_index',
+              physicalDocumentPageCount: 7
+            },
+            sourceExcerptRef: 'Legacy B2 wpis E2E: Pkt 4.2 (str. 3)',
+            clinicalObservation: 'Dane robocze przeniesione z MASTER 04.',
+            relationship: 'supports',
+            reviewStatus: 'awaiting_human_review',
+            questionWorkStatus: 'awaiting_human_review',
+            autoResolved: false,
+            origin: 'auditor_working_entry',
+            isWorkingNote: true,
+            recordedAt: '2026-11-10T10:00:00Z',
+            recordedBy: 'Robocza notatka lokalna (przeglądarka)'
+          }
+        ];
+        localStorage.setItem(storageKey, JSON.stringify(legacy));
+      },
+      {
+        storageKey: EVIDENCE_LEDGER_STORAGE_KEY,
+        bcgHash: bcgSourceMeta!.sha256!,
+        bcgUrl: bcgSourceMeta!.officialSourceUrl,
+      }
+    );
+
+    await page.reload();
+    await navigateViaSidebarOrHeader(page, /Baza preparatów/i);
+    await page.getByTestId('vaccines-mode-workbench').click();
+
+    await expect(page.getByTestId('b2-evidence-chain-list')).toBeVisible();
+    const showAllBtn = page.getByRole('button', { name: /Pokaż wszystkie ogniwa dowodowe/i });
+    if ((await showAllBtn.count()) > 0) {
+      await showAllBtn.click();
+    }
+
+    await expect(page.getByTestId('b2-evidence-chain-list')).toContainText(
+      /Legacy B2 wpis E2E: Pkt 4\.2 \(str\. 3\)/i
+    );
+    await expect(page.getByTestId('b2-evidence-chain-list')).toContainText(
+      /Wymaga kontroli w oryginalnym PDF/i
+    );
+    await expect(page.getByTestId('b3-quality-dashboard').getByTestId('b3-metric-verified-excerpts')).toContainText('0');
+
+    expect(axeErrors).toEqual([]);
     monitor.assertClean();
   });
 });

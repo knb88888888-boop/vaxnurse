@@ -281,7 +281,10 @@ html[data-density="compact"] .wb-details-section {
 .wb-section-heading {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  max-width: 100%;
+  min-width: 0;
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
@@ -1881,10 +1884,226 @@ html[data-density="compact"] .wb-details-section {
   margin-top: 8px;
 }
 
+/* Etap B3: Quality Dashboard, 4 Osie Źródeł, Artefakty i Kwalifikacja Dowodów */
+.wb-b3-quality-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.wb-b3-metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: var(--navy-900);
+  min-width: 0;
+}
+
+.wb-b3-metric-card.wb-b3-metric-warning {
+  background-color: #fffbeb;
+  border-color: #fcd34d;
+  color: #78350f;
+}
+
+.wb-b3-metric-card.wb-b3-metric-danger {
+  background-color: #fff1f2;
+  border-color: #fda4af;
+  color: #881337;
+}
+
+.wb-b3-metric-num {
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.wb-b3-metric-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.wb-b3-filter-bar {
+  grid-template-columns: minmax(200px, 1.5fr) repeat(3, minmax(150px, 1fr));
+}
+
+.wb-b3-historical-banner {
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background-color: #ffe4e6;
+  border: 1px solid #e11d48;
+  color: #881337;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wb-b2-status-pill.tone-historical {
+  background-color: #ffe4e6;
+  border-color: #fda4af;
+  color: #881337;
+}
+
+.wb-b3-axes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+}
+
+.wb-b3-axis-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.wb-b3-axis-name {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--navy-700);
+}
+
+.wb-b3-axis-value {
+  font-size: 0.79rem;
+  font-weight: 600;
+  color: var(--navy-900);
+  overflow-wrap: anywhere;
+}
+
+.wb-b3-details {
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  background-color: #ffffff;
+  padding: 8px 10px;
+  font-size: 0.8rem;
+  color: var(--navy-900);
+}
+
+.wb-b3-details-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--navy-900);
+}
+
+.wb-b3-details-body {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wb-b3-subblock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wb-b3-mini-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+
+.wb-b3-empty-inline {
+  margin: 0;
+  color: var(--navy-700);
+}
+
+.wb-b3-qual-pill,
+.wb-b3-reverify-pill,
+.wb-b3-imported-claim-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.wb-b3-qual-pill.qual-neutral {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+
+.wb-b3-qual-pill.qual-warning {
+  background-color: #fffbeb;
+  border-color: #f59e0b;
+  color: #78350f;
+}
+
+.wb-b3-qual-pill.qual-danger {
+  background-color: #ffe4e6;
+  border-color: #e11d48;
+  color: #881337;
+}
+
+.wb-b3-qual-pill.qual-secondary {
+  background-color: #f3e8ff;
+  border-color: #a855f7;
+  color: #581c87;
+}
+
+.wb-b3-qual-pill.qual-verified {
+  background-color: #dcfce7;
+  border-color: #15803d;
+  color: #14532d;
+}
+
+.wb-b3-reverify-pill {
+  background-color: #fef3c7;
+  border-color: #d97706;
+  color: #78350f;
+}
+
+.wb-b3-imported-claim-pill {
+  background-color: #fae8ff;
+  border-color: #c026d3;
+  color: #701a75;
+}
+
+.wb-b2-alert-warning {
+  background-color: #fffbeb;
+  border: 1px solid #f59e0b;
+  color: #78350f;
+  font-weight: 600;
+}
+
+.wb-b2-source-meta a,
+.wb-b2-source-card code,
+.wb-b2-chain-card code,
+.wb-b2-import-preview code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 @media (max-width: 1200px) {
   .wb-b2-question-strip,
   .wb-b2-source-grid,
-  .wb-b2-workforms-grid {
+  .wb-b2-workforms-grid,
+  .wb-b3-filter-bar,
+  .wb-b3-quality-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1914,7 +2133,9 @@ html[data-density="compact"] .wb-details-section {
   .wb-b2-filter-grid,
   .wb-b2-workforms-grid,
   .wb-b2-form-two-col,
-  .wb-b2-form-three-col {
+  .wb-b2-form-three-col,
+  .wb-b3-quality-grid,
+  .wb-b3-axes-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 

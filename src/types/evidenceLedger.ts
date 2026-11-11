@@ -24,6 +24,152 @@ export type Sha256VerificationBasis =
   | 'local_workspace_pdf_sha256'
   | 'not_verified_binary';
 
+/**
+ * Typ obiektu w Rejestrze Źródeł (Etap B3).
+ * Pozwala rozróżnić pozyskany dokument od wpisu rejestrowego, endpointu, próby pobrania i wersji historycznych.
+ */
+export type SourceObjectType =
+  | 'official_document'
+  | 'official_registry_record'
+  | 'official_endpoint'
+  | 'retrieval_attempt'
+  | 'historical_document'
+  | 'local_reference_document'
+  | 'secondary_document';
+
+/**
+ * Oś 1 (B3): Pochodzenie źródła (Source Origin).
+ */
+export type SourceOriginAxisStatus =
+  | 'not_checked'
+  | 'official_origin_confirmed'
+  | 'origin_uncertain'
+  | 'origin_mismatch'
+  | 'manual_review_required';
+
+/**
+ * Oś 2 (B3): Pozyskanie pliku (File Acquisition).
+ */
+export type SourceAcquisitionAxisStatus =
+  | 'not_acquired'
+  | 'acquired'
+  | 'temporarily_unavailable'
+  | 'permanently_unavailable_unknown'
+  | 'access_failed'
+  | 'historical_copy_only';
+
+/**
+ * Oś 3 (B3): Integralność pliku / SHA-256 (File Integrity).
+ */
+export type FileIntegrityAxisStatus =
+  | 'not_checked'
+  | 'hash_calculated'
+  | 'hash_matches_known_reference'
+  | 'hash_mismatch'
+  | 'hash_reference_unavailable';
+
+/**
+ * Oś 4 (B3): Kontrola treści dokumentu (Content Review).
+ */
+export type ContentReviewAxisStatus =
+  | 'not_reviewed'
+  | 'excerpt_checked'
+  | 'section_reviewed'
+  | 'discrepancy_found'
+  | 'awaiting_human_review';
+
+export interface SourceStatusAxes {
+  originStatus: SourceOriginAxisStatus;
+  acquisitionStatus: SourceAcquisitionAxisStatus;
+  integrityStatus: FileIntegrityAxisStatus;
+  contentReviewStatus: ContentReviewAxisStatus;
+}
+
+export type HashComparisonStatus =
+  | 'calculated_from_local_file'
+  | 'compared_with_known_reference'
+  | 'not_compared'
+  | 'hash_from_untrusted_source'
+  | 'hash_mismatch';
+
+export type HashReferenceType =
+  | 'none'
+  | 'bundle_recorded_sha256'
+  | 'local_workspace_sha256'
+  | 'prior_session_snapshot'
+  | 'imported_unverified_claim';
+
+/**
+ * Pełna proweniencja sumy SHA-256 (B3).
+ * Sam hash potwierdza wyłącznie identyczność bajtową z ewentualnym wzorcem — nigdy autentyczność urzędową ani poprawność kliniczną.
+ */
+export interface HashProvenanceRecord {
+  algorithm: 'SHA-256';
+  value: string | null;
+  artifactId: string | null;
+  calculatedAt: string | null;
+  calculationMethod: string;
+  fileName: string | null;
+  fileSizeBytes: number | null;
+  referenceType: HashReferenceType;
+  referenceHash: string | null;
+  comparisonStatus: HashComparisonStatus;
+}
+
+export type ArtifactChangeCategory =
+  | 'initial_record'
+  | 'updated_same_document'
+  | 'new_chpl_revision'
+  | 'alternate_language_version'
+  | 'historical_version'
+  | 'same_filename_modified_bytes'
+  | 'unverified_origin_copy';
+
+/**
+ * Konkretny artefakt pliku dokumentu (oddzielony od rekordu źródła/urzędu — Etap B3).
+ */
+export interface DocumentArtifactRecord {
+  artifactId: string;
+  documentId: string;
+  language: 'PL' | 'EN';
+  fileName: string | null;
+  documentDate: string | null;
+  retrievedAt: string | null;
+  sourceUrl: string;
+  previousArtifactId: string | null;
+  versionSequence: number;
+  changeCategory: ArtifactChangeCategory;
+  isCurrentActiveVersion: boolean;
+  isHistoricalVersion: boolean;
+  requiresReverification: boolean;
+  physicalPageCount: number | null;
+  fileSizeBytes: number | null;
+  hashProvenance: HashProvenanceRecord;
+}
+
+export type RetrievalAttemptResult =
+  | 'success'
+  | 'http_error'
+  | 'network_error'
+  | 'metadata_only'
+  | 'not_attempted';
+
+/**
+ * Rekord pojedynczej próby dostępu do źródła (Retrieval Attempt — Etap B3).
+ */
+export interface RetrievalAttemptRecord {
+  attemptId: string;
+  documentId: string;
+  attemptedAt: string;
+  targetUrl: string;
+  accessMethod: 'http_get' | 'http_head' | 'local_filesystem_read' | 'bundle_metadata_carryover';
+  result: RetrievalAttemptResult;
+  httpStatus: number | null;
+  errorDescription: string | null;
+  checkScope: string;
+  artifactId: string | null;
+}
+
 export type SourceProductScopeKey =
   | Stage1ChplProductKey
   | 'vaxigrip_tetra_historical_2025_2026'
@@ -31,10 +177,11 @@ export type SourceProductScopeKey =
   | 'pso_2027_general';
 
 /**
- * Pojedynczy wpis w Rejestrze Dokumentów Źródłowych (Etap B2).
+ * Pojedynczy wpis w Rejestrze Dokumentów Źródłowych (Etap B2 + rozszerzenie B3).
  */
 export interface SourceRegistryEntry {
   documentId: string;
+  objectType: SourceObjectType;
   productKey: SourceProductScopeKey;
   productDisplayName: string;
   linkedCatalogVaccineIds: string[];
@@ -61,6 +208,12 @@ export interface SourceRegistryEntry {
   sourceVerificationStatusLabel: string;
   sourceVerificationDate: string | null;
   sourceVerificationNotes: string;
+  statusAxes: SourceStatusAxes;
+  currentArtifact: DocumentArtifactRecord | null;
+  artifactHistory: DocumentArtifactRecord[];
+  retrievalAttempts: RetrievalAttemptRecord[];
+  registryVsFileDistinctionNote: string;
+  historicalNotice?: string;
   isHistoricalRejectedForCurrentSeason?: boolean;
 }
 
@@ -95,6 +248,35 @@ export type QuestionWorkStatus =
 export type EvidenceOrigin = 'bundle_extract' | 'auditor_working_entry';
 
 /**
+ * Klasa kwalifikacji wpisu dowodowego (Etap B3).
+ * Ściśle oddziela odniesienie (reference) od zweryfikowanego fragmentu z rzeczywistego dokumentu (reviewed excerpt).
+ */
+export type EvidenceQualificationClass =
+  | 'traceability_reference'
+  | 'source_excerpt_pending_review'
+  | 'source_excerpt_reviewed'
+  | 'conflicting_source_excerpt'
+  | 'secondary_reference'
+  | 'unavailable_source_reference';
+
+export type EvidenceImportClaimStatus =
+  | 'local_author_record'
+  | 'imported_unverified_claim'
+  | 'imported_verified_claim_unconfirmed_locally';
+
+export interface EvidenceImportProvenance {
+  isImported: boolean;
+  importedAt: string | null;
+  importClaimStatus: EvidenceImportClaimStatus;
+  claimedQualificationClass: EvidenceQualificationClass | null;
+  claimedReviewStatus: EvidenceReviewStatus | null;
+  claimedSourceDocumentHash: string | null;
+  claimedOriginConfirmedByImport: boolean;
+  localConfirmationState: 'local_session_author' | 'unconfirmed_imported_claim';
+  migrationSourceVersion?: 'b2_master04' | 'b3_master05' | null;
+}
+
+/**
  * Precyzyjne wskazanie lokalizacji QRD oraz odrębnej numeracji stron PDF i druku.
  */
 export interface QrdLocationReference {
@@ -108,7 +290,7 @@ export interface QrdLocationReference {
 }
 
 /**
- * Wpis w Rejestrze Dowodów (Evidence Ledger) Etapu B2.
+ * Wpis w Rejestrze Dowodów (Evidence Ledger) Etapu B2/B3.
  * Niezmiennik kliniczny: autoResolved zawsze ma wartość false.
  */
 export interface EvidenceLedgerEntry {
@@ -117,6 +299,7 @@ export interface EvidenceLedgerEntry {
   productKey: SourceProductScopeKey;
   productLabel: string;
   documentId: string;
+  artifactId: string | null;
   documentTitle: string;
   officialSourceUrl: string;
   sourceDocumentHash: string | null;
@@ -125,11 +308,14 @@ export interface EvidenceLedgerEntry {
   sourceExcerptRef: string;
   clinicalObservation: string;
   relationship: EvidenceRelationship;
+  qualificationClass: EvidenceQualificationClass;
   reviewStatus: EvidenceReviewStatus;
   questionWorkStatus: QuestionWorkStatus;
   autoResolved: false;
   origin: EvidenceOrigin;
   isWorkingNote: boolean;
+  requiresReverification: boolean;
+  importProvenance?: EvidenceImportProvenance;
   recordedAt: string;
   recordedBy: string;
 }
@@ -158,9 +344,30 @@ export interface EvidenceTraceabilityFilters {
   productKey: SourceProductScopeKey | 'all';
   qrdSection: string;
   relationship: EvidenceRelationship | 'all';
+  qualificationClass?: EvidenceQualificationClass | 'all';
   reviewStatus: EvidenceReviewStatus | 'all';
   origin: EvidenceOrigin | 'all';
   searchQuery: string;
+}
+
+/**
+ * Dynamiczny raport jakości danych źródłowych i dowodowych (Etap B3 Quality Dashboard).
+ */
+export interface SourceQualityMetrics {
+  totalSourceRecords: number;
+  acquiredDocumentsCount: number;
+  registryEntriesWithoutPdfCount: number;
+  failedRetrievalAttemptsCount: number;
+  historicalDocumentsCount: number;
+  documentsWithoutSha256Count: number;
+  documentsWithCalculatedSha256Count: number;
+  documentsWithComparedHashCount: number;
+  referencesRequiringReviewCount: number;
+  verifiedExcerptsCount: number;
+  conflictingExcerptsCount: number;
+  questionsWithoutConfirmedExcerptsCount: number;
+  importedUnconfirmedClaimsCount: number;
+  disclaimer: string;
 }
 
 export interface QuestionTraceabilitySummary {
@@ -174,6 +381,9 @@ export interface QuestionTraceabilitySummary {
   bundleExtractCount: number;
   workingEvidenceCount: number;
   totalEvidenceCount: number;
+  verifiedExcerptsCount: number;
+  pendingReviewCount: number;
+  conflictingExcerptsCount: number;
   workingNotesCount: number;
   relationshipsCount: Record<EvidenceRelationship, number>;
   linkedDocumentIds: string[];
@@ -182,6 +392,15 @@ export interface QuestionTraceabilitySummary {
 export interface EvidenceLedgerStorageSaveResult {
   success: boolean;
   error: string | null;
+  rolledBack?: boolean;
+}
+
+export interface EvidenceLedgerMigrationReport {
+  migratedFromVersion: 'b2_master04' | 'b3_master05' | 'empty';
+  preservedEntryIds: string[];
+  preservedNoteIds: string[];
+  downgradedToReferenceCount: number;
+  flaggedReverificationCount: number;
 }
 
 export interface EvidenceLedgerExportPayload {
@@ -200,9 +419,15 @@ export interface EvidenceLedgerExportPayload {
 }
 
 export interface EvidenceLedgerImportRejectedItem {
-  kind: 'entry' | 'workingNote' | 'root';
+  kind: 'entry' | 'workingNote' | 'sourceClaim' | 'root';
   id: string;
   reason: string;
+}
+
+export interface EvidenceLedgerImportConflict {
+  kind: 'id_collision_different_content' | 'artifact_version_mismatch' | 'hash_mismatch_with_local_registry' | 'unknown_source_id' | 'missing_document_binary';
+  id: string;
+  details: string;
 }
 
 export interface EvidenceLedgerImportPreview {
@@ -217,6 +442,12 @@ export interface EvidenceLedgerImportPreview {
   skippedDuplicatesCount: number;
   newNotesCount: number;
   updatedNotesCount: number;
+  conflictsCount: number;
+  conflicts: EvidenceLedgerImportConflict[];
+  requiresManualReviewCount: number;
+  importedVerificationClaimsCount: number;
+  missingDocumentsCount: number;
+  unknownSourceIds: string[];
   rejectedItems: EvidenceLedgerImportRejectedItem[];
   payloadMetadata: {
     schemaVersion: string | null;

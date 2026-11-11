@@ -56,8 +56,10 @@ import {
   buildBaseSourceRegistry,
   buildBaselineEvidenceEntries,
   buildQuestionTraceabilitySummaries,
-  loadWorkingEvidenceFromStorage,
+  computeSourceQualityMetrics,
   loadWorkingNotesFromStorage,
+  migrateMaster04EvidenceStorage,
+  saveEvidenceAndNotesAtomically,
   saveWorkingEvidenceToStorage,
   saveWorkingNotesToStorage
 } from '../../utils/chplEvidenceLedger.ts';
@@ -130,12 +132,14 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
     [sourceRegistry]
   );
 
-  const [workingEvidenceEntries, setWorkingEvidenceEntries] = useState<EvidenceLedgerEntry[]>(() =>
-    loadWorkingEvidenceFromStorage(
-      typeof localStorage !== 'undefined' ? localStorage : null,
-      STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
-      buildBaseSourceRegistry(STAGE1_CHPL_AUDIT_BUNDLE)
-    )
+  const [workingEvidenceEntries, setWorkingEvidenceEntries] = useState<EvidenceLedgerEntry[]>(
+    () =>
+      migrateMaster04EvidenceStorage(
+        typeof localStorage !== 'undefined' ? localStorage : null,
+        STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
+        buildBaseSourceRegistry(STAGE1_CHPL_AUDIT_BUNDLE),
+        { persistIfMigrated: true }
+      ).entries
   );
   const [workingNotes, setWorkingNotes] = useState<InformalWorkingNote[]>(() =>
     loadWorkingNotesFromStorage(
@@ -148,14 +152,29 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
     DEFAULT_EVIDENCE_FILTERS
   );
 
+  const allEvidenceEntries = useMemo(
+    () => [...baselineEvidenceEntries, ...workingEvidenceEntries],
+    [baselineEvidenceEntries, workingEvidenceEntries]
+  );
+
+  const sourceQualityMetrics = useMemo(
+    () =>
+      computeSourceQualityMetrics({
+        sources: sourceRegistry,
+        allEntries: allEvidenceEntries,
+        checklist: STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist
+      }),
+    [sourceRegistry, allEvidenceEntries]
+  );
+
   const questionSummaries = useMemo(
     () =>
       buildQuestionTraceabilitySummaries(
         STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
-        [...baselineEvidenceEntries, ...workingEvidenceEntries],
+        allEvidenceEntries,
         workingNotes
       ),
-    [baselineEvidenceEntries, workingEvidenceEntries, workingNotes]
+    [allEvidenceEntries, workingNotes]
   );
 
   const handleSaveWorkingEntries = (nextEntries: EvidenceLedgerEntry[]) => {
@@ -178,6 +197,32 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
       setWorkingNotes(nextNotes);
     }
     return res;
+  };
+
+  const handleSaveEntriesAndNotesAtomically = (
+    nextEntries: EvidenceLedgerEntry[],
+    nextNotes: InformalWorkingNote[]
+  ) => {
+    const res = saveEvidenceAndNotesAtomically(
+      typeof localStorage !== 'undefined' ? localStorage : null,
+      nextEntries,
+      nextNotes
+    );
+    if (res.success) {
+      setWorkingEvidenceEntries(nextEntries);
+      setWorkingNotes(nextNotes);
+    }
+    return res;
+  };
+
+  const handleNavigateToSourceDocument = (documentId: string) => {
+    setEvidenceFilters((prev) => ({
+      ...prev,
+      documentId
+    }));
+    const targetEl =
+      typeof document !== 'undefined' ? document.getElementById(`source-card-${documentId}`) : null;
+    targetEl?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
   };
 
   const handleSelectDocumentForEvidence = (documentId: string) => {
@@ -1457,14 +1502,88 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
         </div>
       </section>
 
-      {/* 6. Sekcja E — Rejestr Dokumentów Źródłowych (Etap B2) */}
+      {/* 6. Panel Jakości Danych Źródłowych i Kwalifikacji Dowodów (Quality Dashboard — Etap B3) */}
+      <section
+        className="wb-details-section wb-b2-panel"
+        aria-labelledby="wb-b3-quality-heading"
+        data-testid="b3-quality-dashboard"
+      >
+        <div className="wb-section-heading-row">
+          <div>
+            <h2 id="wb-b3-quality-heading" className="wb-section-heading">
+              Raport jakości rejestru źródeł i dowodów (Quality Dashboard — Etap B3)
+            </h2>
+            <p className="wb-section-subheading" role="note" data-testid="b3-quality-disclaimer">
+              {sourceQualityMetrics.disclaimer}
+            </p>
+          </div>
+          {sourceQualityMetrics.importedUnconfirmedClaimsCount > 0 && (
+            <span className="wb-b3-imported-claim-pill">
+              Z importu JSON (niepotwierdzone lokalnie): {sourceQualityMetrics.importedUnconfirmedClaimsCount}
+            </span>
+          )}
+        </div>
+
+        <div className="wb-b3-quality-grid" role="region" aria-label="12 wskaźników jakości źródeł i dowodów">
+          <div className="wb-b3-metric-card" data-testid="b3-metric-total-sources">
+            <span className="wb-b3-metric-num">{sourceQualityMetrics.totalSourceRecords}</span>
+            <span className="wb-b3-metric-label">1. Wszystkie rekordy źródeł</span>
+          </div>
+          <div className="wb-b3-metric-card" data-testid="b3-metric-acquired">
+            <span className="wb-b3-metric-num">{sourceQualityMetrics.acquiredDocumentsCount}</span>
+            <span className="wb-b3-metric-label">2. Rzeczywiste dokumenty pozyskane lokalnie</span>
+          </div>
+          <div className="wb-b3-metric-card" data-testid="b3-metric-registry-only">
+            <span className="wb-b3-metric-num">{sourceQualityMetrics.registryEntriesWithoutPdfCount}</span>
+            <span className="wb-b3-metric-label">3. Wpisy rejestrowe bez lokalnego PDF</span>
+          </div>
+          <div className="wb-b3-metric-card wb-b3-metric-danger" data-testid="b3-metric-failed-attempts">
+            <span className="wb-b3-metric-num">{sourceQualityMetrics.failedRetrievalAttemptsCount}</span>
+            <span className="wb-b3-metric-label">4. Nieudane próby dostępu / HTTP 400</span>
+          </div>
+          <div className="wb-b3-metric-card" data-testid="b3-metric-historical">
+            <span className="wb-b3-metric-num">{sourceQualityMetrics.historicalDocumentsCount}</span>
+            <span className="wb-b3-metric-label">5. Dokumenty historyczne (odrzucone dla 2026/2027)</span>
+          </div>
+          <div className="wb-b3-metric-card" data-testid="b3-metric-no-sha">
+            <span className="wb-b3-metric-num">{sourceQualityMetrics.documentsWithoutSha256Count}</span>
+            <span className="wb-b3-metric-label">6. Rekordy bez sumy SHA-256</span>
+          </div>
+          <div className="wb-b3-metric-card" data-testid="b3-metric-calc-sha">
+            <span className="wb-b3-metric-num">{sourceQualityMetrics.documentsWithCalculatedSha256Count}</span>
+            <span className="wb-b3-metric-label">7. Rekordy z obliczonym SHA-256</span>
+          </div>
+          <div className="wb-b3-metric-card" data-testid="b3-metric-compared-sha">
+            <span className="wb-b3-metric-num">{sourceQualityMetrics.documentsWithComparedHashCount}</span>
+            <span className="wb-b3-metric-label">8. Rekordy z hashem porównanym ze wzorcem</span>
+          </div>
+          <div className="wb-b3-metric-card wb-b3-metric-warning" data-testid="b3-metric-refs-pending">
+            <span className="wb-b3-metric-num">{sourceQualityMetrics.referencesRequiringReviewCount}</span>
+            <span className="wb-b3-metric-label">9. Odniesienia i fragmenty wymagające sprawdzenia</span>
+          </div>
+          <div className="wb-b3-metric-card" data-testid="b3-metric-verified-excerpts">
+            <span className="wb-b3-metric-num">{sourceQualityMetrics.verifiedExcerptsCount}</span>
+            <span className="wb-b3-metric-label">10. Rzeczywiście zweryfikowane fragmenty PDF</span>
+          </div>
+          <div className="wb-b3-metric-card wb-b3-metric-danger" data-testid="b3-metric-conflicting">
+            <span className="wb-b3-metric-num">{sourceQualityMetrics.conflictingExcerptsCount}</span>
+            <span className="wb-b3-metric-label">11. Fragmenty sprzeczne / rozbieżności</span>
+          </div>
+          <div className="wb-b3-metric-card wb-b3-metric-warning" data-testid="b3-metric-open-questions">
+            <span className="wb-b3-metric-num">{sourceQualityMetrics.questionsWithoutConfirmedExcerptsCount}</span>
+            <span className="wb-b3-metric-label">12. Pytania bez potwierdzonych fragmentów PDF</span>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. Sekcja E — Rejestr Źródeł, Artefaktów i Prób Pobierań (Etap B2/B3) */}
       <WorkbenchSourceRegistryPanel
         sources={sourceRegistry}
         activeDocumentFilterId={evidenceFilters.documentId}
         onSelectDocumentForEvidence={handleSelectDocumentForEvidence}
       />
 
-      {/* 7. Sekcja F — Identyfikowalność dowodów, QRD/PDF, notatki robocze oraz eksport/import JSON */}
+      {/* 8. Sekcja F — Identyfikowalność dowodów, QRD/PDF, notatki robocze oraz eksport/import JSON */}
       <WorkbenchEvidenceLedgerPanel
         sources={sourceRegistry}
         checklist={STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist}
@@ -1476,6 +1595,8 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
         onFiltersChange={setEvidenceFilters}
         onSaveWorkingEntries={handleSaveWorkingEntries}
         onSaveWorkingNotes={handleSaveWorkingNotes}
+        onSaveEntriesAndNotesAtomically={handleSaveEntriesAndNotesAtomically}
+        onNavigateToSourceDocument={handleNavigateToSourceDocument}
         ledgerSectionRef={evidenceLedgerRef}
       />
     </div>

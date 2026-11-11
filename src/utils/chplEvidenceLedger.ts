@@ -6,23 +6,38 @@ import type {
   Stage1HumanDecisionItem
 } from '../types/childVaccines';
 import type {
+  ArtifactChangeCategory,
+  ContentReviewAxisStatus,
+  DocumentArtifactRecord,
   EvidenceLedgerEntry,
   EvidenceLedgerExportPayload,
+  EvidenceLedgerImportConflict,
   EvidenceLedgerImportPreview,
   EvidenceLedgerImportRejectedItem,
+  EvidenceLedgerMigrationReport,
   EvidenceLedgerStorageSaveResult,
   EvidenceOrigin,
+  EvidenceQualificationClass,
   EvidenceRelationship,
   EvidenceReviewStatus,
   EvidenceTraceabilityFilters,
+  FileIntegrityAxisStatus,
+  HashComparisonStatus,
+  HashProvenanceRecord,
   InformalWorkingNote,
   PageNumberingType,
   QrdLocationReference,
   QuestionTraceabilitySummary,
   QuestionWorkStatus,
+  RetrievalAttemptRecord,
+  SourceAcquisitionAxisStatus,
   SourceAuthorityType,
+  SourceObjectType,
+  SourceOriginAxisStatus,
   SourceProductScopeKey,
+  SourceQualityMetrics,
   SourceRegistryEntry,
+  SourceStatusAxes,
   SourceVerificationStatus
 } from '../types/evidenceLedger';
 import {
@@ -32,10 +47,21 @@ import {
   isValidHttpUrl
 } from './catalogMerge';
 
-export const EVIDENCE_LEDGER_SCHEMA_VERSION = '1.0.0';
-export const SOURCE_REGISTRY_VERSION = '2026.11.11-etap-b2-sources-1.0';
+export const EVIDENCE_LEDGER_SCHEMA_VERSION = '1.1.0';
+export const LEGACY_B2_EVIDENCE_LEDGER_SCHEMA_VERSION = '1.0.0';
+export const SUPPORTED_EVIDENCE_LEDGER_SCHEMA_VERSIONS: readonly string[] = [
+  LEGACY_B2_EVIDENCE_LEDGER_SCHEMA_VERSION,
+  EVIDENCE_LEDGER_SCHEMA_VERSION
+] as const;
+export const SOURCE_REGISTRY_VERSION = '2026.11.11-etap-b3-sources-2.0';
 export const EVIDENCE_LEDGER_STORAGE_KEY = 'vaxnurse_chpl_evidence_ledger_v1';
 export const WORKING_NOTES_STORAGE_KEY = 'vaxnurse_chpl_working_notes_v1';
+
+export const SOURCE_QUALITY_DISCLAIMER =
+  'Metryki pokazują stan dokumentacji i kontroli źródeł. Nie stanowią oceny klinicznej ani potwierdzenia poprawności wszystkich informacji o preparatach.';
+
+export const HISTORICAL_DOCUMENT_NOTICE =
+  'Dokument historyczny — nie stosować jako automatycznej podstawy bieżącego audytu';
 
 export const EMPTY_QUESTION_EVIDENCE_MESSAGE =
   'Nie dodano jeszcze dowodów do tego pytania. Brak dowodów nie oznacza potwierdzenia ani zaprzeczenia informacji.';
@@ -55,6 +81,25 @@ export const ALLOWED_AUTHORITY_TYPES: readonly SourceAuthorityType[] = [
   'ema_epar',
   'mz_gis_document',
   'secondary_reference'
+] as const;
+
+export const ALLOWED_SOURCE_OBJECT_TYPES: readonly SourceObjectType[] = [
+  'official_document',
+  'official_registry_record',
+  'official_endpoint',
+  'retrieval_attempt',
+  'historical_document',
+  'local_reference_document',
+  'secondary_document'
+] as const;
+
+export const ALLOWED_EVIDENCE_QUALIFICATION_CLASSES: readonly EvidenceQualificationClass[] = [
+  'traceability_reference',
+  'source_excerpt_pending_review',
+  'source_excerpt_reviewed',
+  'conflicting_source_excerpt',
+  'secondary_reference',
+  'unavailable_source_reference'
 ] as const;
 
 export const ALLOWED_SOURCE_VERIFICATION_STATUSES: readonly SourceVerificationStatus[] = [
@@ -104,6 +149,7 @@ export const DEFAULT_EVIDENCE_FILTERS: EvidenceTraceabilityFilters = {
   productKey: 'all',
   qrdSection: 'all',
   relationship: 'all',
+  qualificationClass: 'all',
   reviewStatus: 'all',
   origin: 'all',
   searchQuery: ''
@@ -236,8 +282,234 @@ export function getQuestionWorkStatusLabel(status: QuestionWorkStatus): string {
   }
 }
 
+export function getSourceObjectTypePresentation(objectType: SourceObjectType): {
+  label: string;
+  badgeText: string;
+  tone: 'info' | 'warning' | 'danger' | 'neutral' | 'historical';
+} {
+  switch (objectType) {
+    case 'official_document':
+      return {
+        label: 'Oficjalny dokument zdalny (bez lokalnego pliku PDF w repo)',
+        badgeText: 'Dokument zdalny (brak kopii lokalnej)',
+        tone: 'info'
+      };
+    case 'official_registry_record':
+      return {
+        label: 'Źródło rejestrowe (wpis RPL — bez lokalnego pliku PDF)',
+        badgeText: 'Źródło rejestrowe (brak lokalnego PDF)',
+        tone: 'warning'
+      };
+    case 'official_endpoint':
+      return {
+        label: 'Oficjalny endpoint API (brak pobranego dokumentu)',
+        badgeText: 'Źródło niedostępne / endpoint API',
+        tone: 'danger'
+      };
+    case 'retrieval_attempt':
+      return {
+        label: 'Rekord próby pobrania dokumentu',
+        badgeText: 'Próba pobrania',
+        tone: 'neutral'
+      };
+    case 'historical_document':
+      return {
+        label: HISTORICAL_DOCUMENT_NOTICE,
+        badgeText: 'Dokument historyczny (odrzucony dla 2026/2027)',
+        tone: 'historical'
+      };
+    case 'local_reference_document':
+      return {
+        label: 'Dokument pozyskany lokalnie (plik obecny w repozytorium)',
+        badgeText: 'Dokument pozyskany lokalnie',
+        tone: 'info'
+      };
+    case 'secondary_document':
+      return {
+        label: 'Materiał wtórny / komunikat pomocniczy (nie jest ChPL)',
+        badgeText: 'Dokument wtórny',
+        tone: 'warning'
+      };
+  }
+}
+
+export function getOriginAxisStatusLabel(status: SourceOriginAxisStatus): string {
+  switch (status) {
+    case 'not_checked':
+      return 'Pochodzenie niesprawdzone';
+    case 'official_origin_confirmed':
+      return 'Oficjalne pochodzenie potwierdzone (adres/rejestr urzędowy)';
+    case 'origin_uncertain':
+      return 'Pochodzenie niepewne';
+    case 'origin_mismatch':
+      return 'Niezgodność pochodzenia źródła';
+    case 'manual_review_required':
+      return 'Pochodzenie wymaga ręcznego przeglądu';
+  }
+}
+
+export function getAcquisitionAxisStatusLabel(status: SourceAcquisitionAxisStatus): string {
+  switch (status) {
+    case 'acquired':
+      return 'Dokument pozyskany (kopia obecna lokalnie w repozytorium)';
+    case 'not_acquired':
+      return 'Nie pozyskano lokalnej kopii PDF (wyłącznie metadane / weryfikacja HTTP)';
+    case 'temporarily_unavailable':
+      return 'Źródło tymczasowo niedostępne';
+    case 'permanently_unavailable_unknown':
+      return 'Status trwałej dostępności nieustalony';
+    case 'access_failed':
+      return 'Nieudana próba pobrania (błąd endpointu / dostępu HTTP)';
+    case 'historical_copy_only':
+      return 'Wyłącznie historyczna kopia z poprzedniego sezonu';
+  }
+}
+
+export function getIntegrityAxisStatusLabel(status: FileIntegrityAxisStatus): string {
+  switch (status) {
+    case 'not_checked':
+      return 'Integralność niesprawdzona (brak pliku PDF)';
+    case 'hash_calculated':
+      return 'Wyłącznie obliczony SHA-256 (bez wzorca porównawczego — nie potwierdza autentyczności)';
+    case 'hash_matches_known_reference':
+      return 'SHA-256 zgodny z wcześniej zapisanym wzorcem (identyczność bajtowa, nie certyfikat urzędowy)';
+    case 'hash_mismatch':
+      return 'Rozbieżność SHA-256 względem znanego wzorca';
+    case 'hash_reference_unavailable':
+      return 'Brak wzorca SHA-256 do porównania';
+  }
+}
+
+export function getContentReviewAxisStatusLabel(status: ContentReviewAxisStatus): string {
+  switch (status) {
+    case 'not_reviewed':
+      return 'Treść niekontrolowana';
+    case 'excerpt_checked':
+      return 'Pojedynczy fragment porównany (nie zamyka karty)';
+    case 'section_reviewed':
+      return 'Sekcja porównana kontekstowo (bez zamknięcia klinicznego)';
+    case 'discrepancy_found':
+      return 'Wykryto rozbieżność lub lukę wymagającą decyzji człowieka';
+    case 'awaiting_human_review':
+      return 'Oczekuje na przegląd treści przez człowieka';
+  }
+}
+
+export function getHashComparisonStatusLabel(status: HashComparisonStatus): string {
+  switch (status) {
+    case 'calculated_from_local_file':
+      return 'Hash wyliczony z lokalnego pliku';
+    case 'compared_with_known_reference':
+      return 'Hash porównany z wcześniej zapisanym wzorcem';
+    case 'not_compared':
+      return 'Hash nieporównany z żadnym wcześniejszym wzorcem';
+    case 'hash_from_untrusted_source':
+      return 'Hash z nieznanego / importowanego źródła (niezweryfikowany lokalnie)';
+    case 'hash_mismatch':
+      return 'Hash rozbieżny ze wzorcem';
+  }
+}
+
+export function getQualificationClassPresentation(qClass: EvidenceQualificationClass): {
+  label: string;
+  badgeText: string;
+  tone: 'neutral' | 'warning' | 'danger' | 'verified' | 'secondary';
+} {
+  switch (qClass) {
+    case 'traceability_reference':
+      return {
+        label: 'Odniesienie identyfikowalne — nie jest potwierdzonym dowodem z treści PDF',
+        badgeText: 'Odniesienie do weryfikacji',
+        tone: 'neutral'
+      };
+    case 'source_excerpt_pending_review':
+      return {
+        label: 'Fragment przypisany do dokumentu — oczekuje na kontrolę w oryginalnym PDF',
+        badgeText: 'Fragment roboczy (niezweryfikowany)',
+        tone: 'warning'
+      };
+    case 'source_excerpt_reviewed':
+      return {
+        label: 'Fragment sprawdzony ręcznie względem wskazanego PDF (nie zamyka pytania klinicznego)',
+        badgeText: 'Fragment zweryfikowany (lokalnie)',
+        tone: 'verified'
+      };
+    case 'conflicting_source_excerpt':
+      return {
+        label: 'Rozbieżność pomiędzy punktami dokumentu lub między źródłami',
+        badgeText: 'Rozbieżność źródłowa',
+        tone: 'danger'
+      };
+    case 'secondary_reference':
+      return {
+        label: 'Informacja oparta na materiale wtórnym lub kontekstowym (nie jest oryginalną ChPL)',
+        badgeText: 'Źródło wtórne / kontekst',
+        tone: 'secondary'
+      };
+    case 'unavailable_source_reference':
+      return {
+        label: 'Źródło lub plik dokumentu jest niedostępny pod wskazanym odnośnikiem',
+        badgeText: 'Źródło niedostępne',
+        tone: 'danger'
+      };
+  }
+}
+
+interface BuildArtifactParams {
+  artifactId: string;
+  documentId: string;
+  language: 'PL' | 'EN';
+  fileName: string | null;
+  documentDate: string | null;
+  retrievedAt: string | null;
+  sourceUrl: string;
+  physicalPageCount: number | null;
+  fileSizeBytes: number | null;
+  sha256: string | null;
+  calculationMethod: string;
+  referenceType: HashProvenanceRecord['referenceType'];
+  referenceHash: string | null;
+  comparisonStatus: HashComparisonStatus;
+  isHistoricalVersion?: boolean;
+  changeCategory?: ArtifactChangeCategory;
+}
+
+function buildInitialDocumentArtifact(params: BuildArtifactParams): DocumentArtifactRecord {
+  const isHistorical = Boolean(params.isHistoricalVersion);
+  return {
+    artifactId: params.artifactId,
+    documentId: params.documentId,
+    language: params.language,
+    fileName: params.fileName,
+    documentDate: params.documentDate,
+    retrievedAt: params.retrievedAt,
+    sourceUrl: params.sourceUrl,
+    previousArtifactId: null,
+    versionSequence: 1,
+    changeCategory: params.changeCategory ?? (isHistorical ? 'historical_version' : 'initial_record'),
+    isCurrentActiveVersion: !isHistorical,
+    isHistoricalVersion: isHistorical,
+    requiresReverification: isHistorical,
+    physicalPageCount: params.physicalPageCount,
+    fileSizeBytes: params.fileSizeBytes,
+    hashProvenance: {
+      algorithm: 'SHA-256',
+      value: params.sha256,
+      artifactId: params.artifactId,
+      calculatedAt: params.retrievedAt,
+      calculationMethod: params.calculationMethod,
+      fileName: params.fileName,
+      fileSizeBytes: params.fileSizeBytes,
+      referenceType: params.referenceType,
+      referenceHash: params.referenceHash,
+      comparisonStatus: params.comparisonStatus
+    }
+  };
+}
+
 /**
- * Tworzy kanoniczny Rejestr Dokumentów Źródłowych z niemodyfikowalnych źródeł projektu Etapu I i katalogu.
+ * Tworzy kanoniczny Rejestr Źródeł i Artefaktów Etapu B3 z niemodyfikowalnych źródeł projektu Etapu I i katalogu.
+ * Rozdziela obiekt źródła (rejestr / endpoint / dokument lokalny / historyczny), artefakt pliku i próby pobrania.
  * Nigdy nie fabrykuje skrótów SHA-256 ani zmyślonych adresów URL.
  */
 export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRegistryEntry[] {
@@ -251,14 +523,43 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
   const registry: SourceRegistryEntry[] = [];
 
   if (influvac) {
+    const artifact = buildInitialDocumentArtifact({
+      artifactId: 'art-rpl-influvac-49462-v1',
+      documentId: 'doc-rpl-influvac-49462',
+      language: 'PL',
+      fileName: 'OLI-2026-08-18.pdf',
+      documentDate: influvac.documentDateInSection10,
+      retrievedAt: '2026-11-11T03:06:01+01:00',
+      sourceUrl: influvac.officialSourceUrl,
+      physicalPageCount: influvac.pageCount,
+      fileSizeBytes: influvac.fileSizeBytes,
+      sha256: influvac.fileSha256,
+      calculationMethod: 'SHA-256 odpowiedzi HTTP RPL (bez zapisu lokalnego pliku PDF w repozytorium)',
+      referenceType: 'bundle_recorded_sha256',
+      referenceHash: influvac.fileSha256,
+      comparisonStatus: 'compared_with_known_reference'
+    });
+    const attempt: RetrievalAttemptRecord = {
+      attemptId: 'att-rpl-influvac-49462-20261111',
+      documentId: 'doc-rpl-influvac-49462',
+      attemptedAt: '2026-11-11T23:30:00+01:00',
+      targetUrl: influvac.officialSourceUrl,
+      accessMethod: 'http_get',
+      result: 'success',
+      httpStatus: 200,
+      errorDescription: null,
+      checkScope: 'Weryfikacja statusu HTTP 200 oraz sumy SHA-256 w pamięci (bez zapisu PDF na dysk)',
+      artifactId: artifact.artifactId
+    };
     registry.push({
       documentId: 'doc-rpl-influvac-49462',
+      objectType: 'official_registry_record',
       productKey: 'influvac_2026_2027',
       productDisplayName: influvac.productName,
       linkedCatalogVaccineIds: [],
       linkedProcedureIds: [...influvac.relatedProcedureIds],
       documentTitle: 'ChPL Influvac (RPL ID 49462, poz. 28478, sezon 2026/2027)',
-      documentType: 'ChPL (PDF RPL eZdrowie)',
+      documentType: 'Wpis rejestrowy RPL eZdrowie + referencyjny PDF online (brak pliku w repo)',
       authority: 'URPLWMiPB / Rejestr Produktów Leczniczych (eZdrowie)',
       authorityType: 'rpl_registry',
       officialSourceUrl: influvac.officialSourceUrl,
@@ -273,24 +574,64 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       pdfScopeRange: `PDF str. 1–${influvac.pageCount}`,
       fileSizeBytes: influvac.fileSizeBytes,
       sha256: influvac.fileSha256,
-      sha256ScopeLabel: 'Skrót PDF zapisany w rejestrze audytu Etapu I (plik binarny nie jest przechowywany w repozytorium)',
+      sha256ScopeLabel: 'SHA-256 odpowiedzi HTTP RPL zgodny ze skrótem Etapu I (plik PDF nie jest przechowywany lokalnie w repozytorium)',
       sha256Basis: 'bundle_recorded_pdf_sha256',
       sourceVerificationStatus: 'official_source_confirmed',
       sourceVerificationStatusLabel: getSourceVerificationStatusLabel('official_source_confirmed'),
       sourceVerificationDate: '2026-11-11',
-      sourceVerificationNotes: influvac.technicalNotes
+      sourceVerificationNotes: influvac.technicalNotes,
+      statusAxes: {
+        originStatus: 'official_origin_confirmed',
+        acquisitionStatus: 'not_acquired',
+        integrityStatus: 'hash_matches_known_reference',
+        contentReviewStatus: 'awaiting_human_review'
+      },
+      currentArtifact: artifact,
+      artifactHistory: [artifact],
+      retrievalAttempts: [attempt],
+      registryVsFileDistinctionNote:
+        'Wpis rejestrowy RPL ID 49462 potwierdza metadane i sumę SHA-256 zdalnego PDF (HTTP 200), ale sam plik binarny ChPL nie jest przechowywany lokalnie w projekcie.'
     });
   }
 
   if (vaxigrip) {
+    const artifact = buildInitialDocumentArtifact({
+      artifactId: 'art-rpl-vaxigrip-50032-v1',
+      documentId: 'doc-rpl-vaxigrip-50032',
+      language: 'PL',
+      fileName: 'OLI-2026-08-12.pdf',
+      documentDate: vaxigrip.documentDateInSection10,
+      retrievedAt: '2026-11-11T03:06:01+01:00',
+      sourceUrl: vaxigrip.officialSourceUrl,
+      physicalPageCount: vaxigrip.pageCount,
+      fileSizeBytes: vaxigrip.fileSizeBytes,
+      sha256: vaxigrip.fileSha256,
+      calculationMethod: 'SHA-256 odpowiedzi HTTP RPL (bez zapisu lokalnego pliku PDF w repozytorium)',
+      referenceType: 'bundle_recorded_sha256',
+      referenceHash: vaxigrip.fileSha256,
+      comparisonStatus: 'compared_with_known_reference'
+    });
+    const attempt: RetrievalAttemptRecord = {
+      attemptId: 'att-rpl-vaxigrip-50032-20261111',
+      documentId: 'doc-rpl-vaxigrip-50032',
+      attemptedAt: '2026-11-11T23:30:00+01:00',
+      targetUrl: vaxigrip.officialSourceUrl,
+      accessMethod: 'http_get',
+      result: 'success',
+      httpStatus: 200,
+      errorDescription: null,
+      checkScope: 'Weryfikacja statusu HTTP 200 oraz sumy SHA-256 w pamięci (bez zapisu PDF na dysk)',
+      artifactId: artifact.artifactId
+    };
     registry.push({
       documentId: 'doc-rpl-vaxigrip-50032',
+      objectType: 'official_registry_record',
       productKey: 'vaxigrip_2026_2027',
       productDisplayName: vaxigrip.productName,
       linkedCatalogVaccineIds: [],
       linkedProcedureIds: [...vaxigrip.relatedProcedureIds],
       documentTitle: 'ChPL Vaxigrip (RPL ID 50032, poz. 28778, sezon 2026/2027)',
-      documentType: 'ChPL (PDF RPL eZdrowie)',
+      documentType: 'Wpis rejestrowy RPL eZdrowie + referencyjny PDF online (brak pliku w repo)',
       authority: 'URPLWMiPB / Rejestr Produktów Leczniczych (eZdrowie)',
       authorityType: 'rpl_registry',
       officialSourceUrl: vaxigrip.officialSourceUrl,
@@ -305,28 +646,68 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       pdfScopeRange: `PDF str. 1–${vaxigrip.pageCount}`,
       fileSizeBytes: vaxigrip.fileSizeBytes,
       sha256: vaxigrip.fileSha256,
-      sha256ScopeLabel: 'Skrót PDF zapisany w rejestrze audytu Etapu I (plik binarny nie jest przechowywany w repozytorium)',
+      sha256ScopeLabel: 'SHA-256 odpowiedzi HTTP RPL zgodny ze skrótem Etapu I (oddzielony od historycznego VaxigripTetra 35346)',
       sha256Basis: 'bundle_recorded_pdf_sha256',
       sourceVerificationStatus: 'official_source_confirmed',
       sourceVerificationStatusLabel: getSourceVerificationStatusLabel('official_source_confirmed'),
       sourceVerificationDate: '2026-11-11',
-      sourceVerificationNotes: vaxigrip.technicalNotes
+      sourceVerificationNotes: vaxigrip.technicalNotes,
+      statusAxes: {
+        originStatus: 'official_origin_confirmed',
+        acquisitionStatus: 'not_acquired',
+        integrityStatus: 'hash_matches_known_reference',
+        contentReviewStatus: 'awaiting_human_review'
+      },
+      currentArtifact: artifact,
+      artifactHistory: [artifact],
+      retrievalAttempts: [attempt],
+      registryVsFileDistinctionNote:
+        'Bieżący rekord 3-walentnego preparatu Vaxigrip (RPL 50032, sezon 2026/2027) rozdzielony od historycznego VaxigripTetra (RPL 35346). Brak lokalnego PDF w repozytorium.'
     });
   }
 
   if (spikevax) {
+    const spikevaxPlArtifact = buildInitialDocumentArtifact({
+      artifactId: 'art-ema-spikevax-xfg-pl-v1',
+      documentId: 'doc-ema-spikevax-xfg-pl',
+      language: 'PL',
+      fileName: 'spikevax-epar-product-information_pl.pdf',
+      documentDate: spikevax.documentDateInSection10,
+      retrievedAt: '2026-11-11T03:07:05+01:00',
+      sourceUrl: spikevax.officialSourceUrl,
+      physicalPageCount: spikevax.pageCount,
+      fileSizeBytes: spikevax.fileSizeBytes,
+      sha256: spikevax.fileSha256,
+      calculationMethod: 'SHA-256 pełnego strumienia PDF EMA EPAR PL (177 str.) porównany ze skrótem Etapu I',
+      referenceType: 'bundle_recorded_sha256',
+      referenceHash: spikevax.fileSha256,
+      comparisonStatus: 'compared_with_known_reference'
+    });
+    const spikevaxPlAttempt: RetrievalAttemptRecord = {
+      attemptId: 'att-ema-spikevax-pl-20261111',
+      documentId: 'doc-ema-spikevax-xfg-pl',
+      attemptedAt: '2026-11-11T23:31:00+01:00',
+      targetUrl: spikevax.officialSourceUrl,
+      accessMethod: 'http_get',
+      result: 'success',
+      httpStatus: 200,
+      errorDescription: null,
+      checkScope: 'Potwierdzono HTTP 200 (Last-Modified 2026-10-29) oraz identyczność SHA-256 177 str. pliku EPAR PL',
+      artifactId: spikevaxPlArtifact.artifactId
+    };
     registry.push({
       documentId: 'doc-ema-spikevax-xfg-pl',
+      objectType: 'official_document',
       productKey: 'spikevax_xfg',
       productDisplayName: spikevax.productName,
       linkedCatalogVaccineIds: [],
       linkedProcedureIds: [...spikevax.relatedProcedureIds],
       documentTitle: 'EMA EPAR Aneks I — ChPL Spikevax XFG (wersja PL)',
-      documentType: 'EMA EPAR Product Information (Aneks I ChPL, PL)',
+      documentType: 'Oficjalny dokument EMA EPAR (Aneks I ChPL, PL — referencyjny URL online)',
       authority: 'European Medicines Agency (EMA)',
       authorityType: 'ema_epar',
       officialSourceUrl: spikevax.officialSourceUrl,
-      rplIdOrRegistryNumber: 'EMA/EPAR (PL) · RPL CEN ID: 54306 / 54308 / 54456',
+      rplIdOrRegistryNumber: 'EMA/EPAR (PL) · powiązany z brakującymi endpointami RPL CEN 54306/54308/54456',
       marketingAuthorizationNumber: spikevax.authorizationNumber,
       marketingAuthorizationHolder: spikevax.marketingAuthorizationHolder,
       language: 'PL',
@@ -334,25 +715,67 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       publicationDate: '2026-10-30',
       retrievedAt: '2026-11-11T03:07:05+01:00',
       physicalPageCount: spikevax.pageCount,
-      pdfScopeRange: `Aneks I na str. 64–92 z ${spikevax.pageCount} str. PDF EPAR PL`,
+      pdfScopeRange: `Aneks I na str. 64–92 z ${spikevax.pageCount} str. PDF EPAR PL (zmienna w kolejnych aktualizacjach)`,
       fileSizeBytes: spikevax.fileSizeBytes,
       sha256: spikevax.fileSha256,
-      sha256ScopeLabel: 'Skrót pełnego pliku EPAR PL (177 str.) zapisany w rejestrze audytu Etapu I',
+      sha256ScopeLabel: 'SHA-256 pełnego pliku EPAR PL (177 str.) zgodny ze wzorcem Etapu I (wersja PL oddzielona od EN)',
       sha256Basis: 'bundle_recorded_pdf_sha256',
       sourceVerificationStatus: 'official_source_confirmed',
       sourceVerificationStatusLabel: getSourceVerificationStatusLabel('official_source_confirmed'),
       sourceVerificationDate: '2026-11-11',
-      sourceVerificationNotes: spikevax.technicalNotes
+      sourceVerificationNotes: spikevax.technicalNotes,
+      statusAxes: {
+        originStatus: 'official_origin_confirmed',
+        acquisitionStatus: 'not_acquired',
+        integrityStatus: 'hash_matches_known_reference',
+        contentReviewStatus: 'discrepancy_found'
+      },
+      currentArtifact: spikevaxPlArtifact,
+      artifactHistory: [spikevaxPlArtifact],
+      retrievalAttempts: [spikevaxPlAttempt],
+      registryVsFileDistinctionNote:
+        'Oficjalny plik EPAR EMA w wersji PL (177 str.) jest odrębnym artefaktem językowym od wersji EN (158 str.) i od rekordu RPL CEN. Liczba stron stanowi właściwość konkretnej rewizji.'
     });
 
+    const spikevaxEnArtifact = buildInitialDocumentArtifact({
+      artifactId: 'art-ema-spikevax-xfg-en-v1',
+      documentId: 'doc-ema-spikevax-xfg-en',
+      language: 'EN',
+      fileName: 'spikevax-epar-product-information_en.pdf',
+      documentDate: null,
+      retrievedAt: '2026-11-11T03:07:05+01:00',
+      sourceUrl:
+        'https://www.ema.europa.eu/en/documents/product-information/spikevax-epar-product-information_en.pdf',
+      physicalPageCount: 158,
+      fileSizeBytes: 1387433,
+      sha256: '8932b31f46e652f9ee4be89ad65cd6003f9fa5a63be0f2af64affd645a0d7024',
+      calculationMethod: 'SHA-256 pełnego strumienia PDF EMA EPAR EN (158 str.) porównany ze skrótem MASTER 04',
+      referenceType: 'bundle_recorded_sha256',
+      referenceHash: '8932b31f46e652f9ee4be89ad65cd6003f9fa5a63be0f2af64affd645a0d7024',
+      comparisonStatus: 'compared_with_known_reference'
+    });
+    const spikevaxEnAttempt: RetrievalAttemptRecord = {
+      attemptId: 'att-ema-spikevax-en-20261111',
+      documentId: 'doc-ema-spikevax-xfg-en',
+      attemptedAt: '2026-11-11T23:31:00+01:00',
+      targetUrl:
+        'https://www.ema.europa.eu/en/documents/product-information/spikevax-epar-product-information_en.pdf',
+      accessMethod: 'http_get',
+      result: 'success',
+      httpStatus: 200,
+      errorDescription: null,
+      checkScope: 'Potwierdzono HTTP 200 (Last-Modified 2026-10-29) oraz identyczność SHA-256 158 str. pliku EPAR EN',
+      artifactId: spikevaxEnArtifact.artifactId
+    };
     registry.push({
       documentId: 'doc-ema-spikevax-xfg-en',
+      objectType: 'official_document',
       productKey: 'spikevax_xfg',
       productDisplayName: `${spikevax.productName} (wersja angielska SmPC)`,
       linkedCatalogVaccineIds: [],
       linkedProcedureIds: [...spikevax.relatedProcedureIds],
       documentTitle: 'EMA EPAR Annex I — SmPC Spikevax XFG (wersja EN)',
-      documentType: 'EMA EPAR Product Information (Annex I SmPC, EN)',
+      documentType: 'Oficjalny dokument EMA EPAR (Annex I SmPC, EN — oddzielny artefakt językowy)',
       authority: 'European Medicines Agency (EMA)',
       authorityType: 'ema_epar',
       officialSourceUrl:
@@ -365,26 +788,51 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       publicationDate: '2026-10-30',
       retrievedAt: '2026-11-11T03:07:05+01:00',
       physicalPageCount: 158,
-      pdfScopeRange: 'Annex I SmPC na str. 53–77 z 158 str. PDF EPAR EN',
+      pdfScopeRange: 'Annex I SmPC na str. 53–77 z 158 str. PDF EPAR EN (oddzielna numeracja niż PL)',
       fileSizeBytes: 1387433,
       sha256: '8932b31f46e652f9ee4be89ad65cd6003f9fa5a63be0f2af64affd645a0d7024',
-      sha256ScopeLabel: 'Skrót pełnego pliku EPAR EN (158 str.) zapisany w rekordzie audytu PSO',
+      sha256ScopeLabel: 'SHA-256 pełnego pliku EPAR EN (158 str.) zgodny ze wzorcem B2 (odrębny artefakt względem PL)',
       sha256Basis: 'bundle_recorded_pdf_sha256',
       sourceVerificationStatus: 'official_source_confirmed',
       sourceVerificationStatusLabel: getSourceVerificationStatusLabel('official_source_confirmed'),
       sourceVerificationDate: '2026-11-11',
       sourceVerificationNotes:
-        'Odrębny angielskojęzyczny dokument EPAR EMA (158 str.). Pkt 10 na str. 77 również pozostaje bez wpisanej daty w tekście.'
+        'Odrębny angielskojęzyczny dokument EPAR EMA (158 str.). Pkt 10 na str. 77 również pozostaje bez wpisanej daty w tekście.',
+      statusAxes: {
+        originStatus: 'official_origin_confirmed',
+        acquisitionStatus: 'not_acquired',
+        integrityStatus: 'hash_matches_known_reference',
+        contentReviewStatus: 'awaiting_human_review'
+      },
+      currentArtifact: spikevaxEnArtifact,
+      artifactHistory: [spikevaxEnArtifact],
+      retrievalAttempts: [spikevaxEnAttempt],
+      registryVsFileDistinctionNote:
+        'Wersja angielska EPAR EN (158 str.) stanowi całkowicie odrębny artefakt od wersji polskiej EPAR PL (177 str.) — posiada własny URL, sumę SHA-256 i numerację stron.'
     });
 
+    const spikevaxCenAttempt: RetrievalAttemptRecord = {
+      attemptId: 'att-rpl-cen-54306-20261111',
+      documentId: 'doc-rpl-spikevax-cen-endpoints',
+      attemptedAt: '2026-11-11T23:31:05+01:00',
+      targetUrl: 'https://rejestrymedyczne.ezdrowie.gov.pl/api/rpl/medicinal-products/54306/characteristic',
+      accessMethod: 'http_get',
+      result: 'http_error',
+      httpStatus: 400,
+      errorDescription:
+        'STORAGE_FILE_NOT_FOUND (pl.gov.csioz.rpl.infrastructure.exceptions.ApiError): „Nazwa pliku nie została podana.” — brak pliku po stronie endpointu RPL, co nie dowodzi braku dokumentu w EMA.',
+      checkScope: 'Pojedyncze zapytanie HTTP GET o załącznik charakterystyki produktu w endpointcie API RPL ID 54306 (CEN)',
+      artifactId: null
+    };
     registry.push({
       documentId: 'doc-rpl-spikevax-cen-endpoints',
+      objectType: 'official_endpoint',
       productKey: 'spikevax_xfg',
-      productDisplayName: 'Spikevax XFG — wpisy RPL procedury centralnej (CEN)',
+      productDisplayName: 'Spikevax XFG — endpoint API RPL procedury centralnej (CEN)',
       linkedCatalogVaccineIds: [],
       linkedProcedureIds: [...spikevax.relatedProcedureIds],
-      documentTitle: 'RPL CEN Spikevax XFG (ID 54306 / 54308 / 54456) — brak pliku PDF w API',
-      documentType: 'Rejestr krajowy RPL eZdrowie (endpoint CEN)',
+      documentTitle: 'Endpoint API RPL CEN Spikevax XFG (ID 54306 / 54308 / 54456) — nieudana próba pobrania',
+      documentType: 'Oficjalny endpoint API RPL eZdrowie (brak pliku binarnego PDF)',
       authority: 'URPLWMiPB / Rejestr Produktów Leczniczych (eZdrowie)',
       authorityType: 'rpl_registry',
       officialSourceUrl:
@@ -395,30 +843,70 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       language: 'PL',
       revisionDate: null,
       publicationDate: null,
-      retrievedAt: '2026-11-11T03:07:05+01:00',
+      retrievedAt: '2026-11-11T23:31:05+01:00',
       physicalPageCount: null,
-      pdfScopeRange: 'Brak pliku PDF w API RPL (HTTP 400 / hasDownloadableMaterials=false)',
+      pdfScopeRange: 'Brak pliku PDF pod endpointem API RPL (HTTP 400 STORAGE_FILE_NOT_FOUND)',
       fileSizeBytes: null,
       sha256: null,
-      sha256ScopeLabel: 'Niezweryfikowano binarnie (endpoint RPL CEN zwraca HTTP 400 — źródło podstawowe w EMA EPAR)',
+      sha256ScopeLabel: 'Brak sumy SHA-256 — endpoint RPL CEN zwraca HTTP 400 (dokument właściwy publikuje odrębny rekord EMA EPAR)',
       sha256Basis: 'not_verified_binary',
       sourceVerificationStatus: 'official_source_unavailable',
       sourceVerificationStatusLabel: getSourceVerificationStatusLabel('official_source_unavailable'),
       sourceVerificationDate: '2026-11-11',
       sourceVerificationNotes:
-        'W polskim RPL wpisy Spikevax XFG mają puste registryNumber oraz hasDownloadableMaterials=false; endpoint /characteristic zwraca HTTP 400.'
+        'Endpoint RPL CEN zwraca JSON HTTP 400 STORAGE_FILE_NOT_FOUND („Nazwa pliku nie została podana.”). Jest to techniczny błąd endpointu dla produktu centralnego — nie potwierdza nieistnienia produktu w bazie EMA EPAR.',
+      statusAxes: {
+        originStatus: 'official_origin_confirmed',
+        acquisitionStatus: 'access_failed',
+        integrityStatus: 'not_checked',
+        contentReviewStatus: 'not_reviewed'
+      },
+      currentArtifact: null,
+      artifactHistory: [],
+      retrievalAttempts: [spikevaxCenAttempt],
+      registryVsFileDistinctionNote:
+        'Rekord reprezentuje endpoint API RPL oraz nieudaną próbę dostępu (HTTP 400). Nie jest pozyskanym dokumentem PDF ani dowodem braku dokumentacji w EMA.'
     });
   }
 
   if (bcg) {
+    const bcgArtifact = buildInitialDocumentArtifact({
+      artifactId: 'art-rpl-bcg10-19535-v1',
+      documentId: 'doc-rpl-bcg10-19535',
+      language: 'PL',
+      fileName: 'OLI-2023-12-08.pdf',
+      documentDate: bcg.documentDateInSection10,
+      retrievedAt: '2026-11-11T03:30:00+01:00',
+      sourceUrl: bcg.officialSourceUrl,
+      physicalPageCount: bcg.pageCount,
+      fileSizeBytes: bcg.fileSizeBytes,
+      sha256: bcg.fileSha256,
+      calculationMethod: 'SHA-256 odpowiedzi HTTP RPL (bez zapisu lokalnego pliku PDF w repozytorium)',
+      referenceType: 'bundle_recorded_sha256',
+      referenceHash: bcg.fileSha256,
+      comparisonStatus: 'compared_with_known_reference'
+    });
+    const bcgAttempt: RetrievalAttemptRecord = {
+      attemptId: 'att-rpl-bcg10-19535-20261111',
+      documentId: 'doc-rpl-bcg10-19535',
+      attemptedAt: '2026-11-11T23:31:10+01:00',
+      targetUrl: bcg.officialSourceUrl,
+      accessMethod: 'http_get',
+      result: 'success',
+      httpStatus: 200,
+      errorDescription: null,
+      checkScope: 'Weryfikacja HTTP 200 oraz sumy SHA-256 7-stronicowego pliku ChPL BCG 10 (bez zapisu lokalnego)',
+      artifactId: bcgArtifact.artifactId
+    };
     registry.push({
       documentId: 'doc-rpl-bcg10-19535',
+      objectType: 'official_registry_record',
       productKey: 'bcg_10',
       productDisplayName: bcg.productName,
       linkedCatalogVaccineIds: [],
       linkedProcedureIds: [...bcg.relatedProcedureIds],
       documentTitle: 'ChPL Szczepionka przeciwgruźlicza BCG 10 (RPL ID 19535, poz. R/0210)',
-      documentType: 'ChPL (PDF RPL eZdrowie)',
+      documentType: 'Wpis rejestrowy RPL eZdrowie + referencyjny PDF online (brak pliku w repo)',
       authority: 'URPLWMiPB / Rejestr Produktów Leczniczych (eZdrowie)',
       authorityType: 'rpl_registry',
       officialSourceUrl: bcg.officialSourceUrl,
@@ -433,18 +921,59 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       pdfScopeRange: `PDF str. 1–${bcg.pageCount}`,
       fileSizeBytes: bcg.fileSizeBytes,
       sha256: bcg.fileSha256,
-      sha256ScopeLabel: 'Skrót PDF zapisany w rejestrze audytu Etapu I (pkt 10 bez daty rewizji)',
+      sha256ScopeLabel: 'SHA-256 odpowiedzi HTTP RPL zgodny ze skrótem Etapu I (pkt 10 bez daty rewizji w tekście; brak kopii lokalnej)',
       sha256Basis: 'bundle_recorded_pdf_sha256',
       sourceVerificationStatus: 'official_source_confirmed',
       sourceVerificationStatusLabel: getSourceVerificationStatusLabel('official_source_confirmed'),
       sourceVerificationDate: '2026-11-11',
-      sourceVerificationNotes: bcg.technicalNotes
+      sourceVerificationNotes: bcg.technicalNotes,
+      statusAxes: {
+        originStatus: 'official_origin_confirmed',
+        acquisitionStatus: 'not_acquired',
+        integrityStatus: 'hash_matches_known_reference',
+        contentReviewStatus: 'discrepancy_found'
+      },
+      currentArtifact: bcgArtifact,
+      artifactHistory: [bcgArtifact],
+      retrievalAttempts: [bcgAttempt],
+      registryVsFileDistinctionNote:
+        'Wpis rejestrowy RPL 19535 nie rozstrzyga samodzielnie otwartych pytań o granicę wieku (<15 lat vs PSO), podanie podskórne w ulotce ani brak daty w punkcie 10 ChPL.'
     });
   }
 
   // Dokument historyczny 2025/2026 — zachowany wyłącznie do ostrzeżenia o nieaktualności (odrzucony dla 2026/2027)
+  const histArtifact = buildInitialDocumentArtifact({
+    artifactId: 'art-rpl-vaxigrip-tetra-35346-hist-v1',
+    documentId: 'doc-rpl-vaxigrip-tetra-35346-hist',
+    language: 'PL',
+    fileName: 'OLI-2025-06-26.pdf',
+    documentDate: '05/2025',
+    retrievedAt: '2026-11-11T03:06:01+01:00',
+    sourceUrl: 'https://rejestrymedyczne.ezdrowie.gov.pl/api/rpl/medicinal-products/35346/characteristic',
+    physicalPageCount: null,
+    fileSizeBytes: 542801,
+    sha256: '3d07b0b85de404187616b0acb158d4b0526a2e3e513f1cd98eda52adcaaaf044',
+    calculationMethod: 'SHA-256 odpowiedzi HTTP historycznego rekordu RPL 35346 (sezon 2025/2026)',
+    referenceType: 'bundle_recorded_sha256',
+    referenceHash: '3d07b0b85de404187616b0acb158d4b0526a2e3e513f1cd98eda52adcaaaf044',
+    comparisonStatus: 'compared_with_known_reference',
+    isHistoricalVersion: true
+  });
+  const histAttempt: RetrievalAttemptRecord = {
+    attemptId: 'att-rpl-vaxigrip-tetra-35346-20261111',
+    documentId: 'doc-rpl-vaxigrip-tetra-35346-hist',
+    attemptedAt: '2026-11-11T23:31:15+01:00',
+    targetUrl: 'https://rejestrymedyczne.ezdrowie.gov.pl/api/rpl/medicinal-products/35346/characteristic',
+    accessMethod: 'http_get',
+    result: 'success',
+    httpStatus: 200,
+    errorDescription: null,
+    checkScope: 'Potwierdzono historyczny plik 4-walentny z sezonu 2025/2026 — zablokowany jako podstawa bieżącego audytu 2026/2027',
+    artifactId: histArtifact.artifactId
+  };
   registry.push({
     documentId: 'doc-rpl-vaxigrip-tetra-35346-hist',
+    objectType: 'historical_document',
     productKey: 'vaxigrip_tetra_historical_2025_2026',
     productDisplayName: 'VaxigripTetra (RPL ID 35346, sezon historyczny 2025/2026)',
     linkedCatalogVaccineIds: ['vac-vaxigrip-tetra'],
@@ -473,18 +1002,58 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
     sourceVerificationDate: '2026-11-11',
     sourceVerificationNotes:
       'NIE używać jako podstawy klinicznej dla sezonu 2026/2027 (w 2026/2027 obowiązują preparaty 3-walentne: Vaxigrip RPL 50032 i Influvac RPL 49462).',
+    statusAxes: {
+      originStatus: 'official_origin_confirmed',
+      acquisitionStatus: 'historical_copy_only',
+      integrityStatus: 'hash_matches_known_reference',
+      contentReviewStatus: 'awaiting_human_review'
+    },
+    currentArtifact: histArtifact,
+    artifactHistory: [histArtifact],
+    retrievalAttempts: [histAttempt],
+    historicalNotice: HISTORICAL_DOCUMENT_NOTICE,
+    registryVsFileDistinctionNote: HISTORICAL_DOCUMENT_NOTICE,
     isHistoricalRejectedForCurrentSeason: true
   });
 
   // Dokument Infanrix hexa (otwarta blokada fenyloalaniny disc-phenylalanine-content-01)
+  const infanrixArtifact = buildInitialDocumentArtifact({
+    artifactId: 'art-gsk-infanrix-hexa-pl-v1',
+    documentId: 'doc-gsk-infanrix-hexa-pl',
+    language: 'PL',
+    fileName: 'infanrix-hexa-druki-pl-h-0296-ia-vr-323859-12_02_2026.pdf',
+    documentDate: '2026-02-12',
+    retrievedAt: '2026-11-11T23:32:00+01:00',
+    sourceUrl: 'https://pl.gsk.com/media/b2ip1snt/infanrix-hexa-druki-pl-h-0296-ia-vr-323859-12_02_2026.pdf',
+    physicalPageCount: 48,
+    fileSizeBytes: 677179,
+    sha256: '9e15fce32c7c0e0d38c7803a262c24b50278819902578a641d91aeca090bfb80',
+    calculationMethod: 'SHA-256 strumienia PDF GSK (48 str., bez zapisu lokalnego w repozytorium i bez wcześniejszego wzorca)',
+    referenceType: 'none',
+    referenceHash: null,
+    comparisonStatus: 'not_compared'
+  });
+  const infanrixAttempt: RetrievalAttemptRecord = {
+    attemptId: 'att-gsk-infanrix-hexa-pl-20261111',
+    documentId: 'doc-gsk-infanrix-hexa-pl',
+    attemptedAt: '2026-11-11T23:32:00+01:00',
+    targetUrl: 'https://pl.gsk.com/media/b2ip1snt/infanrix-hexa-druki-pl-h-0296-ia-vr-323859-12_02_2026.pdf',
+    accessMethod: 'http_get',
+    result: 'success',
+    httpStatus: 200,
+    errorDescription: null,
+    checkScope: 'Potwierdzono HTTP 200 (48 str.): pkt 2 str. 2 (0,0289 µg), pkt 4.4 str. 6 (0,0298 µg), pkt 10 str. 19 (12.02.2026). Blokada katalogowa utrzymana.',
+    artifactId: infanrixArtifact.artifactId
+  };
   registry.push({
     documentId: 'doc-gsk-infanrix-hexa-pl',
+    objectType: 'official_document',
     productKey: 'infanrix_hexa',
     productDisplayName: 'Infanrix hexa (DTaP-HBV-IPV-Hib)',
     linkedCatalogVaccineIds: ['vac-infanrix-hexa'],
     linkedProcedureIds: ['pso-2m-dtap', 'pso-6m-dtap'],
     documentTitle: 'ChPL Infanrix hexa (GSK — druk h-0296-ia-vr-323859-12_02_2026)',
-    documentType: 'ChPL podmiotu odpowiedzialnego (PDF)',
+    documentType: 'Oficjalny druk ChPL podmiotu odpowiedzialnego online (PDF 48 str., nieprzechowywany lokalnie)',
     authority: 'GSK / European Medicines Agency (EMA)',
     authorityType: 'regulator_document',
     officialSourceUrl:
@@ -493,31 +1062,71 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
     marketingAuthorizationNumber: 'EU/1/00/152/001, 002, 005, 006, 021',
     marketingAuthorizationHolder: 'GlaxoSmithKline Biologicals S.A.',
     language: 'PL',
-    revisionDate: null,
+    revisionDate: '2026-02-12',
     publicationDate: '2026-02-12',
-    retrievedAt: null,
-    physicalPageCount: null,
-    pdfScopeRange: 'Wybrane strony cytowane w audycie (str. 2–19); brak weryfikacji pełnego pliku PDF w repozytorium',
-    fileSizeBytes: null,
-    sha256: null,
-    sha256ScopeLabel: 'Niezweryfikowano binarnie (brak pliku PDF w repozytorium — skrót nie został zapisany)',
-    sha256Basis: 'not_verified_binary',
+    retrievedAt: '2026-11-11T23:32:00+01:00',
+    physicalPageCount: 48,
+    pdfScopeRange: 'ChPL na str. 1–19 z 48 str. PDF GSK (pkt 2 na str. 2: 0,0289 µg; pkt 4.4 na str. 6: 0,0298 µg; pkt 10 na str. 19)',
+    fileSizeBytes: 677179,
+    sha256: '9e15fce32c7c0e0d38c7803a262c24b50278819902578a641d91aeca090bfb80',
+    sha256ScopeLabel: 'Obliczony SHA-256 strumienia HTTP PDF GSK (nieporównany ze wzorcem urzędowym; plik nie jest przechowywany lokalnie)',
+    sha256Basis: 'bundle_recorded_pdf_sha256',
     sourceVerificationStatus: 'requires_manual_review',
     sourceVerificationStatusLabel: getSourceVerificationStatusLabel('requires_manual_review'),
     sourceVerificationDate: '2026-11-11',
     sourceVerificationNotes:
-      'Aktywna blokada disc-phenylalanine-content-01: pkt 2 ChPL podaje 0,0289 µg/dawkę, pkt 4.4 podaje 0,0298 µg/dawkę. Status karty pozostaje requires_source_clarification.'
+      'Aktywna blokada disc-phenylalanine-content-01 potwierdzona w 48-stronicowym druku GSK (12.02.2026): pkt 2 (str. 2) podaje 0,0289 µg/dawkę, pkt 4.4 (str. 6) podaje 0,0298 µg/dawkę. Status karty pozostaje requires_source_clarification.',
+    statusAxes: {
+      originStatus: 'manual_review_required',
+      acquisitionStatus: 'not_acquired',
+      integrityStatus: 'hash_calculated',
+      contentReviewStatus: 'discrepancy_found'
+    },
+    currentArtifact: infanrixArtifact,
+    artifactHistory: [infanrixArtifact],
+    retrievalAttempts: [infanrixAttempt],
+    registryVsFileDistinctionNote:
+      'Plik ChPL GSK (48 str.) zawiera jawną rozbieżność ilości fenyloalaniny (pkt 2 str. 2 vs pkt 4.4 str. 6). Rekord pozostaje otwarty do wyjaśnienia podmiotu/organu.'
   });
 
-  // Dokument PSO 2027 obecny lokalnie jako akt.pdf
+  // Dokument PSO 2027 obecny lokalnie jako akt.pdf (zweryfikowano 48 stron fizycznych!)
+  const psoArtifact = buildInitialDocumentArtifact({
+    artifactId: 'art-mz-pso-2027-akt-v1',
+    documentId: 'doc-mz-pso-2027-akt',
+    language: 'PL',
+    fileName: 'akt.pdf',
+    documentDate: '2026-10-28',
+    retrievedAt: '2026-10-30',
+    sourceUrl: 'https://dziennikmz.mz.gov.pl/DUM_MZ/2026/77/akt.pdf',
+    physicalPageCount: 48,
+    fileSizeBytes: 864528,
+    sha256: '4c6fa9212f292b130fd8958baaeeac2444f86fbaa260b873d586b905108fc6da',
+    calculationMethod: 'Bezpośredni odczyt SHA-256 lokalnego pliku akt.pdf w katalogu głównym projektu (48 stron fizycznych)',
+    referenceType: 'local_workspace_sha256',
+    referenceHash: '4c6fa9212f292b130fd8958baaeeac2444f86fbaa260b873d586b905108fc6da',
+    comparisonStatus: 'compared_with_known_reference'
+  });
+  const psoAttempt: RetrievalAttemptRecord = {
+    attemptId: 'att-mz-pso-2027-akt-local',
+    documentId: 'doc-mz-pso-2027-akt',
+    attemptedAt: '2026-11-11T23:32:10+01:00',
+    targetUrl: 'https://dziennikmz.mz.gov.pl/DUM_MZ/2026/77/akt.pdf',
+    accessMethod: 'local_filesystem_read',
+    result: 'success',
+    httpStatus: null,
+    errorDescription: null,
+    checkScope: 'Lokalna weryfikacja pliku akt.pdf (864528 B, 48 str. PDF, zgodny SHA-256 z Dz. Urz. MZ 2026 poz. 77)',
+    artifactId: psoArtifact.artifactId
+  };
   registry.push({
     documentId: 'doc-mz-pso-2027-akt',
+    objectType: 'local_reference_document',
     productKey: 'pso_2027_general',
     productDisplayName: 'Program Szczepień Ochronnych (PSO) na 2027 rok',
     linkedCatalogVaccineIds: [],
     linkedProcedureIds: ['pso-bcg-0'],
     documentTitle: 'Komunikat GIS z 28.10.2026 r. — PSO 2027 (Dz. Urz. MZ 2026 poz. 77)',
-    documentType: 'Oficjalny akt prawny / Komunikat GIS (PDF)',
+    documentType: 'Lokalny referencyjny akt prawny (akt.pdf, 48 str. PDF)',
     authority: 'Główny Inspektorat Sanitarny / Ministerstwo Zdrowia',
     authorityType: 'mz_gis_document',
     officialSourceUrl: 'https://dziennikmz.mz.gov.pl/DUM_MZ/2026/77/akt.pdf',
@@ -528,17 +1137,28 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
     revisionDate: '2026-10-28',
     publicationDate: '2026-10-30',
     retrievedAt: '2026-10-30',
-    physicalPageCount: 44,
-    pdfScopeRange: 'Załącznik do Komunikatu GIS (Część I–IV PSO 2027)',
+    physicalPageCount: 48,
+    pdfScopeRange: 'Załącznik do Komunikatu GIS (akt.pdf — 48 str. fizycznych, Część I–IV PSO 2027)',
     fileSizeBytes: 864528,
     sha256: '4c6fa9212f292b130fd8958baaeeac2444f86fbaa260b873d586b905108fc6da',
-    sha256ScopeLabel: 'Skrót SHA-256 zweryfikowany na lokalnym pliku akt.pdf w katalogu projektu',
+    sha256ScopeLabel: 'Skrót SHA-256 porównany bezpośrednio na lokalnym pliku akt.pdf (nie dotyczy plików TypeScript aplikacji)',
     sha256Basis: 'local_workspace_pdf_sha256',
     sourceVerificationStatus: 'official_source_confirmed',
     sourceVerificationStatusLabel: getSourceVerificationStatusLabel('official_source_confirmed'),
     sourceVerificationDate: '2026-11-11',
     sourceVerificationNotes:
-      'Referencyjny akt prawny PSO 2027 porównywany z ChPL podczas rozstrzygania rozbieżności operacyjnych (np. wiek graniczny BCG 10 vs 15 lat).'
+      'Jedyny dokument źródłowy przechowywany bezpośrednio lokalnie jako plik akt.pdf (48 str.). Stanowi akt PSO 2027 porównywany z ChPL bez automatycznej zmiany statusu klinicznego preparatów.',
+    statusAxes: {
+      originStatus: 'official_origin_confirmed',
+      acquisitionStatus: 'acquired',
+      integrityStatus: 'hash_matches_known_reference',
+      contentReviewStatus: 'section_reviewed'
+    },
+    currentArtifact: psoArtifact,
+    artifactHistory: [psoArtifact],
+    retrievalAttempts: [psoAttempt],
+    registryVsFileDistinctionNote:
+      'Jedyny lokalnie pozyskany dokument binarny w repozytorium (akt.pdf, 48 stron fizycznych). Nie zastępuje indywidualnych ChPL preparatów.'
   });
 
   return registry;
@@ -665,9 +1285,31 @@ function getPrimaryDocumentForProduct(
   );
 }
 
+function qualifyBaselineEntry(params: {
+  doc: SourceRegistryEntry;
+  outcome: Stage1ChplCheckOutcome;
+  hasPdfPage: boolean;
+  hasExcerptRef: boolean;
+}): EvidenceQualificationClass {
+  if (params.doc.statusAxes.acquisitionStatus === 'access_failed') {
+    return 'unavailable_source_reference';
+  }
+  if (params.doc.isHistoricalRejectedForCurrentSeason || params.doc.objectType === 'secondary_document') {
+    return 'secondary_reference';
+  }
+  if (params.outcome === 'ambiguity_flagged') {
+    return 'conflicting_source_excerpt';
+  }
+  if (params.hasPdfPage && params.hasExcerptRef) {
+    return 'source_excerpt_pending_review';
+  }
+  return 'traceability_reference';
+}
+
 /**
  * Buduje deterministyczne wpisy bazowego łańcucha identyfikowalności na podstawie
  * nieedytowalnego pakietu STAGE1_CHPL_AUDIT_BUNDLE.
+ * Etap B3: żaden automatyczny wpis bazowy nie otrzymuje klasy source_excerpt_reviewed.
  */
 export function buildBaselineEvidenceEntries(
   bundle: Stage1ChplAuditBundle,
@@ -699,12 +1341,20 @@ export function buildBaselineEvidenceEntries(
           : undefined
       ].filter(Boolean);
 
+      const qualificationClass = qualifyBaselineEntry({
+        doc: primaryDoc,
+        outcome,
+        hasPdfPage: locMeta.pdfPageIndex !== null,
+        hasExcerptRef: Boolean(sheetRow?.sourceExcerptRef)
+      });
+
       entries.push({
         evidenceId: `ev-stage1-${question.id}-${token.replace('.', '_')}`,
         questionId: question.id,
         productKey: question.productKey,
         productLabel: getProductScopeLabel(question.productKey),
         documentId: primaryDoc.documentId,
+        artifactId: primaryDoc.currentArtifact?.artifactId ?? null,
         documentTitle: primaryDoc.documentTitle,
         officialSourceUrl: primaryDoc.officialSourceUrl,
         sourceDocumentHash: primaryDoc.sha256,
@@ -721,11 +1371,13 @@ export function buildBaselineEvidenceEntries(
           observationParts.join(' · ') ||
           question.ambiguitySummary,
         relationship: mapped.relationship,
+        qualificationClass,
         reviewStatus: mapped.reviewStatus,
         questionWorkStatus: mapped.questionWorkStatus,
         autoResolved: false,
         origin: 'bundle_extract',
         isWorkingNote: false,
+        requiresReverification: true,
         recordedAt: bundle.generatedAt,
         recordedBy: 'Ekstrakcja Etapu I (read-only)'
       });
@@ -741,6 +1393,7 @@ export function buildBaselineEvidenceEntries(
           productKey: 'pso_2027_general',
           productLabel: getProductScopeLabel('pso_2027_general'),
           documentId: psoDoc.documentId,
+          artifactId: psoDoc.currentArtifact?.artifactId ?? null,
           documentTitle: psoDoc.documentTitle,
           officialSourceUrl: psoDoc.officialSourceUrl,
           sourceDocumentHash: psoDoc.sha256,
@@ -758,11 +1411,13 @@ export function buildBaselineEvidenceEntries(
           clinicalObservation:
             'Dokument prawny PSO 2027 stanowi kontekst operacyjny dla pytania o granicę wieku <15 lat w ChPL BCG 10; nie rozstrzyga samodzielnie wskazań ChPL.',
           relationship: 'contextualizes',
+          qualificationClass: 'traceability_reference',
           reviewStatus: 'awaiting_human_review',
           questionWorkStatus: 'awaiting_human_review',
           autoResolved: false,
           origin: 'bundle_extract',
           isWorkingNote: false,
+          requiresReverification: true,
           recordedAt: bundle.generatedAt,
           recordedBy: 'Ekstrakcja Etapu I (read-only)'
         });
@@ -778,6 +1433,7 @@ export function buildBaselineEvidenceEntries(
           productKey: 'vaxigrip_tetra_historical_2025_2026',
           productLabel: getProductScopeLabel('vaxigrip_tetra_historical_2025_2026'),
           documentId: histDoc.documentId,
+          artifactId: histDoc.currentArtifact?.artifactId ?? null,
           documentTitle: histDoc.documentTitle,
           officialSourceUrl: histDoc.officialSourceUrl,
           sourceDocumentHash: histDoc.sha256,
@@ -795,11 +1451,13 @@ export function buildBaselineEvidenceEntries(
           clinicalObservation:
             'Wskazuje, dlaczego automatyczna ekstrapolacja z dawnych druków 4-walentnych na 3-walentny Vaxigrip (RPL 50032) jest zablokowana i wymaga oceny audytora.',
           relationship: 'does_not_resolve',
+          qualificationClass: 'secondary_reference',
           reviewStatus: 'awaiting_human_review',
           questionWorkStatus: 'awaiting_human_review',
           autoResolved: false,
           origin: 'bundle_extract',
           isWorkingNote: false,
+          requiresReverification: true,
           recordedAt: bundle.generatedAt,
           recordedBy: 'Ekstrakcja Etapu I (read-only)'
         });
@@ -816,6 +1474,7 @@ export function buildBaselineEvidenceEntries(
           productKey: 'spikevax_xfg',
           productLabel: getProductScopeLabel('spikevax_xfg'),
           documentId: enDoc.documentId,
+          artifactId: enDoc.currentArtifact?.artifactId ?? null,
           documentTitle: enDoc.documentTitle,
           officialSourceUrl: enDoc.officialSourceUrl,
           sourceDocumentHash: enDoc.sha256,
@@ -831,13 +1490,15 @@ export function buildBaselineEvidenceEntries(
           },
           sourceExcerptRef: 'EMA EPAR EN (str. 77): sekcja 10 SmPC nie zawiera wpisanej daty rewizji tekstu',
           clinicalObservation:
-            'Potwierdza brak daty w sekcji 10 równolegle w wersji PL (str. 92) oraz EN (str. 77); strona główna EPAR podaje Last updated 30/10/2026.',
+            'Wskazuje brak daty w sekcji 10 równolegle w wersji PL (str. 92) oraz EN (str. 77); strona główna EPAR podaje Last updated 30/10/2026.',
           relationship: 'missing_information',
+          qualificationClass: 'source_excerpt_pending_review',
           reviewStatus: 'requires_authority_clarification',
           questionWorkStatus: 'requires_authority_clarification',
           autoResolved: false,
           origin: 'bundle_extract',
           isWorkingNote: false,
+          requiresReverification: true,
           recordedAt: bundle.generatedAt,
           recordedBy: 'Ekstrakcja Etapu I (read-only)'
         });
@@ -849,6 +1510,7 @@ export function buildBaselineEvidenceEntries(
           productKey: 'spikevax_xfg',
           productLabel: getProductScopeLabel('spikevax_xfg'),
           documentId: rplCenDoc.documentId,
+          artifactId: null,
           documentTitle: rplCenDoc.documentTitle,
           officialSourceUrl: rplCenDoc.officialSourceUrl,
           sourceDocumentHash: null,
@@ -864,13 +1526,15 @@ export function buildBaselineEvidenceEntries(
           },
           sourceExcerptRef: 'RPL CEN ID 54306/54308/54456 — brak plików do pobrania w polskim API RPL (HTTP 400)',
           clinicalObservation:
-            'Kody GTIN 00380777714110 oraz 00380777712024 pochodzą z komunikatów MZ/RARS i nie znajdują potwierdzenia w EPAR EMA ani w API RPL.',
+            'Kody GTIN 00380777714110 oraz 00380777712024 pochodzą z komunikatów MZ/RARS (materiał wtórny) i nie zostały pozyskane przez endpoint API RPL.',
           relationship: 'does_not_resolve',
+          qualificationClass: 'unavailable_source_reference',
           reviewStatus: 'requires_authority_clarification',
           questionWorkStatus: 'requires_authority_clarification',
           autoResolved: false,
           origin: 'bundle_extract',
           isWorkingNote: false,
+          requiresReverification: true,
           recordedAt: bundle.generatedAt,
           recordedBy: 'Ekstrakcja Etapu I (read-only)'
         });
@@ -891,7 +1555,31 @@ export interface WorkingEvidenceDraftInput {
   sourceExcerptRef: string;
   clinicalObservation: string;
   relationship: EvidenceRelationship;
+  qualificationClass?: EvidenceQualificationClass;
+  confirmedRealPdfContent?: boolean;
   reviewStatus: EvidenceReviewStatus;
+}
+
+function inferDefaultQualificationClassForDraft(
+  doc: SourceRegistryEntry | undefined,
+  input: WorkingEvidenceDraftInput
+): EvidenceQualificationClass {
+  if (input.qualificationClass && ALLOWED_EVIDENCE_QUALIFICATION_CLASSES.includes(input.qualificationClass)) {
+    return input.qualificationClass;
+  }
+  if (doc?.statusAxes.acquisitionStatus === 'access_failed' || doc?.objectType === 'official_endpoint') {
+    return 'unavailable_source_reference';
+  }
+  if (doc?.isHistoricalRejectedForCurrentSeason || doc?.objectType === 'secondary_document') {
+    return 'secondary_reference';
+  }
+  if (input.relationship === 'contradicts') {
+    return 'conflicting_source_excerpt';
+  }
+  if (input.pdfPageIndex !== null) {
+    return 'source_excerpt_pending_review';
+  }
+  return 'traceability_reference';
 }
 
 export function validateWorkingEvidenceInput(
@@ -954,6 +1642,29 @@ export function validateWorkingEvidenceInput(
     errors.push('Nieprawidłowy status roboczy dowodu.');
   }
 
+  if (
+    input.qualificationClass !== undefined &&
+    !ALLOWED_EVIDENCE_QUALIFICATION_CLASSES.includes(input.qualificationClass)
+  ) {
+    errors.push(`Nieprawidłowa klasa kwalifikacji dowodu: ${String(input.qualificationClass)}.`);
+  }
+
+  if (input.qualificationClass === 'source_excerpt_reviewed') {
+    if (!doc || doc.statusAxes.acquisitionStatus === 'access_failed' || doc.objectType === 'official_endpoint') {
+      errors.push('Nie można oznaczyć fragmentu jako zweryfikowanego dla niedostępnego endpointu lub błędu pobrania.');
+    } else if (doc.isHistoricalRejectedForCurrentSeason) {
+      errors.push('Dokument historyczny (2025/2026) nie może zostać zakwalifikowany jako zweryfikowany dowód dla bieżącego audytu.');
+    } else if (!doc.sha256) {
+      errors.push('Brak zidentyfikowanego pliku / sumy SHA-256 — nie można zadeklarować weryfikacji fragmentu z PDF.');
+    }
+    if (input.pdfPageIndex === null) {
+      errors.push('Oznaczenie fragmentu jako zweryfikowanego wymaga wskazania konkretnej strony PDF (>= 1).');
+    }
+    if (input.confirmedRealPdfContent !== true) {
+      errors.push('Wymagane jest jawne potwierdzenie, że cytowany fragment został ręcznie porównany z treścią rzeczywistego pliku PDF.');
+    }
+  }
+
   return { valid: errors.length === 0, errors };
 }
 
@@ -987,6 +1698,7 @@ export function createWorkingEvidenceEntry(
   const iso = now.toISOString();
   const suffix = Math.random().toString(36).slice(2, 8);
   const qrdNormalized = input.qrdSection.trim();
+  const qualificationClass = inferDefaultQualificationClassForDraft(doc, input);
   const pageLabel =
     input.pdfPageIndex !== null
       ? `PDF str. ${input.pdfPageIndex}${doc.physicalPageCount ? ` z ${doc.physicalPageCount}` : ''}`
@@ -998,6 +1710,7 @@ export function createWorkingEvidenceEntry(
     productKey: doc.productKey,
     productLabel: getProductScopeLabel(doc.productKey),
     documentId: doc.documentId,
+    artifactId: doc.currentArtifact?.artifactId ?? null,
     documentTitle: doc.documentTitle,
     officialSourceUrl: doc.officialSourceUrl,
     sourceDocumentHash: doc.sha256,
@@ -1014,11 +1727,24 @@ export function createWorkingEvidenceEntry(
     sourceExcerptRef: input.sourceExcerptRef.trim(),
     clinicalObservation: input.clinicalObservation.trim(),
     relationship: input.relationship,
+    qualificationClass,
     reviewStatus: input.reviewStatus,
     questionWorkStatus: mapReviewStatusToQuestionWorkStatus(input.reviewStatus),
     autoResolved: false,
     origin: 'auditor_working_entry',
     isWorkingNote: true,
+    requiresReverification: qualificationClass !== 'source_excerpt_reviewed',
+    importProvenance: {
+      isImported: false,
+      importedAt: null,
+      importClaimStatus: 'local_author_record',
+      claimedQualificationClass: null,
+      claimedReviewStatus: null,
+      claimedSourceDocumentHash: null,
+      claimedOriginConfirmedByImport: false,
+      localConfirmationState: 'local_session_author',
+      migrationSourceVersion: null
+    },
     recordedAt: iso,
     recordedBy: LOCAL_WORKING_NOTE_AUTHOR
   };
@@ -1110,13 +1836,40 @@ export function createInformalWorkingNote(
   };
 }
 
+function inferLegacyQualificationClass(
+  doc: SourceRegistryEntry,
+  relationship: EvidenceRelationship,
+  pdfPageIndex: number | null,
+  excerptLength: number
+): EvidenceQualificationClass {
+  if (doc.statusAxes.acquisitionStatus === 'access_failed' || doc.objectType === 'official_endpoint') {
+    return 'unavailable_source_reference';
+  }
+  if (doc.isHistoricalRejectedForCurrentSeason || doc.objectType === 'secondary_document') {
+    return 'secondary_reference';
+  }
+  if (relationship === 'contradicts') {
+    return 'conflicting_source_excerpt';
+  }
+  if (pdfPageIndex !== null && excerptLength >= 10) {
+    return 'source_excerpt_pending_review';
+  }
+  return 'traceability_reference';
+}
+
 function validateImportedEvidenceEntryObject(
   raw: unknown,
   index: number,
   sourceMap: ReadonlyMap<string, SourceRegistryEntry>,
   questionIds: ReadonlySet<string>,
-  seenIds: Set<string>
-): { entry?: EvidenceLedgerEntry; rejection?: EvidenceLedgerImportRejectedItem } {
+  seenIds: Set<string>,
+  options: { isLocalStorageMigration?: boolean; importedAt?: string } = {}
+): {
+  entry?: EvidenceLedgerEntry;
+  rejection?: EvidenceLedgerImportRejectedItem;
+  importedVerificationClaim?: boolean;
+  versionMismatchConflict?: EvidenceLedgerImportConflict;
+} {
   const fallbackId = isPlainRecord(raw) && typeof raw.evidenceId === 'string' ? raw.evidenceId : `entry[${index}]`;
   if (!isPlainRecord(raw)) {
     return { rejection: { kind: 'entry', id: fallbackId, reason: 'Wpis dowodowy nie jest obiektem JSON.' } };
@@ -1305,51 +2058,159 @@ function validateImportedEvidenceEntryObject(
   const normalizedQrd = loc.qrdSection.trim();
   const normalizedPageIdx = typeof pageIdx === 'number' ? pageIdx : null;
 
-  return {
-    entry: {
-      evidenceId: id,
-      questionId: raw.questionId,
-      productKey: canonicalDoc.productKey,
-      productLabel: getProductScopeLabel(canonicalDoc.productKey),
-      documentId: canonicalDoc.documentId,
-      documentTitle: canonicalDoc.documentTitle,
-      officialSourceUrl: canonicalDoc.officialSourceUrl,
-      sourceDocumentHash: canonicalDoc.sha256,
-      sha256Basis: canonicalDoc.sha256Basis,
-      location: {
-        qrdSection: normalizedQrd,
-        qrdSectionTitle: getQrdSectionTitle(normalizedQrd),
-        pdfPageIndex: normalizedPageIdx,
-        pdfPageRangeLabel:
-          typeof loc.pdfPageRangeLabel === 'string' && loc.pdfPageRangeLabel.trim()
-            ? loc.pdfPageRangeLabel.trim()
-            : normalizedPageIdx !== null
-              ? `PDF str. ${normalizedPageIdx}`
-              : 'Brak numeru strony PDF',
-        printedPageNumber:
-          typeof loc.printedPageNumber === 'string' && loc.printedPageNumber.trim()
-            ? loc.printedPageNumber.trim()
-            : null,
-        pageNumberingType: numberingType,
-        physicalDocumentPageCount: canonicalDoc.physicalPageCount
-      },
-      sourceExcerptRef: raw.sourceExcerptRef.trim(),
-      clinicalObservation: raw.clinicalObservation.trim(),
-      relationship: raw.relationship as EvidenceRelationship,
-      reviewStatus: raw.reviewStatus as EvidenceReviewStatus,
-      questionWorkStatus: workStatus,
-      autoResolved: false,
-      origin,
-      isWorkingNote: origin === 'auditor_working_entry' ? true : Boolean(raw.isWorkingNote),
-      recordedAt: String(raw.recordedAt).trim(),
-      recordedBy:
-        origin === 'bundle_extract'
-          ? 'Ekstrakcja Etapu I (read-only)'
-          : typeof raw.recordedBy === 'string' && raw.recordedBy.trim()
-            ? raw.recordedBy.trim()
-            : LOCAL_WORKING_NOTE_AUTHOR
+  // Walidacja i kwalifikacja klasy B3
+  let rawQualificationClass: EvidenceQualificationClass | null = null;
+  if (raw.qualificationClass !== undefined && raw.qualificationClass !== null) {
+    if (
+      typeof raw.qualificationClass !== 'string' ||
+      !(ALLOWED_EVIDENCE_QUALIFICATION_CLASSES as readonly string[]).includes(raw.qualificationClass)
+    ) {
+      return {
+        rejection: {
+          kind: 'entry',
+          id,
+          reason: `Niedozwolona klasa kwalifikacji dowodu: ${String(raw.qualificationClass)}.`
+        }
+      };
     }
+    rawQualificationClass = raw.qualificationClass as EvidenceQualificationClass;
+  }
+
+  const inferredClass = inferLegacyQualificationClass(
+    canonicalDoc,
+    raw.relationship as EvidenceRelationship,
+    normalizedPageIdx,
+    raw.sourceExcerptRef.trim().length
+  );
+
+  const isLegacyB2Entry = raw.qualificationClass === undefined || raw.qualificationClass === null;
+  let effectiveQualificationClass: EvidenceQualificationClass = rawQualificationClass ?? inferredClass;
+  let importedVerificationClaim = false;
+  let requiresReverification =
+    Boolean(raw.requiresReverification) ||
+    (options.isLocalStorageMigration === true && isLegacyB2Entry);
+
+  const incomingClaimedVerified =
+    rawQualificationClass === 'source_excerpt_reviewed' ||
+    (isPlainRecord(raw.importProvenance) &&
+      (raw.importProvenance.claimedQualificationClass === 'source_excerpt_reviewed' ||
+        raw.importProvenance.claimedOriginConfirmedByImport === true));
+
+  // Przy zewnętrznym imporcie JSON nigdy nie uznajemy cudzego statusu source_excerpt_reviewed za lokalnie potwierdzony
+  if (!options.isLocalStorageMigration && origin === 'auditor_working_entry' && incomingClaimedVerified) {
+    importedVerificationClaim = true;
+    effectiveQualificationClass = 'source_excerpt_pending_review';
+    requiresReverification = true;
+  } else if (options.isLocalStorageMigration && origin === 'bundle_extract' && effectiveQualificationClass === 'source_excerpt_reviewed') {
+    effectiveQualificationClass = inferredClass;
+    requiresReverification = true;
+  }
+
+  // Konflikt wersji artefaktu
+  const incomingArtifactId =
+    typeof raw.artifactId === 'string' && raw.artifactId.trim() ? raw.artifactId.trim() : null;
+  const currentArtifactId = canonicalDoc.currentArtifact?.artifactId ?? null;
+  let versionMismatchConflict: EvidenceLedgerImportConflict | undefined;
+  if (incomingArtifactId && currentArtifactId && incomingArtifactId !== currentArtifactId) {
+    versionMismatchConflict = {
+      kind: 'artifact_version_mismatch',
+      id,
+      details: `Wpis ${id} odwołuje się do artefaktu ${incomingArtifactId}, podczas gdy bieżąca wersja dokumentu to ${currentArtifactId}. Wymaga ponownego sprawdzenia.`
+    };
+    requiresReverification = true;
+    if (effectiveQualificationClass === 'source_excerpt_reviewed') {
+      effectiveQualificationClass = 'source_excerpt_pending_review';
+    }
+  }
+
+  const incomingOriginClaimed =
+    isPlainRecord(raw.importProvenance) && raw.importProvenance.claimedOriginConfirmedByImport === true;
+
+  const entry: EvidenceLedgerEntry = {
+    evidenceId: id,
+    questionId: raw.questionId,
+    productKey: canonicalDoc.productKey,
+    productLabel: getProductScopeLabel(canonicalDoc.productKey),
+    documentId: canonicalDoc.documentId,
+    artifactId: currentArtifactId,
+    documentTitle: canonicalDoc.documentTitle,
+    officialSourceUrl: canonicalDoc.officialSourceUrl,
+    sourceDocumentHash: canonicalDoc.sha256,
+    sha256Basis: canonicalDoc.sha256Basis,
+    location: {
+      qrdSection: normalizedQrd,
+      qrdSectionTitle: getQrdSectionTitle(normalizedQrd),
+      pdfPageIndex: normalizedPageIdx,
+      pdfPageRangeLabel:
+        typeof loc.pdfPageRangeLabel === 'string' && loc.pdfPageRangeLabel.trim()
+          ? loc.pdfPageRangeLabel.trim()
+          : normalizedPageIdx !== null
+            ? `PDF str. ${normalizedPageIdx}`
+            : 'Brak numeru strony PDF',
+      printedPageNumber:
+        typeof loc.printedPageNumber === 'string' && loc.printedPageNumber.trim()
+          ? loc.printedPageNumber.trim()
+          : null,
+      pageNumberingType: numberingType,
+      physicalDocumentPageCount: canonicalDoc.physicalPageCount
+    },
+    sourceExcerptRef: raw.sourceExcerptRef.trim(),
+    clinicalObservation: raw.clinicalObservation.trim(),
+    relationship: raw.relationship as EvidenceRelationship,
+    qualificationClass: effectiveQualificationClass,
+    reviewStatus: raw.reviewStatus as EvidenceReviewStatus,
+    questionWorkStatus: workStatus,
+    autoResolved: false,
+    origin,
+    isWorkingNote: origin === 'auditor_working_entry' ? true : Boolean(raw.isWorkingNote),
+    requiresReverification,
+    importProvenance: options.isLocalStorageMigration
+      ? {
+          isImported: isPlainRecord(raw.importProvenance) ? Boolean(raw.importProvenance.isImported) : false,
+          importedAt:
+            isPlainRecord(raw.importProvenance) && typeof raw.importProvenance.importedAt === 'string'
+              ? raw.importProvenance.importedAt
+              : null,
+          importClaimStatus:
+            isPlainRecord(raw.importProvenance) &&
+            raw.importProvenance.importClaimStatus === 'imported_verified_claim_unconfirmed_locally'
+              ? 'imported_verified_claim_unconfirmed_locally'
+              : isPlainRecord(raw.importProvenance) && Boolean(raw.importProvenance.isImported)
+                ? 'imported_unverified_claim'
+                : 'local_author_record',
+          claimedQualificationClass: rawQualificationClass,
+          claimedReviewStatus: raw.reviewStatus as EvidenceReviewStatus,
+          claimedSourceDocumentHash: typeof incomingHash === 'string' ? incomingHash : null,
+          claimedOriginConfirmedByImport: incomingOriginClaimed,
+          localConfirmationState:
+            isPlainRecord(raw.importProvenance) && Boolean(raw.importProvenance.isImported)
+              ? 'unconfirmed_imported_claim'
+              : 'local_session_author',
+          migrationSourceVersion: rawQualificationClass === null ? 'b2_master04' : 'b3_master05'
+        }
+      : {
+          isImported: true,
+          importedAt: options.importedAt ?? null,
+          importClaimStatus: importedVerificationClaim
+            ? 'imported_verified_claim_unconfirmed_locally'
+            : 'imported_unverified_claim',
+          claimedQualificationClass: rawQualificationClass ?? effectiveQualificationClass,
+          claimedReviewStatus: raw.reviewStatus as EvidenceReviewStatus,
+          claimedSourceDocumentHash: typeof incomingHash === 'string' ? incomingHash : null,
+          claimedOriginConfirmedByImport: incomingOriginClaimed || incomingClaimedVerified,
+          localConfirmationState: 'unconfirmed_imported_claim',
+          migrationSourceVersion: null
+        },
+    recordedAt: String(raw.recordedAt).trim(),
+    recordedBy:
+      origin === 'bundle_extract'
+        ? 'Ekstrakcja Etapu I (read-only)'
+        : typeof raw.recordedBy === 'string' && raw.recordedBy.trim()
+          ? raw.recordedBy.trim()
+          : LOCAL_WORKING_NOTE_AUTHOR
   };
+
+  return { entry, importedVerificationClaim, versionMismatchConflict };
 }
 
 function validateImportedWorkingNoteObject(
@@ -1460,37 +2321,127 @@ function validateImportedWorkingNoteObject(
   };
 }
 
+/**
+ * Bezpiecznie migruje dane MASTER 04 (lub B3) z localStorage bez utraty identyfikatorów,
+ * pytań, notatek oraz wpisów roboczych, konwertując niesprawdzone wpisy do właściwych klas B3.
+ */
+export function migrateMaster04EvidenceStorage(
+  storage: Storage | null,
+  checklist: readonly Stage1HumanDecisionItem[],
+  sources: readonly SourceRegistryEntry[],
+  options: { persistIfMigrated?: boolean } = {}
+): {
+  entries: EvidenceLedgerEntry[];
+  notes: InformalWorkingNote[];
+  report: EvidenceLedgerMigrationReport;
+  saveError: string | null;
+} {
+  const emptyReport: EvidenceLedgerMigrationReport = {
+    migratedFromVersion: 'empty',
+    preservedEntryIds: [],
+    preservedNoteIds: [],
+    downgradedToReferenceCount: 0,
+    flaggedReverificationCount: 0
+  };
+  if (!storage) {
+    return { entries: [], notes: [], report: emptyReport, saveError: null };
+  }
+
+  const rawEntriesText = storage.getItem(EVIDENCE_LEDGER_STORAGE_KEY);
+  const rawNotesText = storage.getItem(WORKING_NOTES_STORAGE_KEY);
+  const sourceMap = new Map(sources.map((s) => [s.documentId, s]));
+  const questionIds = new Set(checklist.map((q) => q.id));
+
+  let migratedFromVersion: EvidenceLedgerMigrationReport['migratedFromVersion'] = 'empty';
+  const validEntries: EvidenceLedgerEntry[] = [];
+  let downgradedCount = 0;
+  let flaggedReverificationCount = 0;
+
+  if (rawEntriesText) {
+    try {
+      const parsed: unknown = JSON.parse(rawEntriesText);
+      if (Array.isArray(parsed) && !hasPrototypePollutionKey(parsed)) {
+        const seenIds = new Set<string>();
+        let hadB2Entry = false;
+        let hadB3Entry = false;
+        for (let i = 0; i < parsed.length; i += 1) {
+          const rawItem = parsed[i];
+          if (isPlainRecord(rawItem) && rawItem.qualificationClass === undefined) {
+            hadB2Entry = true;
+          } else if (isPlainRecord(rawItem)) {
+            hadB3Entry = true;
+          }
+          const res = validateImportedEvidenceEntryObject(
+            rawItem,
+            i,
+            sourceMap,
+            questionIds,
+            seenIds,
+            { isLocalStorageMigration: true }
+          );
+          if (res.entry && res.entry.origin === 'auditor_working_entry') {
+            if (isPlainRecord(rawItem) && rawItem.qualificationClass === undefined) {
+              downgradedCount += 1;
+            }
+            if (res.entry.requiresReverification) {
+              flaggedReverificationCount += 1;
+            }
+            validEntries.push(res.entry);
+          }
+        }
+        migratedFromVersion = hadB2Entry ? 'b2_master04' : hadB3Entry ? 'b3_master05' : 'empty';
+      }
+    } catch {
+      // Uszkodzony JSON w pamięci lokalnej zwraca pustą kolekcję bez awarii
+    }
+  }
+
+  const validNotes: InformalWorkingNote[] = [];
+  if (rawNotesText) {
+    try {
+      const parsed: unknown = JSON.parse(rawNotesText);
+      if (Array.isArray(parsed) && !hasPrototypePollutionKey(parsed)) {
+        const seenIds = new Set<string>();
+        for (let i = 0; i < parsed.length; i += 1) {
+          const res = validateImportedWorkingNoteObject(parsed[i], i, sourceMap, questionIds, seenIds);
+          if (res.note) {
+            validNotes.push(res.note);
+          }
+        }
+      }
+    } catch {
+      // Ignoruj uszkodzony JSON notatek
+    }
+  }
+
+  let saveError: string | null = null;
+  if (options.persistIfMigrated && migratedFromVersion === 'b2_master04' && validEntries.length > 0) {
+    const res = saveEvidenceAndNotesAtomically(storage, validEntries, validNotes);
+    if (!res.success) {
+      saveError = res.error;
+    }
+  }
+
+  return {
+    entries: validEntries,
+    notes: validNotes,
+    report: {
+      migratedFromVersion,
+      preservedEntryIds: validEntries.map((e) => e.evidenceId),
+      preservedNoteIds: validNotes.map((n) => n.noteId),
+      downgradedToReferenceCount: downgradedCount,
+      flaggedReverificationCount
+    },
+    saveError
+  };
+}
+
 export function loadWorkingEvidenceFromStorage(
   storage: Storage | null,
   checklist: readonly Stage1HumanDecisionItem[],
   sources: readonly SourceRegistryEntry[]
 ): EvidenceLedgerEntry[] {
-  if (!storage) {
-    return [];
-  }
-  try {
-    const rawText = storage.getItem(EVIDENCE_LEDGER_STORAGE_KEY);
-    if (!rawText) {
-      return [];
-    }
-    const parsed: unknown = JSON.parse(rawText);
-    if (!Array.isArray(parsed) || hasPrototypePollutionKey(parsed)) {
-      return [];
-    }
-    const sourceMap = new Map(sources.map((s) => [s.documentId, s]));
-    const questionIds = new Set(checklist.map((q) => q.id));
-    const seenIds = new Set<string>();
-    const valid: EvidenceLedgerEntry[] = [];
-    for (let i = 0; i < parsed.length; i += 1) {
-      const res = validateImportedEvidenceEntryObject(parsed[i], i, sourceMap, questionIds, seenIds);
-      if (res.entry && res.entry.origin === 'auditor_working_entry') {
-        valid.push(res.entry);
-      }
-    }
-    return valid;
-  } catch {
-    return [];
-  }
+  return migrateMaster04EvidenceStorage(storage, checklist, sources).entries;
 }
 
 export function saveWorkingEvidenceToStorage(
@@ -1565,6 +2516,287 @@ export function saveWorkingNotesToStorage(
   }
 }
 
+/**
+ * Atomowy zapis wpisów dowodowych oraz notatek w localStorage z przywróceniem poprzedniego
+ * stanu w razie błędu (np. QuotaExceededError podczas drugiego zapisu).
+ */
+export function saveEvidenceAndNotesAtomically(
+  storage: Storage | null,
+  workingEntries: readonly EvidenceLedgerEntry[],
+  workingNotes: readonly InformalWorkingNote[]
+): EvidenceLedgerStorageSaveResult {
+  if (!storage) {
+    return { success: false, error: 'Brak dostępu do lokalnej pamięci przeglądarki (localStorage).' };
+  }
+  const previousEntriesRaw = storage.getItem(EVIDENCE_LEDGER_STORAGE_KEY);
+  const previousNotesRaw = storage.getItem(WORKING_NOTES_STORAGE_KEY);
+
+  const entriesRes = saveWorkingEvidenceToStorage(storage, workingEntries);
+  if (!entriesRes.success) {
+    return { ...entriesRes, rolledBack: false };
+  }
+
+  const notesRes = saveWorkingNotesToStorage(storage, workingNotes);
+  if (!notesRes.success) {
+    try {
+      if (previousEntriesRaw === null) {
+        storage.removeItem(EVIDENCE_LEDGER_STORAGE_KEY);
+      } else {
+        storage.setItem(EVIDENCE_LEDGER_STORAGE_KEY, previousEntriesRaw);
+      }
+      if (previousNotesRaw === null) {
+        storage.removeItem(WORKING_NOTES_STORAGE_KEY);
+      } else {
+        storage.setItem(WORKING_NOTES_STORAGE_KEY, previousNotesRaw);
+      }
+    } catch {
+      // Jeśli wycofanie również napotka błąd storage, zwracamy informację o nieudanym zapisie
+    }
+    return {
+      success: false,
+      error: `${notesRes.error} Poprzedni stan wpisów w localStorage został bezpiecznie przywrócony.`,
+      rolledBack: true
+    };
+  }
+
+  return { success: true, error: null, rolledBack: false };
+}
+
+/**
+ * Wykrywa zmianę artefaktu i klasyfikuje rodzaj zmiany zgodnie z zasadami wersjonowania Etapu B3.
+ */
+export function detectArtifactHashChange(
+  source: SourceRegistryEntry,
+  incoming: {
+    sha256: string | null;
+    fileName?: string | null;
+    language?: 'PL' | 'EN';
+    documentDate?: string | null;
+    sourceUrl?: string;
+    isHistoricalRejected?: boolean;
+    unverifiedOrigin?: boolean;
+  }
+): {
+  changed: boolean;
+  changeCategory: ArtifactChangeCategory | 'no_change';
+  reason: string;
+} {
+  if (incoming.unverifiedOrigin) {
+    return {
+      changed: true,
+      changeCategory: 'unverified_origin_copy',
+      reason: 'Kopia pochodzi z niezweryfikowanego źródła lub adresu.'
+    };
+  }
+  if (incoming.isHistoricalRejected) {
+    return {
+      changed: true,
+      changeCategory: 'historical_version',
+      reason: 'Dokument oznaczono jako historyczną wersję z wcześniejszego sezonu.'
+    };
+  }
+  if (incoming.language && incoming.language !== source.language) {
+    return {
+      changed: true,
+      changeCategory: 'alternate_language_version',
+      reason: `Odmienna wersja językowa (${incoming.language} vs ${source.language}) wymaga oddzielnego artefaktu.`
+    };
+  }
+  const currentHash = source.currentArtifact?.hashProvenance.value?.toLowerCase() ?? source.sha256?.toLowerCase() ?? null;
+  const incomingHash = incoming.sha256?.toLowerCase() ?? null;
+  if (currentHash && incomingHash && currentHash !== incomingHash) {
+    if (
+      incoming.documentDate &&
+      source.currentArtifact?.documentDate &&
+      incoming.documentDate !== source.currentArtifact.documentDate
+    ) {
+      return {
+        changed: true,
+        changeCategory: 'new_chpl_revision',
+        reason: `Wykryto nową rewizję ChPL (${incoming.documentDate} vs ${source.currentArtifact.documentDate}) oraz zmianę SHA-256.`
+      };
+    }
+    if (
+      incoming.fileName &&
+      source.currentArtifact?.fileName &&
+      incoming.fileName === source.currentArtifact.fileName
+    ) {
+      return {
+        changed: true,
+        changeCategory: 'same_filename_modified_bytes',
+        reason: `Ta sama nazwa pliku („${incoming.fileName}”), ale inny skrót SHA-256 — zawartość bajtowa uległa zmianie.`
+      };
+    }
+    return {
+      changed: true,
+      changeCategory: 'updated_same_document',
+      reason: 'Zmiana sumy SHA-256 wskazuje na aktualizację pliku źródłowego.'
+    };
+  }
+  return {
+    changed: false,
+    changeCategory: 'no_change',
+    reason: 'Brak zmiany zawartości bajtowej względem bieżącego artefaktu.'
+  };
+}
+
+/**
+ * Rejestruje nową wersję artefaktu bez nadpisywania historii i automatycznie oznacza
+ * powiązane wpisy dowodowe jako wymagające ponownej weryfikacji (bez przenoszenia statusu zweryfikowanego).
+ */
+export function registerNewDocumentArtifactVersion(params: {
+  source: SourceRegistryEntry;
+  entries: readonly EvidenceLedgerEntry[];
+  newFile: {
+    fileName: string | null;
+    fileSizeBytes: number | null;
+    physicalPageCount: number | null;
+    documentDate: string | null;
+    retrievedAt: string;
+    sourceUrl: string;
+    language: 'PL' | 'EN';
+    sha256: string | null;
+    acquiredLocally: boolean;
+    unverifiedOrigin?: boolean;
+  };
+}): {
+  updatedSource: SourceRegistryEntry;
+  updatedEntries: EvidenceLedgerEntry[];
+  detectedChange: ReturnType<typeof detectArtifactHashChange>;
+} {
+  const { source, entries, newFile } = params;
+  const detectedChange = detectArtifactHashChange(source, {
+    sha256: newFile.sha256,
+    fileName: newFile.fileName,
+    language: newFile.language,
+    documentDate: newFile.documentDate,
+    sourceUrl: newFile.sourceUrl,
+    unverifiedOrigin: newFile.unverifiedOrigin
+  });
+
+  if (!detectedChange.changed && source.currentArtifact) {
+    return {
+      updatedSource: source,
+      updatedEntries: [...entries],
+      detectedChange
+    };
+  }
+
+  const archivedHistory: DocumentArtifactRecord[] = source.artifactHistory.map((item) => ({
+    ...item,
+    isCurrentActiveVersion: false,
+    isHistoricalVersion: true
+  }));
+
+  const nextSeq = archivedHistory.length + 1;
+  const previousArtifactId = source.currentArtifact?.artifactId ?? null;
+  const previousHash = source.currentArtifact?.hashProvenance.value ?? source.sha256;
+  const newArtifactId = `art-${source.documentId}-v${nextSeq}`;
+
+  const comparisonStatus: HashComparisonStatus = newFile.unverifiedOrigin
+    ? 'hash_from_untrusted_source'
+    : !newFile.sha256
+      ? 'not_compared'
+      : previousHash && newFile.sha256.toLowerCase() !== previousHash.toLowerCase()
+        ? 'hash_mismatch'
+        : previousHash
+          ? 'compared_with_known_reference'
+          : newFile.acquiredLocally
+            ? 'calculated_from_local_file'
+            : 'not_compared';
+
+  const newArtifact: DocumentArtifactRecord = {
+    artifactId: newArtifactId,
+    documentId: source.documentId,
+    language: newFile.language,
+    fileName: newFile.fileName,
+    documentDate: newFile.documentDate,
+    retrievedAt: newFile.retrievedAt,
+    sourceUrl: newFile.sourceUrl,
+    previousArtifactId,
+    versionSequence: nextSeq,
+    changeCategory: detectedChange.changeCategory === 'no_change' ? 'updated_same_document' : detectedChange.changeCategory,
+    isCurrentActiveVersion: true,
+    isHistoricalVersion: false,
+    requiresReverification: true,
+    physicalPageCount: newFile.physicalPageCount,
+    fileSizeBytes: newFile.fileSizeBytes,
+    hashProvenance: {
+      algorithm: 'SHA-256',
+      value: newFile.sha256,
+      artifactId: newArtifactId,
+      calculatedAt: newFile.retrievedAt,
+      calculationMethod: newFile.acquiredLocally
+        ? 'Obliczono SHA-256 na podstawie lokalnego pliku dokumentu'
+        : 'Obliczono SHA-256 dla nowej wersji źródła (bez lokalnego zapisu binarnego)',
+      fileName: newFile.fileName,
+      fileSizeBytes: newFile.fileSizeBytes,
+      referenceType: previousHash ? 'prior_session_snapshot' : 'none',
+      referenceHash: previousHash,
+      comparisonStatus
+    }
+  };
+
+  const nextStatusAxes: SourceStatusAxes = {
+    originStatus: newFile.unverifiedOrigin ? 'origin_uncertain' : source.statusAxes.originStatus,
+    acquisitionStatus: newFile.acquiredLocally ? 'acquired' : 'not_acquired',
+    integrityStatus:
+      comparisonStatus === 'hash_mismatch'
+        ? 'hash_mismatch'
+        : newFile.sha256
+          ? 'hash_calculated'
+          : 'not_checked',
+    contentReviewStatus: 'awaiting_human_review'
+  };
+
+  const updatedSource: SourceRegistryEntry = {
+    ...source,
+    retrievedAt: newFile.retrievedAt,
+    revisionDate: newFile.documentDate ?? source.revisionDate,
+    physicalPageCount: newFile.physicalPageCount,
+    fileSizeBytes: newFile.fileSizeBytes,
+    sha256: newFile.sha256,
+    sha256Basis: newFile.acquiredLocally ? 'local_workspace_pdf_sha256' : source.sha256Basis,
+    statusAxes: nextStatusAxes,
+    currentArtifact: newArtifact,
+    artifactHistory: [...archivedHistory, newArtifact],
+    retrievalAttempts: [
+      ...source.retrievalAttempts,
+      {
+        attemptId: `att-${source.documentId}-v${nextSeq}`,
+        documentId: source.documentId,
+        attemptedAt: newFile.retrievedAt,
+        targetUrl: newFile.sourceUrl,
+        accessMethod: newFile.acquiredLocally ? 'local_filesystem_read' : 'http_get',
+        result: 'success',
+        httpStatus: newFile.acquiredLocally ? null : 200,
+        errorDescription: null,
+        checkScope: `Zarejestrowano artefakt ${newArtifactId} (${detectedChange.reason})`,
+        artifactId: newArtifactId
+      }
+    ]
+  };
+
+  // Kaskadowe oznaczenie powiązanych dowodów do ponownego sprawdzenia BEZ przenoszenia statusu zweryfikowanego i BEZ zamykania pytań
+  const updatedEntries = entries.map((entry) => {
+    if (entry.documentId !== source.documentId) {
+      return entry;
+    }
+    const downgradedClass: EvidenceQualificationClass =
+      entry.qualificationClass === 'source_excerpt_reviewed'
+        ? 'source_excerpt_pending_review'
+        : entry.qualificationClass;
+    return {
+      ...entry,
+      qualificationClass: downgradedClass,
+      requiresReverification: true,
+      autoResolved: false as const
+    };
+  });
+
+  return { updatedSource, updatedEntries, detectedChange };
+}
+
 export function buildEvidenceLedgerExportPayload(
   params: {
     sources: SourceRegistryEntry[];
@@ -1588,7 +2820,7 @@ export function buildEvidenceLedgerExportPayload(
     clinicalApprovalGranted: false,
     isWorkingDraft: true,
     disclaimer:
-      'Odrębny eksport rejestru dowodów roboczych Etapu B2 (VaxNurse). Nie zastępuje kopii katalogu preparatów (vaxnurseBackup), nie zawiera danych pacjentów ani nie stanowi zatwierdzenia klinicznego ChPL.',
+      'Odrębny eksport rejestru dowodów roboczych Etapu B3 (VaxNurse). Nie zastępuje kopii katalogu preparatów (vaxnurseBackup), nie zawiera danych pacjentów ani nie stanowi lokalnego potwierdzenia klinicznego dla importera.',
     sourceCount: params.sources.length,
     sources: [...params.sources],
     entries,
@@ -1605,7 +2837,10 @@ export function parseAndPreviewEvidenceLedgerImport(
     existingWorkingNotes: readonly InformalWorkingNote[];
   }
 ): EvidenceLedgerImportPreview {
-  const emptyPreview = (errors: string[], rejectedItems: EvidenceLedgerImportRejectedItem[] = []): EvidenceLedgerImportPreview => ({
+  const emptyPreview = (
+    errors: string[],
+    rejectedItems: EvidenceLedgerImportRejectedItem[] = []
+  ): EvidenceLedgerImportPreview => ({
     isValid: false,
     canImport: false,
     errors,
@@ -1617,6 +2852,12 @@ export function parseAndPreviewEvidenceLedgerImport(
     skippedDuplicatesCount: 0,
     newNotesCount: 0,
     updatedNotesCount: 0,
+    conflictsCount: 0,
+    conflicts: [],
+    requiresManualReviewCount: 0,
+    importedVerificationClaimsCount: 0,
+    missingDocumentsCount: 0,
+    unknownSourceIds: [],
     rejectedItems,
     payloadMetadata: {
       schemaVersion: null,
@@ -1649,21 +2890,28 @@ export function parseAndPreviewEvidenceLedgerImport(
 
   if (parsed.vaxnurseBackup === true) {
     return emptyPreview([
-      'Wybrany plik to ogólna kopia zapasowa katalogu preparatów (vaxnurseBackup). Użyj modułu Ustawienia do przywrócenia backupu aplikacji — ten importer obsługuje wyłącznie rejestr dowodów Etapu B2.'
+      'Wybrany plik to ogólna kopia zapasowa katalogu preparatów (vaxnurseBackup). Użyj modułu Ustawienia do przywrócenia backupu aplikacji — ten importer obsługuje wyłącznie rejestr dowodów.'
     ]);
   }
 
   const errors: string[] = [];
   const warnings: string[] = [];
   const rejectedItems: EvidenceLedgerImportRejectedItem[] = [];
+  const conflicts: EvidenceLedgerImportConflict[] = [];
+  const unknownSourceIds = new Set<string>();
+  let importedVerificationClaimsCount = 0;
+  let missingDocumentsCount = 0;
 
   if (parsed.vaxnurseEvidenceLedger !== true) {
     errors.push('Brak znacznika schematu vaxnurseEvidenceLedger: true.');
   }
 
-  if (parsed.schemaVersion !== EVIDENCE_LEDGER_SCHEMA_VERSION) {
+  if (
+    typeof parsed.schemaVersion !== 'string' ||
+    !SUPPORTED_EVIDENCE_LEDGER_SCHEMA_VERSIONS.includes(parsed.schemaVersion)
+  ) {
     errors.push(
-      `Nieobsługiwana lub brakująca wersja schematu dowodów (${String(parsed.schemaVersion)}; oczekiwano ${EVIDENCE_LEDGER_SCHEMA_VERSION}).`
+      `Nieobsługiwana lub brakująca wersja schematu dowodów (${String(parsed.schemaVersion)}; oczekiwano ${SUPPORTED_EVIDENCE_LEDGER_SCHEMA_VERSIONS.join(' lub ')}).`
     );
   }
 
@@ -1695,9 +2943,63 @@ export function parseAndPreviewEvidenceLedgerImport(
 
   const sourceMap = new Map(options.sources.map((s) => [s.documentId, s]));
   const questionIds = new Set(options.checklist.map((q) => q.id));
+
+  // Inspekcja opcjonalnej deklaracji źródeł z zewnętrznego pliku JSON (bez nadpisywania lokalnego rejestru!)
+  if (Array.isArray(parsed.sources)) {
+    for (const rawSource of parsed.sources as unknown[]) {
+      if (!isPlainRecord(rawSource) || typeof rawSource.documentId !== 'string') {
+        continue;
+      }
+      const docId = rawSource.documentId.trim();
+      const localSource = sourceMap.get(docId);
+      if (!localSource) {
+        unknownSourceIds.add(docId);
+        conflicts.push({
+          kind: 'unknown_source_id',
+          id: docId,
+          details: `Importowany plik wymienia nieznane źródło ${docId}, którego nie ma w lokalnym Rejestrze Źródeł.`
+        });
+        continue;
+      }
+
+      if (typeof rawSource.sha256 === 'string' && localSource.sha256) {
+        if (rawSource.sha256.trim().toLowerCase() !== localSource.sha256.toLowerCase()) {
+          conflicts.push({
+            kind: 'hash_mismatch_with_local_registry',
+            id: docId,
+            details: `Niezgodność SHA-256 w sekcji sources dla ${docId} między plikiem importu a lokalnym rejestrem.`
+          });
+          rejectedItems.push({
+            kind: 'sourceClaim',
+            id: docId,
+            reason: `Fałszywy lub rozbieżny SHA-256 dla źródła ${docId} w importowanym JSON.`
+          });
+        }
+      }
+
+      const incomingStatusAxes = isPlainRecord(rawSource.statusAxes) ? rawSource.statusAxes : null;
+      const claimsMoreConfirmedStatus =
+        rawSource.sourceVerificationStatus === 'official_source_confirmed' &&
+        localSource.sourceVerificationStatus !== 'official_source_confirmed';
+      const claimsMoreConfirmedOriginAxis =
+        incomingStatusAxes?.originStatus === 'official_origin_confirmed' &&
+        localSource.statusAxes.originStatus !== 'official_origin_confirmed';
+
+      if (claimsMoreConfirmedStatus || claimsMoreConfirmedOriginAxis) {
+        importedVerificationClaimsCount += 1;
+        warnings.push(
+          `Importowana deklaracja potwierdzonego pochodzenia dla „${docId}” pochodzi wyłącznie z zewnętrznego JSON i NIE zastępuje lokalnej kontroli.`
+        );
+      }
+
+      if (localSource.statusAxes.acquisitionStatus !== 'acquired') {
+        missingDocumentsCount += 1;
+      }
+    }
+  }
+
   const seenEntryIds = new Set<string>();
   const seenNoteIds = new Set<string>();
-
   const rawEntries = parsed.entries as unknown[];
   const validEntries: EvidenceLedgerEntry[] = [];
   let skippedBaselineCount = 0;
@@ -1708,14 +3010,31 @@ export function parseAndPreviewEvidenceLedgerImport(
       i,
       sourceMap,
       questionIds,
-      seenEntryIds
+      seenEntryIds,
+      { isLocalStorageMigration: false }
     );
     if (res.rejection) {
       rejectedItems.push(res.rejection);
+      if (res.rejection.reason.includes('Nieznany documentId')) {
+        const rawRec = rawEntries[i];
+        if (isPlainRecord(rawRec) && typeof rawRec.documentId === 'string') {
+          unknownSourceIds.add(rawRec.documentId);
+        }
+      }
     } else if (res.entry) {
+      if (res.versionMismatchConflict) {
+        conflicts.push(res.versionMismatchConflict);
+      }
       if (res.entry.origin === 'bundle_extract') {
         skippedBaselineCount += 1;
       } else {
+        if (res.importedVerificationClaim) {
+          importedVerificationClaimsCount += 1;
+        }
+        const localSource = sourceMap.get(res.entry.documentId);
+        if (localSource && localSource.statusAxes.acquisitionStatus !== 'acquired' && !Array.isArray(parsed.sources)) {
+          missingDocumentsCount += 1;
+        }
         validEntries.push(res.entry);
       }
     }
@@ -1744,6 +3063,12 @@ export function parseAndPreviewEvidenceLedgerImport(
     );
   }
 
+  if (importedVerificationClaimsCount > 0) {
+    warnings.push(
+      `Wykryto ${importedVerificationClaimsCount} deklaracji weryfikacji pochodzących z importu JSON (np. source_excerpt_reviewed / official_origin_confirmed). Zostały one automatycznie oznaczone jako niezweryfikowane lokalnie (source_excerpt_pending_review) i wymagają ręcznego potwierdzenia w tej sesji.`
+    );
+  }
+
   if (rejectedItems.length > 0) {
     errors.push(
       `Wykryto ${rejectedItems.length} nieprawidłowych lub zmodyfikowanych wpisów w imporcie. Zastosowanie pliku jest zablokowane.`
@@ -1763,11 +3088,17 @@ export function parseAndPreviewEvidenceLedgerImport(
       prev.clinicalObservation === e.clinicalObservation &&
       prev.sourceExcerptRef === e.sourceExcerptRef &&
       prev.relationship === e.relationship &&
-      prev.reviewStatus === e.reviewStatus
+      prev.reviewStatus === e.reviewStatus &&
+      prev.qualificationClass === e.qualificationClass
     ) {
       skippedDuplicatesCount += 1;
     } else {
       updatedEntriesCount += 1;
+      conflicts.push({
+        kind: 'id_collision_different_content',
+        id: e.evidenceId,
+        details: `Kolizja evidenceId „${e.evidenceId}”: treść lub status w pliku importu różni się od lokalnego wpisu.`
+      });
     }
   }
 
@@ -1781,6 +3112,14 @@ export function parseAndPreviewEvidenceLedgerImport(
       updatedNotesCount += 1;
     }
   }
+
+  const requiresManualReviewCount = validEntries.filter(
+    (e) =>
+      e.requiresReverification ||
+      e.qualificationClass === 'source_excerpt_pending_review' ||
+      e.qualificationClass === 'traceability_reference' ||
+      e.importProvenance?.localConfirmationState === 'unconfirmed_imported_claim'
+  ).length;
 
   warnings.push(
     'Import dotyczy wyłącznie lokalnego rejestru dowodów i notatek roboczych. Katalog VACCINES_CATALOG, blokada Infanrix hexa oraz autoResolved: false pozostają nienaruszone.'
@@ -1798,6 +3137,12 @@ export function parseAndPreviewEvidenceLedgerImport(
     skippedDuplicatesCount,
     newNotesCount,
     updatedNotesCount,
+    conflictsCount: conflicts.length,
+    conflicts,
+    requiresManualReviewCount,
+    importedVerificationClaimsCount,
+    missingDocumentsCount,
+    unknownSourceIds: Array.from(unknownSourceIds),
     rejectedItems,
     payloadMetadata: {
       schemaVersion: typeof parsed.schemaVersion === 'string' ? parsed.schemaVersion : null,
@@ -1812,7 +3157,8 @@ export function parseAndPreviewEvidenceLedgerImport(
 export function applyPreviewedEvidenceLedgerImport(
   preview: EvidenceLedgerImportPreview,
   existingWorkingEntries: readonly EvidenceLedgerEntry[],
-  existingWorkingNotes: readonly InformalWorkingNote[]
+  existingWorkingNotes: readonly InformalWorkingNote[],
+  now: Date = new Date()
 ): {
   mergedEntries: EvidenceLedgerEntry[];
   mergedNotes: InformalWorkingNote[];
@@ -1821,9 +3167,35 @@ export function applyPreviewedEvidenceLedgerImport(
     throw new Error('Nie można zastosować importu zawierającego błędy walidacji.');
   }
 
+  const importedAt = now.toISOString();
   const entryMap = new Map(existingWorkingEntries.map((e) => [e.evidenceId, e]));
   for (const entry of preview.validEntries) {
-    entryMap.set(entry.evidenceId, { ...entry, autoResolved: false });
+    const safeQualification: EvidenceQualificationClass =
+      entry.qualificationClass === 'source_excerpt_reviewed'
+        ? 'source_excerpt_pending_review'
+        : entry.qualificationClass;
+    entryMap.set(entry.evidenceId, {
+      ...entry,
+      qualificationClass: safeQualification,
+      requiresReverification: true,
+      autoResolved: false,
+      importProvenance: {
+        isImported: true,
+        importedAt,
+        importClaimStatus:
+          entry.importProvenance?.importClaimStatus ?? 'imported_unverified_claim',
+        claimedQualificationClass:
+          entry.importProvenance?.claimedQualificationClass ?? entry.qualificationClass,
+        claimedReviewStatus:
+          entry.importProvenance?.claimedReviewStatus ?? entry.reviewStatus,
+        claimedSourceDocumentHash:
+          entry.importProvenance?.claimedSourceDocumentHash ?? entry.sourceDocumentHash,
+        claimedOriginConfirmedByImport:
+          entry.importProvenance?.claimedOriginConfirmedByImport ?? false,
+        localConfirmationState: 'unconfirmed_imported_claim',
+        migrationSourceVersion: null
+      }
+    });
   }
 
   const noteMap = new Map(existingWorkingNotes.map((n) => [n.noteId, n]));
@@ -1834,6 +3206,93 @@ export function applyPreviewedEvidenceLedgerImport(
   return {
     mergedEntries: Array.from(entryMap.values()),
     mergedNotes: Array.from(noteMap.values())
+  };
+}
+
+/**
+ * Dynamicznie wylicza 12 metryk raportu jakości źródeł i dowodów (Quality Dashboard — Etap B3).
+ * Nigdy nie traktuje wpisu rejestrowego ani błędu endpointu jako pozyskanego PDF,
+ * ani odniesienia lub niepotwierdzonego importu jako zweryfikowanego fragmentu.
+ */
+export function computeSourceQualityMetrics(params: {
+  sources: readonly SourceRegistryEntry[];
+  allEntries: readonly EvidenceLedgerEntry[];
+  checklist: readonly Stage1HumanDecisionItem[];
+}): SourceQualityMetrics {
+  const { sources, allEntries, checklist } = params;
+
+  const acquiredDocumentsCount = sources.filter(
+    (s) => s.statusAxes.acquisitionStatus === 'acquired'
+  ).length;
+
+  const registryEntriesWithoutPdfCount = sources.filter(
+    (s) =>
+      s.objectType === 'official_registry_record' &&
+      s.statusAxes.acquisitionStatus !== 'acquired'
+  ).length;
+
+  const failedRetrievalAttemptsCount = sources.reduce(
+    (acc, s) =>
+      acc +
+      s.retrievalAttempts.filter(
+        (attempt) => attempt.result === 'http_error' || attempt.result === 'network_error'
+      ).length,
+    0
+  );
+
+  const historicalDocumentsCount = sources.filter(
+    (s) => s.objectType === 'historical_document' || Boolean(s.isHistoricalRejectedForCurrentSeason)
+  ).length;
+
+  const documentsWithoutSha256Count = sources.filter((s) => !s.sha256).length;
+  const documentsWithCalculatedSha256Count = sources.filter((s) => Boolean(s.sha256)).length;
+  const documentsWithComparedHashCount = sources.filter(
+    (s) => s.statusAxes.integrityStatus === 'hash_matches_known_reference'
+  ).length;
+
+  const isLocallyVerifiedExcerpt = (entry: EvidenceLedgerEntry): boolean =>
+    entry.qualificationClass === 'source_excerpt_reviewed' &&
+    entry.origin === 'auditor_working_entry' &&
+    entry.importProvenance?.localConfirmationState !== 'unconfirmed_imported_claim';
+
+  const referencesRequiringReviewCount = allEntries.filter(
+    (e) =>
+      e.qualificationClass === 'traceability_reference' ||
+      e.qualificationClass === 'source_excerpt_pending_review' ||
+      e.requiresReverification
+  ).length;
+
+  const verifiedExcerptsCount = allEntries.filter(isLocallyVerifiedExcerpt).length;
+
+  const conflictingExcerptsCount = allEntries.filter(
+    (e) => e.qualificationClass === 'conflicting_source_excerpt'
+  ).length;
+
+  const questionsWithoutConfirmedExcerptsCount = checklist.filter(
+    (q) => !allEntries.some((e) => e.questionId === q.id && isLocallyVerifiedExcerpt(e))
+  ).length;
+
+  const importedUnconfirmedClaimsCount = allEntries.filter(
+    (e) =>
+      Boolean(e.importProvenance?.isImported) &&
+      e.importProvenance?.localConfirmationState === 'unconfirmed_imported_claim'
+  ).length;
+
+  return {
+    totalSourceRecords: sources.length,
+    acquiredDocumentsCount,
+    registryEntriesWithoutPdfCount,
+    failedRetrievalAttemptsCount,
+    historicalDocumentsCount,
+    documentsWithoutSha256Count,
+    documentsWithCalculatedSha256Count,
+    documentsWithComparedHashCount,
+    referencesRequiringReviewCount,
+    verifiedExcerptsCount,
+    conflictingExcerptsCount,
+    questionsWithoutConfirmedExcerptsCount,
+    importedUnconfirmedClaimsCount,
+    disclaimer: SOURCE_QUALITY_DISCLAIMER
   };
 }
 
@@ -1856,6 +3315,13 @@ export function filterEvidenceLedgerEntries(
       return false;
     }
     if (filters.relationship !== 'all' && entry.relationship !== filters.relationship) {
+      return false;
+    }
+    if (
+      filters.qualificationClass &&
+      filters.qualificationClass !== 'all' &&
+      entry.qualificationClass !== filters.qualificationClass
+    ) {
       return false;
     }
     if (filters.reviewStatus !== 'all' && entry.reviewStatus !== filters.reviewStatus) {
@@ -1896,6 +3362,21 @@ export function buildQuestionTraceabilitySummaries(
     const notesForQ = workingNotes.filter((n) => n.questionId === q.id);
     const workingEvidenceCount = entriesForQ.filter((e) => e.origin === 'auditor_working_entry').length;
     const bundleExtractCount = entriesForQ.filter((e) => e.origin === 'bundle_extract').length;
+    const verifiedExcerptsCount = entriesForQ.filter(
+      (e) =>
+        e.qualificationClass === 'source_excerpt_reviewed' &&
+        e.origin === 'auditor_working_entry' &&
+        e.importProvenance?.localConfirmationState !== 'unconfirmed_imported_claim'
+    ).length;
+    const pendingReviewCount = entriesForQ.filter(
+      (e) =>
+        e.qualificationClass === 'traceability_reference' ||
+        e.qualificationClass === 'source_excerpt_pending_review' ||
+        e.requiresReverification
+    ).length;
+    const conflictingExcerptsCount = entriesForQ.filter(
+      (e) => e.qualificationClass === 'conflicting_source_excerpt'
+    ).length;
 
     const relationshipsCount: Record<EvidenceRelationship, number> = {
       supports: 0,
@@ -1912,7 +3393,7 @@ export function buildQuestionTraceabilitySummaries(
     }
 
     let workStatus: QuestionWorkStatus = 'open';
-    if (relationshipsCount.contradicts > 0) {
+    if (relationshipsCount.contradicts > 0 || conflictingExcerptsCount > 0) {
       workStatus = 'conflicting_evidence';
     } else if (relationshipsCount.missing_information > 0) {
       workStatus = 'requires_authority_clarification';
@@ -1935,6 +3416,9 @@ export function buildQuestionTraceabilitySummaries(
       bundleExtractCount,
       workingEvidenceCount,
       totalEvidenceCount: entriesForQ.length,
+      verifiedExcerptsCount,
+      pendingReviewCount,
+      conflictingExcerptsCount,
       workingNotesCount: notesForQ.length,
       relationshipsCount,
       linkedDocumentIds: Array.from(docIds)

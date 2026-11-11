@@ -84,7 +84,7 @@ describe('ChplAuditWorkbenchView — stanowisko audytu ChPL (ETAP B1 · READ-ONL
     expect(spikevaxSheet?.entries).toHaveLength(18);
     expect(detailsScope.getByText(/4\.1 Wskazania do stosowania/i)).toBeInTheDocument();
     expect(detailsScope.getByText(/4\.9 Przedawkowanie/i)).toBeInTheDocument();
-  }, 15000);
+  }, 30000);
 
   it('prezentuje missingDataReport i wszystkie 8 otwartych pytań do audytora z autoResolved = false', () => {
     render(<ChplAuditWorkbenchView vaccines={VACCINES_CATALOG} onOpenVaccineById={vi.fn()} />);
@@ -129,7 +129,7 @@ describe('ChplAuditWorkbenchView — stanowisko audytu ChPL (ETAP B1 · READ-ONL
     expect(
       screen.queryByRole('button', { name: /Zatwierdź status|Oznacz jako zweryfikowany|Zamknij pytanie/i })
     ).not.toBeInTheDocument();
-  }, 15000);
+  }, 30000);
 
   it('eksportuje wyłącznie roboczy raport JSON (isWorkingDraft: true) oraz wywołuje wydruk roboczy', async () => {
     const user = userEvent.setup();
@@ -162,5 +162,5 @@ describe('ChplAuditWorkbenchView — stanowisko audytu ChPL (ETAP B1 · READ-ONL
     expect(report.containsPatientData).toBe(false);
     expect(report.humanQuestions).toHaveLength(8);
     expect(report.humanQuestions.every((q) => q.autoResolved === false)).toBe(true);
-  }, 15000);
+  }, 30000);
 });

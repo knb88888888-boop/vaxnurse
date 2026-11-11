@@ -80,11 +80,12 @@ button.brand-logo {
   background: transparent;
   border: none;
   font: inherit;
-  padding: 4px 6px;
+  padding: 2px 6px;
   margin: 0;
   cursor: pointer;
   color: inherit;
   border-radius: var(--radius-sm);
+  line-height: 1.35;
 }
 
 button.breadcrumb-root:hover,
@@ -414,7 +415,7 @@ textarea:focus-visible {
 
 .module-card.is-placeholder {
   border-style: dashed;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  background-color: #f8fafc;
 }
 
 .module-badge--placeholder {
@@ -906,6 +907,129 @@ button.recent-module-item {
     white-space: normal;
     text-align: center;
   }
+}
+
+/* ETAP B3: WCAG 2.2 Target Size + stabilność 200% zoom na 360px + brak ucinania wyników search */
+.search-clear-btn,
+.clear-search-btn {
+  min-width: 28px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.global-search-dropdown.desktop {
+  width: min(620px, calc(100vw - 48px));
+  max-width: calc(100vw - 32px);
+  max-height: min(76vh, 600px);
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+.pso-reference-alert {
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.pso-alert-content {
+  min-width: 0;
+  flex: 1 1 200px;
+  max-width: 100%;
+}
+
+.pso-gis-link {
+  flex-shrink: 1;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.section-header {
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.backup-last-date-item {
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.backup-last-date-val {
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+.wb-section-heading-row {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.wb-section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.wb-section-heading > span {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 180px;
+  overflow-wrap: anywhere;
+}
+
+.chpl-workbench-container section,
+.chpl-workbench-container div,
+.chpl-workbench-container p,
+.chpl-workbench-container li,
+.chpl-workbench-container span,
+.chpl-workbench-container strong,
+.chpl-workbench-container a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.wb-sheet-row,
+.wb-metric-card,
+.wb-subpanel,
+.wb-meta-notes-box {
+  max-width: 100%;
+}
+
+.qa-placeholder-pill {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.content-panel,
+.v-banner-content,
+.bracket-header-left,
+.age-bracket-section,
+.backup-meta-bar,
+.backup-actions-row,
+.chpl-workbench-container {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.backup-actions-row {
+  flex-wrap: wrap;
+}
+
+.chpl-workbench-container code,
+.settings-container code,
+.dashboard-container code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .sr-only {

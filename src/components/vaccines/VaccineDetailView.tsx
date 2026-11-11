@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   ArrowLeft,
+  ArrowRight,
   ExternalLink,
   ShieldAlert,
   AlertTriangle,
@@ -2314,7 +2315,7 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
                       <span className="v-audit-timestamp">{entry.timestamp}</span>
                       <span className="v-audit-transition">
                         <span className="v-audit-prev">{VERIFICATION_STATUS_META[entry.previousStatus]?.label || entry.previousStatus}</span>
-                        <span className="v-audit-arrow">&rarr;</span>
+                        <ArrowRight size={14} className="v-audit-arrow" aria-hidden="true" />
                         <span className="v-audit-next">{VERIFICATION_STATUS_META[entry.newStatus]?.label || entry.newStatus}</span>
                       </span>
                       <span className="v-audit-author">Autor: {entry.author}</span>

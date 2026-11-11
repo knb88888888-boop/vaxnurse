@@ -12,7 +12,7 @@
 
 /* --- Theme Icon Box --- */
 .module-view-icon-box.child-icon-theme {
-  background: linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 100%);
+  background-color: #e0f2fe;
   color: var(--blue-700);
   border: 1px solid #bae6fd;
 }
@@ -46,11 +46,11 @@
   align-items: center;
   gap: 1.5rem;
   padding: 1.25rem 1.5rem;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  background-color: #0f172a;
   border-radius: 12px;
   color: #f8fafc;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid #334155;
 }
 
 .pso-banner-left {
@@ -77,18 +77,18 @@
   display: inline-block;
   padding: 0.15rem 0.55rem;
   border-radius: 4px;
-  background-color: rgba(56, 189, 248, 0.2);
-  color: #38bdf8;
+  background-color: #164e63;
+  color: #e0f2fe;
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  border: 1px solid #0284c7;
 }
 
 .pso-date-tag {
   font-size: 0.8rem;
-  color: #94a3b8;
+  color: #cbd5e1;
 }
 
 .pso-banner-title {
@@ -289,17 +289,19 @@
 }
 
 .obligation-tabs {
-  display: inline-flex;
+  display: flex;
   background-color: #f1f5f9;
   border-radius: 8px;
   padding: 0.25rem;
   gap: 0.25rem;
   flex-wrap: wrap;
+  max-width: 100%;
 }
 
 .obligation-tab {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.45rem;
   padding: 0.5rem 0.95rem;
   border-radius: 6px;
@@ -308,6 +310,8 @@
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--navy-700);
+  max-width: 100%;
+  text-align: left;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -440,9 +444,11 @@
 }
 
 .pathogen-chips {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.35rem;
   align-items: center;
+  max-width: 100%;
 }
 
 .pathogen-btn {
@@ -490,7 +496,8 @@
   color: var(--navy-800);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  white-space: nowrap;
+  white-space: normal;
+  max-width: 100%;
 }
 
 .jump-chips-container {
@@ -537,7 +544,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.85rem 1.25rem;
-  background: linear-gradient(90deg, #f1f5f9 0%, #ffffff 100%);
+  background-color: #f8fafc;
   border-radius: 10px;
   border-left: 4px solid #0284c7;
   border-top: 1px solid #e2e8f0;

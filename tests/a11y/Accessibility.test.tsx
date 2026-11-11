@@ -90,7 +90,7 @@ describe('Automatyczny audyt dostępności WCAG 2.1/2.2 A/AA (axe-core w Vitest/
     await screen.findByTestId('vaccines-mode-workbench', {}, { timeout: 10000 });
     expect((await runWcagAxe(container, 'VaccinesDatabaseView')).wcagViolations).toBe(0);
 
-    // 3. Stanowisko audytu ChPL (Workbench READ-ONLY + Etap B2 Source Registry & Evidence Ledger)
+    // 3. Stanowisko audytu ChPL (Workbench READ-ONLY + Etap B2/B3 Quality Dashboard, Source Registry & Evidence Ledger)
     await user.click(screen.getByTestId('vaccines-mode-workbench'));
     await screen.findByRole(
       'heading',
@@ -99,9 +99,17 @@ describe('Automatyczny audyt dostępności WCAG 2.1/2.2 A/AA (axe-core w Vitest/
       },
       { timeout: 10000 }
     );
+    await screen.findByTestId('b3-quality-dashboard', {}, { timeout: 10000 });
     await screen.findByTestId('b2-source-registry-panel', {}, { timeout: 10000 });
     await screen.findByTestId('b2-evidence-ledger-panel', {}, { timeout: 10000 });
-    expect((await runWcagAxe(container, 'ChplAuditWorkbenchView + B2')).wcagViolations).toBe(0);
+    expect((await runWcagAxe(container, 'ChplAuditWorkbenchView + B3')).wcagViolations).toBe(0);
+
+    // 3b. Stanowisko audytu ChPL w trybie compact + large
+    document.documentElement.setAttribute('data-density', 'compact');
+    document.documentElement.setAttribute('data-font-size', 'large');
+    expect((await runWcagAxe(container, 'ChplAuditWorkbenchView + B3 (compact + large)')).wcagViolations).toBe(0);
+    document.documentElement.removeAttribute('data-density');
+    document.documentElement.removeAttribute('data-font-size');
 
     // 4. Karta ChPL Infanrix hexa (zwinięte + rozwinięte akordeony)
     const infanrixBtns = await screen.findAllByRole(
@@ -125,7 +133,7 @@ describe('Automatyczny audyt dostępności WCAG 2.1/2.2 A/AA (axe-core w Vitest/
       { timeout: 10000 }
     );
     expect((await runWcagAxe(container, 'VaccineDetailView (Expanded)')).wcagViolations).toBe(0);
-  }, 40000);
+  }, 60000);
 
   it('Baza wiedzy, moduł w przygotowaniu oraz Ustawienia + podgląd importu kopii JSON spełniają WCAG 2.1/2.2 A/AA', async () => {
     const user = userEvent.setup();

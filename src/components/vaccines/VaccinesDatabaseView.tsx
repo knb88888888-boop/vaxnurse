@@ -135,6 +135,9 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
     } catch (e) {
       console.warn('Błąd zapisu aktywnego ID preparatu w localStorage:', e);
     }
+    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
   };
 
   const handleOpenVaccineById = (vaccineId: string) => {
@@ -150,6 +153,9 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
       getBrowserStorage()?.removeItem(VAX_ACTIVE_ID_KEY);
     } catch (e) {
       console.warn('Błąd usunięcia aktywnego ID preparatu z localStorage:', e);
+    }
+    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+      window.scrollTo({ top: 0, behavior: 'auto' });
     }
   };
 

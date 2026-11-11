@@ -8,7 +8,9 @@ import { createBackupPayload, getStoredVaccines } from '../../src/utils/backup';
 import {
   EMPTY_QUESTION_EVIDENCE_MESSAGE,
   EVIDENCE_LEDGER_STORAGE_KEY,
+  HISTORICAL_DOCUMENT_NOTICE,
   INFORMAL_WORKING_NOTE_DISCLAIMER,
+  SOURCE_QUALITY_DISCLAIMER,
   WORKING_NOTES_STORAGE_KEY,
   buildBaseSourceRegistry,
   buildEvidenceLedgerExportPayload,
@@ -232,4 +234,114 @@ describe('Etap B2 — WorkbenchSourceRegistryPanel & WorkbenchEvidenceLedgerPane
     expect(parsedExport.vaxnurseEvidenceLedger).toBe(true);
     expect(parsedExport.clinicalApprovalGranted).toBe(false);
   });
+});
+
+describe('Etap B3 — Quality Dashboard, 4 osie źródeł, kontrola awansu dowodu i UI importu', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('prezentuje 12 metryk Quality Dashboard + disclaimer, banner historyczny i filtr typów obiektów', async () => {
+    const user = userEvent.setup();
+    render(<ChplAuditWorkbenchView vaccines={VACCINES_CATALOG} onOpenVaccineById={vi.fn()} />);
+
+    const dash = screen.getByTestId('b3-quality-dashboard');
+    expect(within(dash).getByTestId('b3-quality-disclaimer')).toHaveTextContent(
+      SOURCE_QUALITY_DISCLAIMER
+    );
+    expect(within(dash).getByTestId('b3-metric-total-sources')).toHaveTextContent('9');
+    expect(within(dash).getByTestId('b3-metric-acquired')).toHaveTextContent('1');
+    expect(within(dash).getByTestId('b3-metric-registry-only')).toHaveTextContent('3');
+    expect(within(dash).getByTestId('b3-metric-failed-attempts')).toHaveTextContent('1');
+    expect(within(dash).getByTestId('b3-metric-historical')).toHaveTextContent('1');
+    expect(within(dash).getByTestId('b3-metric-no-sha')).toHaveTextContent('1');
+    expect(within(dash).getByTestId('b3-metric-calc-sha')).toHaveTextContent('8');
+    expect(within(dash).getByTestId('b3-metric-verified-excerpts')).toHaveTextContent('0');
+    expect(within(dash).getByTestId('b3-metric-open-questions')).toHaveTextContent('8');
+
+    // Banner historyczny i 4 osie na VaxigripTetra 2025/2026
+    const histCard = screen.getByTestId('source-card-doc-rpl-vaxigrip-tetra-35346-hist');
+    expect(within(histCard).getAllByText(HISTORICAL_DOCUMENT_NOTICE).length).toBeGreaterThanOrEqual(1);
+    expect(histCard).toHaveAttribute('data-object-type', 'historical_document');
+
+    // Filtr typu obiektu źródłowego -> official_endpoint
+    const typeSelect = screen.getByLabelText(/Typ obiektu źródłowego/i);
+    await user.selectOptions(typeSelect, 'official_endpoint');
+    expect(screen.getByTestId('source-card-doc-rpl-spikevax-cen-endpoints')).toBeInTheDocument();
+    expect(screen.queryByTestId('source-card-doc-mz-pso-2027-akt')).not.toBeInTheDocument();
+
+    // Przycisk "Pokaż dokument w Rejestrze Źródeł" z Łańcucha dowodowego przywraca lub wybiera dokument
+    await user.selectOptions(typeSelect, 'all');
+    const navBtns = screen.getAllByRole('button', { name: /Pokaż dokument w Rejestrze Źródeł/i });
+    await user.click(navBtns[0]);
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+  }, 35000);
+
+  it('blokuje source_excerpt_reviewed bez potwierdzenia PDF, pozwala na świadomy zapis i nie potwierdza importowanego claimu', async () => {
+    const user = userEvent.setup();
+    document.documentElement.setAttribute('data-density', 'compact');
+    document.documentElement.setAttribute('data-font-size', 'large');
+
+    render(<ChplAuditWorkbenchView vaccines={VACCINES_CATALOG} onOpenVaccineById={vi.fn()} />);
+
+    const form = screen.getByTestId('b2-add-evidence-form');
+    const formScope = within(form);
+
+    await user.selectOptions(formScope.getByLabelText(/Dokument z Rejestru Źródeł/i), 'doc-rpl-bcg10-19535');
+    fireEvent.change(formScope.getByLabelText(/Indeks strony PDF/i), { target: { value: '3' } });
+    fireEvent.change(formScope.getByLabelText(/Krótki fragment \/ odniesienie źródłowe/i), {
+      target: { value: 'Pkt 4.2 ChPL BCG 10 — strona 3 PDF' }
+    });
+    fireEvent.change(formScope.getByLabelText(/Obserwacja robocza audytora/i), {
+      target: { value: 'Sprawdzenie miejsca podania w rzeczywistym pliku PDF.' }
+    });
+    await user.selectOptions(
+      formScope.getByLabelText(/Klasa kwalifikacji dowodu/i),
+      'source_excerpt_reviewed'
+    );
+
+    // Próba bez zaznaczenia checkboxa potwierdzenia porównania z PDF -> blokada
+    await user.click(formScope.getByRole('button', { name: /Zapisz roboczy ślad dowodowy/i }));
+    expect(
+      formScope.getByText(/ręcznie porównany z treścią rzeczywistego pliku PDF/i)
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('b3-metric-verified-excerpts')).toHaveTextContent('0');
+
+    // Po zaznaczeniu checkboxa -> zapis + dynamiczna aktualizacja licznika Quality Dashboard, nadal autoResolved=false
+    await user.click(
+      formScope.getByRole('checkbox', { name: /Potwierdzam ręczne sprawdzenie przytoczonego fragmentu/i })
+    );
+    await user.click(formScope.getByRole('button', { name: /Zapisz roboczy ślad dowodowy/i }));
+    expect(screen.getByTestId('b3-metric-verified-excerpts')).toHaveTextContent('1');
+    expect(screen.getByTestId('b3-metric-open-questions')).toHaveTextContent('7');
+
+    // Eksport i czysty re-import -> deklaracja z JSON zostaje oznaczona jako niepotwierdzona lokalnie!
+    const storedNow = JSON.parse(localStorage.getItem(EVIDENCE_LEDGER_STORAGE_KEY) || '[]');
+    const sources = buildBaseSourceRegistry(STAGE1_CHPL_AUDIT_BUNDLE);
+    const claimExport = buildEvidenceLedgerExportPayload({
+      sources,
+      workingEntries: storedNow,
+      workingNotes: []
+    });
+    localStorage.clear();
+
+    // Usuń poprzedni wpis z UI
+    await user.click(screen.getByRole('button', { name: /Usuń lokalny wpis dowodowy/i }));
+    expect(screen.getByTestId('b3-metric-verified-excerpts')).toHaveTextContent('0');
+
+    const ioBox = screen.getByTestId('b2-evidence-import-export');
+    const fileInput = within(ioBox).getByTestId('b2-evidence-import-input') as HTMLInputElement;
+    const claimFile = new File([JSON.stringify(claimExport)], 'claimed-verified.json', {
+      type: 'application/json'
+    });
+    fireEvent.change(fileInput, { target: { files: [claimFile] } });
+
+    const preview = await screen.findByTestId('b2-import-preview-card');
+    expect(preview).toHaveTextContent(/Deklaracje weryfikacji pochodzące z importu JSON:\s*1/i);
+    await user.click(within(preview).getByRole('button', { name: /Zastosuj podglądany import dowodów/i }));
+
+    expect(screen.getByTestId('b3-metric-verified-excerpts')).toHaveTextContent('0');
+    expect(screen.getAllByText(/Z importu JSON \(niepotwierdzone lokalnie\)/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Wymaga kontroli w oryginalnym PDF/i).length).toBeGreaterThanOrEqual(1);
+  }, 30000);
 });

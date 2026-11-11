@@ -1,19 +1,35 @@
 import React, { useMemo, useState } from 'react';
 import {
+  AlertOctagon,
+  Archive,
   CheckCircle2,
   ExternalLink,
+  FileCheck2,
   FileWarning,
   Filter,
   Globe2,
   Hash,
+  History,
   Search,
+  ServerCrash,
   ShieldAlert,
   XCircle
 } from 'lucide-react';
-import type { SourceRegistryEntry, SourceVerificationStatus } from '../../types/evidenceLedger';
+import type {
+  SourceObjectType,
+  SourceRegistryEntry,
+  SourceVerificationStatus
+} from '../../types/evidenceLedger';
 import {
+  ALLOWED_SOURCE_OBJECT_TYPES,
   ALLOWED_SOURCE_VERIFICATION_STATUSES,
-  getProductScopeLabel
+  getAcquisitionAxisStatusLabel,
+  getContentReviewAxisStatusLabel,
+  getHashComparisonStatusLabel,
+  getIntegrityAxisStatusLabel,
+  getOriginAxisStatusLabel,
+  getProductScopeLabel,
+  getSourceObjectTypePresentation
 } from '../../utils/chplEvidenceLedger';
 
 interface WorkbenchSourceRegistryPanelProps {
@@ -22,19 +38,20 @@ interface WorkbenchSourceRegistryPanelProps {
   onSelectDocumentForEvidence: (documentId: string) => void;
 }
 
-function getSourceBadgeTone(status: SourceVerificationStatus): 'info' | 'warning' | 'danger' | 'neutral' {
-  switch (status) {
-    case 'official_source_confirmed':
-      return 'info';
-    case 'official_source_unavailable':
-    case 'document_version_uncertain':
-    case 'metadata_mismatch':
-      return 'danger';
-    case 'requires_manual_review':
-      return 'warning';
-    case 'not_checked':
-      return 'neutral';
+function getSourceBadgeTone(src: SourceRegistryEntry): 'info' | 'warning' | 'danger' | 'neutral' | 'historical' {
+  if (src.isHistoricalRejectedForCurrentSeason || src.objectType === 'historical_document') {
+    return 'historical';
   }
+  if (src.statusAxes.acquisitionStatus === 'access_failed' || src.objectType === 'official_endpoint') {
+    return 'danger';
+  }
+  if (src.statusAxes.acquisitionStatus === 'acquired') {
+    return 'info';
+  }
+  if (src.sourceVerificationStatus === 'requires_manual_review' || src.statusAxes.originStatus !== 'official_origin_confirmed') {
+    return 'warning';
+  }
+  return 'neutral';
 }
 
 export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanelProps> = React.memo(({
@@ -42,6 +59,7 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
   activeDocumentFilterId,
   onSelectDocumentForEvidence
 }) => {
+  const [objectTypeFilter, setObjectTypeFilter] = useState<SourceObjectType | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<SourceVerificationStatus | 'all'>('all');
   const [languageFilter, setLanguageFilter] = useState<'all' | 'PL' | 'EN'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -49,6 +67,9 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
   const filteredSources = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return sources.filter((src) => {
+      if (objectTypeFilter !== 'all' && src.objectType !== objectTypeFilter) {
+        return false;
+      }
       if (statusFilter !== 'all' && src.sourceVerificationStatus !== statusFilter) {
         return false;
       }
@@ -58,6 +79,7 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
       if (q) {
         const hay = [
           src.documentId,
+          src.objectType,
           src.documentTitle,
           src.productDisplayName,
           src.authority,
@@ -74,13 +96,13 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
       }
       return true;
     });
-  }, [sources, statusFilter, languageFilter, searchQuery]);
+  }, [sources, objectTypeFilter, statusFilter, languageFilter, searchQuery]);
 
-  const confirmedCount = sources.filter(
-    (s) => s.sourceVerificationStatus === 'official_source_confirmed'
+  const locallyAcquiredCount = sources.filter(
+    (s) => s.statusAxes.acquisitionStatus === 'acquired'
   ).length;
-  const unavailableOrWarningCount = sources.filter(
-    (s) => s.sourceVerificationStatus !== 'official_source_confirmed'
+  const unacquiredOrWarningCount = sources.filter(
+    (s) => s.statusAxes.acquisitionStatus !== 'acquired'
   ).length;
 
   return (
@@ -92,27 +114,28 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
       <div className="wb-section-heading-row">
         <div>
           <h2 id="wb-source-registry-heading" className="wb-section-heading">
-            Sekcja E — Rejestr Dokumentów Źródłowych (Etap B2)
+            Sekcja E — Rejestr Źródeł, Artefaktów i Prób Pobierań (Etap B3)
           </h2>
           <p className="wb-section-subheading">
-            Rozróżnienie statusu pochodzenia dokumentu od weryfikacji klinicznej treści: zapisany skrót SHA-256 i
-            adres URL potwierdzają źródło pliku, nigdy nie zastępują decyzji audytora ani nie stanowią
-            klinicznego zatwierdzenia karty ChPL czy procedury PSO.
+            Każdy obiekt rozdziela niezależnie cztery osie: <strong>pochodzenie</strong>,{' '}
+            <strong>pozyskanie pliku</strong>, <strong>integralność (SHA-256)</strong> oraz{' '}
+            <strong>kontrolę treści</strong>. Sam wpis rejestrowy ani suma SHA-256 nie stanowią potwierdzenia
+            autentyczności ani zatwierdzenia klinicznego karty ChPL.
           </p>
         </div>
-        <div className="wb-b2-counters" role="group" aria-label="Podsumowanie statusów rejestru źródeł">
+        <div className="wb-b2-counters" role="group" aria-label="Podsumowanie pozyskania i statusów źródeł">
           <span className="wb-b2-stat-chip wb-b2-chip-info">
-            <CheckCircle2 size={14} aria-hidden="true" />
-            <span>Potwierdzone pochodzenie: {confirmedCount}</span>
+            <FileCheck2 size={14} aria-hidden="true" />
+            <span>Pozyskane lokalnie: {locallyAcquiredCount} / {sources.length}</span>
           </span>
           <span className="wb-b2-stat-chip wb-b2-chip-warning">
             <ShieldAlert size={14} aria-hidden="true" />
-            <span>Niedostępne / historyczne / do przeglądu: {unavailableOrWarningCount}</span>
+            <span>Metadane / niedostępne / historyczne: {unacquiredOrWarningCount}</span>
           </span>
         </div>
       </div>
 
-      <div className="wb-b2-filter-bar">
+      <div className="wb-b2-filter-bar wb-b3-filter-bar">
         <div className="wb-filter-group">
           <label htmlFor="b2-src-search" className="wb-filter-label">
             Szukaj dokumentu / ID / SHA-256 / podmiotu
@@ -131,8 +154,27 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
         </div>
 
         <div className="wb-filter-group">
+          <label htmlFor="b3-src-object-type" className="wb-filter-label">
+            Typ obiektu źródłowego (Etap B3)
+          </label>
+          <select
+            id="b3-src-object-type"
+            className="wb-select-input"
+            value={objectTypeFilter}
+            onChange={(e) => setObjectTypeFilter(e.target.value as SourceObjectType | 'all')}
+          >
+            <option value="all">Wszystkie typy obiektów ({sources.length})</option>
+            {ALLOWED_SOURCE_OBJECT_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {getSourceObjectTypePresentation(t).badgeText}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="wb-filter-group">
           <label htmlFor="b2-src-status" className="wb-filter-label">
-            Status pochodzenia źródła
+            Status historyczny źródła
           </label>
           <select
             id="b2-src-status"
@@ -151,7 +193,7 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
 
         <div className="wb-filter-group">
           <label htmlFor="b2-src-lang" className="wb-filter-label">
-            Język dokumentu
+            Język artefaktu
           </label>
           <select
             id="b2-src-lang"
@@ -168,20 +210,36 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
 
       <div className="wb-b2-source-grid">
         {filteredSources.map((src) => {
-          const tone = getSourceBadgeTone(src.sourceVerificationStatus);
+          const objectMeta = getSourceObjectTypePresentation(src.objectType);
+          const tone = getSourceBadgeTone(src);
           const isSelectedForEvidence = activeDocumentFilterId === src.documentId;
+          const hashProv = src.currentArtifact?.hashProvenance;
           return (
             <article
               key={src.documentId}
+              id={`source-card-${src.documentId}`}
               className={`wb-b2-source-card ${isSelectedForEvidence ? 'is-selected' : ''} ${
                 src.isHistoricalRejectedForCurrentSeason ? 'is-historical-rejected' : ''
               }`}
               data-testid={`source-card-${src.documentId}`}
+              data-object-type={src.objectType}
             >
               <div className="wb-b2-source-header">
                 <div className="wb-b2-source-badges">
+                  <span className={`wb-b2-status-pill tone-${objectMeta.tone}`}>
+                    {src.objectType === 'official_endpoint' ? (
+                      <ServerCrash size={13} aria-hidden="true" />
+                    ) : src.objectType === 'historical_document' ? (
+                      <Archive size={13} aria-hidden="true" />
+                    ) : src.statusAxes.acquisitionStatus === 'acquired' ? (
+                      <FileCheck2 size={13} aria-hidden="true" />
+                    ) : (
+                      <AlertOctagon size={13} aria-hidden="true" />
+                    )}
+                    <span>{objectMeta.badgeText}</span>
+                  </span>
                   <span className={`wb-b2-status-pill tone-${tone}`}>
-                    {src.sourceVerificationStatus === 'official_source_confirmed' ? (
+                    {src.statusAxes.acquisitionStatus === 'acquired' ? (
                       <CheckCircle2 size={13} aria-hidden="true" />
                     ) : src.sourceVerificationStatus === 'official_source_unavailable' ? (
                       <XCircle size={13} aria-hidden="true" />
@@ -192,19 +250,45 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
                   </span>
                   <span className="wb-b2-lang-pill">
                     <Globe2 size={12} aria-hidden="true" />
-                    <span>{src.language}</span>
+                    <span>Język: {src.language}</span>
                   </span>
                   {src.isHistoricalRejectedForCurrentSeason && (
-                    <span className="wb-b2-danger-pill">
+                    <span className="wb-b2-status-pill tone-historical">
                       Historyczny 2025/2026 · Odrzucony dla 2026/2027
                     </span>
                   )}
                 </div>
+                {(src.historicalNotice || src.isHistoricalRejectedForCurrentSeason) && (
+                  <p className="wb-b3-historical-banner" role="note">
+                    <Archive size={14} aria-hidden="true" />
+                    <span>{src.historicalNotice ?? 'Dokument historyczny — nie stosować jako automatycznej podstawy bieżącego audytu'}</span>
+                  </p>
+                )}
                 <h3 className="wb-b2-source-title">{src.documentTitle}</h3>
                 <p className="wb-b2-source-subtitle">
                   <span>{src.documentType}</span> ·{' '}
                   <strong>{getProductScopeLabel(src.productKey)}</strong>
                 </p>
+              </div>
+
+              {/* Cztery niezależne osie statusu B3 */}
+              <div className="wb-b3-axes-grid" role="group" aria-label="Cztery niezależne osie statusu źródła">
+                <div className="wb-b3-axis-item">
+                  <span className="wb-b3-axis-name">1. Pochodzenie</span>
+                  <span className="wb-b3-axis-value">{getOriginAxisStatusLabel(src.statusAxes.originStatus)}</span>
+                </div>
+                <div className="wb-b3-axis-item">
+                  <span className="wb-b3-axis-name">2. Pozyskanie pliku</span>
+                  <span className="wb-b3-axis-value">{getAcquisitionAxisStatusLabel(src.statusAxes.acquisitionStatus)}</span>
+                </div>
+                <div className="wb-b3-axis-item">
+                  <span className="wb-b3-axis-name">3. Integralność (SHA-256)</span>
+                  <span className="wb-b3-axis-value">{getIntegrityAxisStatusLabel(src.statusAxes.integrityStatus)}</span>
+                </div>
+                <div className="wb-b3-axis-item">
+                  <span className="wb-b3-axis-name">4. Kontrola treści</span>
+                  <span className="wb-b3-axis-value">{getContentReviewAxisStatusLabel(src.statusAxes.contentReviewStatus)}</span>
+                </div>
               </div>
 
               <dl className="wb-b2-meta-list">
@@ -222,24 +306,24 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
                 <div className="wb-b2-meta-row">
                   <dt>Pozwolenie i podmiot</dt>
                   <dd>
-                    {src.marketingAuthorizationNumber ?? 'Nie dotyczy'} ·{' '}
-                    {src.marketingAuthorizationHolder ?? 'Brak danych'}
+                    {src.marketingAuthorizationNumber ?? 'Pole puste (brak numeru w źródle)'} ·{' '}
+                    {src.marketingAuthorizationHolder ?? 'Pole puste'}
                   </dd>
                 </div>
                 <div className="wb-b2-meta-row">
-                  <dt>Data rewizji ChPL (pkt 10) / pobrania</dt>
+                  <dt>Data rewizji / pobrania</dt>
                   <dd>
                     <strong>
-                      {src.revisionDate ?? 'Brak wpisanej daty w pkt 10 (missing_in_document)'}
+                      {src.revisionDate ?? 'Brak wpisanej daty w pkt 10 (pole puste)'}
                     </strong>
-                    {src.publicationDate ? ` · Publikacja/aktualizacja: ${src.publicationDate}` : ''}
-                    {src.retrievedAt ? ` · Pozyskanie: ${src.retrievedAt}` : ''}
+                    {src.publicationDate ? ` · Publikacja: ${src.publicationDate}` : ''}
+                    {src.retrievedAt ? ` · Pozyskanie/sprawdzenie: ${src.retrievedAt}` : ''}
                   </dd>
                 </div>
                 <div className="wb-b2-meta-row">
-                  <dt>Zakres i objętość PDF</dt>
+                  <dt>Zakres i objętość artefaktu</dt>
                   <dd>
-                    {src.physicalPageCount !== null ? `${src.physicalPageCount} str.` : 'Liczba stron nieokreślona'} ·{' '}
+                    {src.physicalPageCount !== null ? `${src.physicalPageCount} str.` : 'Liczba stron nieustalona'} ·{' '}
                     {src.pdfScopeRange}
                     {src.fileSizeBytes !== null ? ` · ${src.fileSizeBytes.toLocaleString('pl-PL')} B` : ''}
                   </dd>
@@ -247,22 +331,70 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
                 <div className="wb-b2-meta-row">
                   <dt>
                     <Hash size={13} aria-hidden="true" />
-                    <span>SHA-256 i podstawa</span>
+                    <span>Proweniencja SHA-256</span>
                   </dt>
                   <dd>
-                    {src.sha256 ? (
-                      <code className="wb-b2-hash-code">{src.sha256}</code>
+                    {hashProv?.value ? (
+                      <code className="wb-b2-hash-code">{hashProv.value}</code>
                     ) : (
-                      <span>Brak zapisanego skrótu SHA-256</span>
+                      <span>Brak sumy SHA-256 (brak pliku PDF)</span>
                     )}
                     <span className="wb-b2-hash-basis">
-                      Podstawa: {src.sha256ScopeLabel} (<code>{src.sha256Basis}</code>)
+                      Stan porównania:{' '}
+                      <strong>
+                        {hashProv
+                          ? getHashComparisonStatusLabel(hashProv.comparisonStatus)
+                          : 'Brak artefaktu'}
+                      </strong>{' '}
+                      · Metoda: {hashProv?.calculationMethod ?? 'Nie dotyczy'}
+                      {hashProv?.fileName ? ` · Plik: ${hashProv.fileName}` : ''}
                     </span>
                   </dd>
                 </div>
               </dl>
 
-              <p className="wb-b2-source-notes">{src.sourceVerificationNotes}</p>
+              <p className="wb-b2-source-notes">{src.registryVsFileDistinctionNote}</p>
+
+              <details className="wb-b3-details">
+                <summary className="wb-b3-details-summary">
+                  <History size={14} aria-hidden="true" />
+                  <span>
+                    Artefakty ({src.artifactHistory.length}) i próby pobrania ({src.retrievalAttempts.length})
+                  </span>
+                </summary>
+                <div className="wb-b3-details-body">
+                  {src.artifactHistory.length > 0 ? (
+                    <div className="wb-b3-subblock">
+                      <strong>Historia wersji artefaktów:</strong>
+                      <ul className="wb-b3-mini-list">
+                        {src.artifactHistory.map((art) => (
+                          <li key={art.artifactId}>
+                            <code>{art.artifactId}</code> (v{art.versionSequence}, {art.language}) ·{' '}
+                            {art.fileName ?? 'brak nazwy pliku'} ·{' '}
+                            {art.isCurrentActiveVersion ? 'wersja bieżąca' : 'wersja historyczna'}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <p className="wb-b3-empty-inline">Brak pozyskanego artefaktu pliku binarnego.</p>
+                  )}
+
+                  <div className="wb-b3-subblock">
+                    <strong>Zarejestrowane próby dostępu:</strong>
+                    <ul className="wb-b3-mini-list">
+                      {src.retrievalAttempts.map((att) => (
+                        <li key={att.attemptId}>
+                          <code>{att.attemptId}</code> ({att.attemptedAt}) ·{' '}
+                          {att.httpStatus !== null ? `HTTP ${att.httpStatus}` : att.accessMethod} ·{' '}
+                          {att.result}
+                          {att.errorDescription ? ` — ${att.errorDescription}` : ` — ${att.checkScope}`}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </details>
 
               <div className="wb-b2-source-actions">
                 <a

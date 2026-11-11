@@ -19,6 +19,7 @@ import type {
   EvidenceLedgerEntry,
   EvidenceLedgerImportPreview,
   EvidenceOrigin,
+  EvidenceQualificationClass,
   EvidenceRelationship,
   EvidenceReviewStatus,
   EvidenceTraceabilityFilters,
@@ -30,6 +31,7 @@ import type {
 } from '../../types/evidenceLedger';
 import { triggerJsonDownload } from '../../utils/backup';
 import {
+  ALLOWED_EVIDENCE_QUALIFICATION_CLASSES,
   ALLOWED_EVIDENCE_RELATIONSHIPS,
   ALLOWED_EVIDENCE_REVIEW_STATUSES,
   ALLOWED_PAGE_NUMBERING_TYPES,
@@ -42,6 +44,7 @@ import {
   createWorkingEvidenceEntry,
   filterEvidenceLedgerEntries,
   getProductScopeLabel,
+  getQualificationClassPresentation,
   getQuestionWorkStatusLabel,
   getRelationshipPresentation,
   getReviewStatusLabel,
@@ -61,6 +64,11 @@ interface WorkbenchEvidenceLedgerPanelProps {
   onFiltersChange: React.Dispatch<React.SetStateAction<EvidenceTraceabilityFilters>>;
   onSaveWorkingEntries: (nextEntries: EvidenceLedgerEntry[]) => { success: boolean; error: string | null };
   onSaveWorkingNotes: (nextNotes: InformalWorkingNote[]) => { success: boolean; error: string | null };
+  onSaveEntriesAndNotesAtomically?: (
+    nextEntries: EvidenceLedgerEntry[],
+    nextNotes: InformalWorkingNote[]
+  ) => { success: boolean; error: string | null };
+  onNavigateToSourceDocument?: (documentId: string) => void;
   ledgerSectionRef?: React.RefObject<HTMLElement | null>;
 }
 
@@ -72,6 +80,8 @@ const DEFAULT_EVIDENCE_FORM = {
   printedPageNumber: '',
   pageNumberingType: 'pdf_page_index' as PageNumberingType,
   relationship: 'does_not_resolve' as EvidenceRelationship,
+  qualificationClass: 'source_excerpt_pending_review' as EvidenceQualificationClass,
+  confirmedRealPdfContent: false,
   reviewStatus: 'awaiting_human_review' as EvidenceReviewStatus,
   sourceExcerptRef: '',
   clinicalObservation: ''
@@ -88,6 +98,8 @@ export const WorkbenchEvidenceLedgerPanel: React.FC<WorkbenchEvidenceLedgerPanel
   onFiltersChange,
   onSaveWorkingEntries,
   onSaveWorkingNotes,
+  onSaveEntriesAndNotesAtomically,
+  onNavigateToSourceDocument,
   ledgerSectionRef
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -183,6 +195,7 @@ export const WorkbenchEvidenceLedgerPanel: React.FC<WorkbenchEvidenceLedgerPanel
       productKey: 'all',
       qrdSection: 'all',
       relationship: 'all',
+      qualificationClass: 'all',
       reviewStatus: 'all',
       origin: 'all',
       searchQuery: ''
@@ -204,6 +217,8 @@ export const WorkbenchEvidenceLedgerPanel: React.FC<WorkbenchEvidenceLedgerPanel
       sourceExcerptRef: evidenceForm.sourceExcerptRef,
       clinicalObservation: evidenceForm.clinicalObservation,
       relationship: evidenceForm.relationship,
+      qualificationClass: evidenceForm.qualificationClass,
+      confirmedRealPdfContent: evidenceForm.confirmedRealPdfContent,
       reviewStatus: evidenceForm.reviewStatus
     };
 
@@ -225,11 +240,12 @@ export const WorkbenchEvidenceLedgerPanel: React.FC<WorkbenchEvidenceLedgerPanel
     setEvidenceFormErrors([]);
     setEvidenceForm((prev) => ({
       ...prev,
+      confirmedRealPdfContent: false,
       sourceExcerptRef: '',
       clinicalObservation: ''
     }));
     setEvidenceFeedback(
-      `Dodano lokalny roboczy ślad dowodowy (${newEntry.evidenceId}) do pytania ${newEntry.questionId}. Status pytania nadal wymaga decyzji człowieka (autoResolved: false).`
+      `Dodano lokalny roboczy ślad dowodowy (${newEntry.evidenceId}) w klasie ${newEntry.qualificationClass}. Status pytania nadal wymaga decyzji człowieka (autoResolved: false).`
     );
   };
 
@@ -326,20 +342,31 @@ export const WorkbenchEvidenceLedgerPanel: React.FC<WorkbenchEvidenceLedgerPanel
       workingEntries,
       workingNotes
     );
-    const entrySave = onSaveWorkingEntries(mergedEntries);
-    const noteSave = onSaveWorkingNotes(mergedNotes);
-    if (!entrySave.success || !noteSave.success) {
+    const saveRes = onSaveEntriesAndNotesAtomically
+      ? onSaveEntriesAndNotesAtomically(mergedEntries, mergedNotes)
+      : (() => {
+          const entrySave = onSaveWorkingEntries(mergedEntries);
+          if (!entrySave.success) {
+            return entrySave;
+          }
+          return onSaveWorkingNotes(mergedNotes);
+        })();
+    if (!saveRes.success) {
       setImportBanner({
         tone: 'danger',
-        text: entrySave.error ?? noteSave.error ?? 'Błąd zapisu zaimportowanych dowodów w localStorage.'
+        text: saveRes.error ?? 'Błąd zapisu zaimportowanych dowodów w localStorage.'
       });
       return;
     }
 
     setImportPreview(null);
+    const claimsNote =
+      importPreview.importedVerificationClaimsCount > 0
+        ? ` Deklaracje weryfikacji z JSON (${importPreview.importedVerificationClaimsCount}) oznaczono jako niepotwierdzone lokalnie.`
+        : '';
     setImportBanner({
       tone: 'info',
-      text: `Zaimportowano rejestr dowodów Etapu B2 (nowe/zaktualizowane dowody: ${importPreview.newEntriesCount + importPreview.updatedEntriesCount}, notatki: ${importPreview.newNotesCount + importPreview.updatedNotesCount}). Katalog preparatów, blokada Infanrix hexa oraz autoResolved: false pozostały niezmienione.`
+      text: `Zaimportowano rejestr dowodów (nowe/zaktualizowane wpisy: ${importPreview.newEntriesCount + importPreview.updatedEntriesCount}, notatki: ${importPreview.newNotesCount + importPreview.updatedNotesCount}).${claimsNote} Katalog preparatów, blokada Infanrix hexa oraz autoResolved: false pozostały niezmienione.`
     });
   };
 
@@ -603,6 +630,30 @@ export const WorkbenchEvidenceLedgerPanel: React.FC<WorkbenchEvidenceLedgerPanel
           </div>
 
           <div className="wb-filter-group">
+            <label htmlFor="b3-ev-qual" className="wb-filter-label">
+              Klasa kwalifikacji (Etap B3)
+            </label>
+            <select
+              id="b3-ev-qual"
+              className="wb-select-input"
+              value={filters.qualificationClass ?? 'all'}
+              onChange={(e) =>
+                onFiltersChange((prev) => ({
+                  ...prev,
+                  qualificationClass: e.target.value as EvidenceQualificationClass | 'all'
+                }))
+              }
+            >
+              <option value="all">Wszystkie klasy kwalifikacji</option>
+              {ALLOWED_EVIDENCE_QUALIFICATION_CLASSES.map((qc) => (
+                <option key={qc} value={qc}>
+                  {getQualificationClassPresentation(qc).badgeText}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="wb-filter-group">
             <label htmlFor="b2-ev-status" className="wb-filter-label">
               Status przeglądu dowodu
             </label>
@@ -679,11 +730,16 @@ export const WorkbenchEvidenceLedgerPanel: React.FC<WorkbenchEvidenceLedgerPanel
         <div className="wb-b2-chain-list" data-testid="b2-evidence-chain-list">
           {visibleChainEntries.map((entry) => {
             const relInfo = getRelationshipPresentation(entry.relationship);
+            const qualInfo = getQualificationClassPresentation(entry.qualificationClass);
+            const isImportedUnconfirmed =
+              entry.importProvenance?.isImported &&
+              entry.importProvenance.localConfirmationState === 'unconfirmed_imported_claim';
             return (
               <article
                 key={entry.evidenceId}
                 className={`wb-b2-chain-card ${entry.origin === 'auditor_working_entry' ? 'is-working' : ''}`}
                 data-testid={`evidence-chain-${entry.evidenceId}`}
+                data-qualification-class={entry.qualificationClass}
               >
                 <div className="wb-b2-chain-breadcrumb" role="group" aria-label="Ścieżka identyfikowalności dowodu">
                   <span className="wb-b2-chain-node">
@@ -710,14 +766,36 @@ export const WorkbenchEvidenceLedgerPanel: React.FC<WorkbenchEvidenceLedgerPanel
                 </div>
 
                 <div className="wb-b2-chain-badges">
+                  <span
+                    className={`wb-b3-qual-pill qual-${qualInfo.tone}`}
+                    title={qualInfo.label}
+                  >
+                    {entry.qualificationClass === 'source_excerpt_reviewed' ? (
+                      <CheckCircle2 size={13} aria-hidden="true" />
+                    ) : entry.qualificationClass === 'conflicting_source_excerpt' ||
+                      entry.qualificationClass === 'unavailable_source_reference' ? (
+                      <AlertTriangle size={13} aria-hidden="true" />
+                    ) : (
+                      <ShieldAlert size={13} aria-hidden="true" />
+                    )}
+                    <span>Kwalifikacja: {qualInfo.badgeText}</span>
+                  </span>
                   <span className={`wb-b2-status-pill tone-${relInfo.tone}`}>{relInfo.label}</span>
                   <span className="wb-b2-review-pill">{getReviewStatusLabel(entry.reviewStatus)}</span>
                   <span className="wb-badge wb-badge-readonly">autoResolved: false</span>
                   <span className="wb-b2-origin-pill">
                     {entry.origin === 'bundle_extract'
-                      ? 'Wyciąg bazowy Etapu I (read-only)'
+                      ? 'Odniesienie bazowe Etapu I (read-only)'
                       : 'Roboczy wpis lokalny audytora'}
                   </span>
+                  {entry.requiresReverification && (
+                    <span className="wb-b3-reverify-pill">Wymaga kontroli w oryginalnym PDF</span>
+                  )}
+                  {isImportedUnconfirmed && (
+                    <span className="wb-b3-imported-claim-pill">
+                      Z importu JSON (niepotwierdzone lokalnie)
+                    </span>
+                  )}
                 </div>
 
                 <div className="wb-b2-chain-body">
@@ -755,16 +833,28 @@ export const WorkbenchEvidenceLedgerPanel: React.FC<WorkbenchEvidenceLedgerPanel
                   </span>
                 </div>
 
-                {entry.origin === 'auditor_working_entry' && (
+                {(entry.origin === 'auditor_working_entry' || onNavigateToSourceDocument) && (
                   <div className="wb-b2-chain-actions">
-                    <button
-                      type="button"
-                      className="wb-action-btn wb-action-btn-secondary"
-                      onClick={() => handleDeleteWorkingEvidence(entry.evidenceId)}
-                    >
-                      <Trash2 size={14} aria-hidden="true" />
-                      <span>Usuń lokalny wpis dowodowy</span>
-                    </button>
+                    {onNavigateToSourceDocument && (
+                      <button
+                        type="button"
+                        className="wb-action-btn wb-action-btn-secondary"
+                        onClick={() => onNavigateToSourceDocument(entry.documentId)}
+                      >
+                        <Search size={14} aria-hidden="true" />
+                        <span>Pokaż dokument w Rejestrze Źródeł</span>
+                      </button>
+                    )}
+                    {entry.origin === 'auditor_working_entry' && (
+                      <button
+                        type="button"
+                        className="wb-action-btn wb-action-btn-secondary"
+                        onClick={() => handleDeleteWorkingEvidence(entry.evidenceId)}
+                      >
+                        <Trash2 size={14} aria-hidden="true" />
+                        <span>Usuń lokalny wpis dowodowy</span>
+                      </button>
+                    )}
                   </div>
                 )}
               </article>
@@ -937,6 +1027,48 @@ export const WorkbenchEvidenceLedgerPanel: React.FC<WorkbenchEvidenceLedgerPanel
               </select>
             </div>
           </div>
+
+          <div className="wb-b2-form-row">
+            <label htmlFor="ev-form-qualification">Klasa kwalifikacji dowodu (Etap B3)</label>
+            <select
+              id="ev-form-qualification"
+              className="wb-select-input"
+              value={evidenceForm.qualificationClass}
+              onChange={(e) =>
+                setEvidenceForm((p) => ({
+                  ...p,
+                  qualificationClass: e.target.value as EvidenceQualificationClass
+                }))
+              }
+            >
+              {ALLOWED_EVIDENCE_QUALIFICATION_CLASSES.map((qc) => (
+                <option key={qc} value={qc}>
+                  {getQualificationClassPresentation(qc).badgeText} ({qc})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {evidenceForm.qualificationClass === 'source_excerpt_reviewed' && (
+            <div className="wb-b2-form-row">
+              <label className="wb-b2-checkbox-label">
+                <input
+                  id="ev-form-confirm-pdf"
+                  type="checkbox"
+                  checked={evidenceForm.confirmedRealPdfContent}
+                  onChange={(e) =>
+                    setEvidenceForm((p) => ({
+                      ...p,
+                      confirmedRealPdfContent: e.target.checked
+                    }))
+                  }
+                />
+                <span>
+                  Potwierdzam ręczne sprawdzenie przytoczonego fragmentu w rzeczywistym dokumencie PDF (nie zamyka pytania klinicznego ani karty ChPL).
+                </span>
+              </label>
+            </div>
+          )}
 
           <div className="wb-b2-form-row">
             <label htmlFor="ev-form-excerpt">
@@ -1174,7 +1306,33 @@ export const WorkbenchEvidenceLedgerPanel: React.FC<WorkbenchEvidenceLedgerPanel
                       {importPreview.newNotesCount} nowych, {importPreview.updatedNotesCount} aktualizacji
                     </strong>
                   </li>
+                  <li>
+                    Wymagające ręcznej weryfikacji lokalnej:{' '}
+                    <strong>{importPreview.requiresManualReviewCount}</strong> · Deklaracje weryfikacji pochodzące z importu JSON:{' '}
+                    <strong>{importPreview.importedVerificationClaimsCount}</strong>
+                  </li>
+                  <li>
+                    Konflikty i niezgodności: <strong>{importPreview.conflictsCount}</strong> · Brakujące pliki PDF w repo:{' '}
+                    <strong>{importPreview.missingDocumentsCount}</strong> · Nieznane ID źródeł:{' '}
+                    <strong>{importPreview.unknownSourceIds.length}</strong>
+                    {importPreview.unknownSourceIds.length > 0 && (
+                      <span> (<code>{importPreview.unknownSourceIds.join(', ')}</code>)</span>
+                    )}
+                  </li>
                 </ul>
+
+                {importPreview.conflicts.length > 0 && (
+                  <div className="wb-b2-alert wb-b2-alert-warning" role="status">
+                    <strong>Wykryte konflikty importu ({importPreview.conflicts.length}):</strong>
+                    <ul>
+                      {importPreview.conflicts.map((conf) => (
+                        <li key={`${conf.kind}-${conf.id}`}>
+                          <code>{conf.id}</code> [{conf.kind}]: {conf.details}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 {importPreview.errors.length > 0 && (
                   <div className="wb-b2-alert wb-b2-alert-danger" role="alert">

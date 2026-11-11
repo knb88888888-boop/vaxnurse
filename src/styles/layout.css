@@ -64,7 +64,7 @@
   width: 40px;
   height: 40px;
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  background-color: #0369a1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -273,9 +273,10 @@
 .header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   min-width: 0;
-  flex-shrink: 1;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .mobile-menu-trigger {
@@ -292,10 +293,11 @@
 .header-breadcrumb {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  row-gap: 2px;
-  gap: 8px;
+  flex-wrap: nowrap;
+  gap: 6px;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   font-size: 0.9375rem;
 }
 
@@ -304,6 +306,7 @@
   color: var(--text-tertiary);
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: color var(--transition-fast);
 }
 
@@ -314,12 +317,16 @@
 .breadcrumb-separator {
   color: var(--border-light);
   font-weight: 300;
+  flex-shrink: 0;
 }
 
 .breadcrumb-current {
   font-weight: 600;
   color: var(--navy-900);
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Header Center (Search) */

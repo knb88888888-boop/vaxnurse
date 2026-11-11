@@ -91,6 +91,18 @@ export async function runAxeAudit(
   console.info(
     `[axe wcag] [${contextLabel}]: violations=${wcag.violations.length}, incomplete=${wcag.incomplete.length}, passes=${wcag.passes.length}`
   );
+  if (wcag.incomplete.length > 0) {
+    const incSummary = wcag.incomplete
+      .map((inc) => {
+        const targets = inc.nodes
+          .slice(0, 6)
+          .map((n) => `  - ${n.target.join(' > ')} :: ${n.failureSummary ?? n.any.map((a) => a.message).join('; ')}`)
+          .join('\n');
+        return `[incomplete:${inc.id}] (${inc.nodes.length} nodes)\n${targets}`;
+      })
+      .join('\n');
+    console.info(`[axe wcag incomplete details] [${contextLabel}]:\n${incSummary}`);
+  }
 
   if (wcag.violations.length > 0) {
     const formatted = wcag.violations

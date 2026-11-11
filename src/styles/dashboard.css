@@ -7,37 +7,13 @@
 
 /* Hero Welcome Section */
 .dashboard-hero {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 60%, #f0f7ff 100%);
+  background-color: #f8fafc;
   border: 1px solid var(--border-light);
   border-radius: var(--radius-xl);
   padding: 32px 36px;
   box-shadow: var(--shadow-sm);
   position: relative;
   overflow: hidden;
-}
-
-.dashboard-hero::before {
-  content: '';
-  position: absolute;
-  top: -60px;
-  right: -60px;
-  width: 240px;
-  height: 240px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgb(99 102 241 / 0.08) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.dashboard-hero::after {
-  content: '';
-  position: absolute;
-  bottom: -40px;
-  left: 20%;
-  width: 280px;
-  height: 140px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgb(2 132 199 / 0.06) 0%, transparent 70%);
-  pointer-events: none;
 }
 
 .hero-pill {
@@ -126,7 +102,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  background-color: #f0f9ff;
   border: 1px solid var(--blue-100);
   border-radius: var(--radius-lg);
   padding: 14px 20px;
@@ -447,6 +423,9 @@
   background-color: var(--bg-surface-subtle);
   padding: 3px 8px;
   border-radius: var(--radius-full);
+  white-space: normal;
+  max-width: 100%;
+  text-align: center;
 }
 
 .recent-modules-list {
@@ -734,18 +713,28 @@
   }
 
   .modules-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
   }
 
   .quick-access-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
   }
 
   .recent-modules-list {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
+  }
+
+  .quick-access-card {
+    flex-wrap: wrap;
+  }
+
+  .qa-title,
+  .qa-subtitle,
+  .recent-name {
+    white-space: normal;
   }
 
   .module-card {
