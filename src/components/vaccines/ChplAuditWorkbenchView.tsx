@@ -7,6 +7,7 @@ import {
   Download,
   ExternalLink,
   FileSearch,
+  ArrowRight,
   FileText,
   Filter,
   HelpCircle,
@@ -45,6 +46,23 @@ import {
   type WorkbenchStage1ProductRecord,
 } from '../../utils/chplWorkbench.ts';
 import { triggerJsonDownload } from '../../utils/backup.ts';
+import type {
+  EvidenceLedgerEntry,
+  EvidenceTraceabilityFilters,
+  InformalWorkingNote
+} from '../../types/evidenceLedger.ts';
+import {
+  DEFAULT_EVIDENCE_FILTERS,
+  buildBaseSourceRegistry,
+  buildBaselineEvidenceEntries,
+  buildQuestionTraceabilitySummaries,
+  loadWorkingEvidenceFromStorage,
+  loadWorkingNotesFromStorage,
+  saveWorkingEvidenceToStorage,
+  saveWorkingNotesToStorage
+} from '../../utils/chplEvidenceLedger.ts';
+import { WorkbenchSourceRegistryPanel } from './WorkbenchSourceRegistryPanel.tsx';
+import { WorkbenchEvidenceLedgerPanel } from './WorkbenchEvidenceLedgerPanel.tsx';
 import '../../styles/workbench.css';
 
 export interface ChplAuditWorkbenchViewProps {
@@ -101,6 +119,74 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
   onOpenVaccineById,
 }) => {
   const detailsRef = useRef<HTMLElement>(null);
+  const evidenceLedgerRef = useRef<HTMLElement | null>(null);
+
+  const sourceRegistry = useMemo(
+    () => buildBaseSourceRegistry(STAGE1_CHPL_AUDIT_BUNDLE),
+    []
+  );
+  const baselineEvidenceEntries = useMemo(
+    () => buildBaselineEvidenceEntries(STAGE1_CHPL_AUDIT_BUNDLE, sourceRegistry),
+    [sourceRegistry]
+  );
+
+  const [workingEvidenceEntries, setWorkingEvidenceEntries] = useState<EvidenceLedgerEntry[]>(() =>
+    loadWorkingEvidenceFromStorage(
+      typeof localStorage !== 'undefined' ? localStorage : null,
+      STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
+      buildBaseSourceRegistry(STAGE1_CHPL_AUDIT_BUNDLE)
+    )
+  );
+  const [workingNotes, setWorkingNotes] = useState<InformalWorkingNote[]>(() =>
+    loadWorkingNotesFromStorage(
+      typeof localStorage !== 'undefined' ? localStorage : null,
+      STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
+      buildBaseSourceRegistry(STAGE1_CHPL_AUDIT_BUNDLE)
+    )
+  );
+  const [evidenceFilters, setEvidenceFilters] = useState<EvidenceTraceabilityFilters>(
+    DEFAULT_EVIDENCE_FILTERS
+  );
+
+  const questionSummaries = useMemo(
+    () =>
+      buildQuestionTraceabilitySummaries(
+        STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
+        [...baselineEvidenceEntries, ...workingEvidenceEntries],
+        workingNotes
+      ),
+    [baselineEvidenceEntries, workingEvidenceEntries, workingNotes]
+  );
+
+  const handleSaveWorkingEntries = (nextEntries: EvidenceLedgerEntry[]) => {
+    const res = saveWorkingEvidenceToStorage(
+      typeof localStorage !== 'undefined' ? localStorage : null,
+      nextEntries
+    );
+    if (res.success) {
+      setWorkingEvidenceEntries(nextEntries);
+    }
+    return res;
+  };
+
+  const handleSaveWorkingNotes = (nextNotes: InformalWorkingNote[]) => {
+    const res = saveWorkingNotesToStorage(
+      typeof localStorage !== 'undefined' ? localStorage : null,
+      nextNotes
+    );
+    if (res.success) {
+      setWorkingNotes(nextNotes);
+    }
+    return res;
+  };
+
+  const handleSelectDocumentForEvidence = (documentId: string) => {
+    setEvidenceFilters((prev) => ({
+      ...prev,
+      documentId
+    }));
+    evidenceLedgerRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  };
 
   const snapshot = useMemo(
     () =>
@@ -1310,8 +1396,9 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
             <div className="wb-kv-grid">
               <div className="wb-kv-item">
                 <span className="wb-kv-label">Status procedur przed / po Etapie I:</span>
-                <span className="wb-kv-val">
-                  <code>{STAGE1_CHPL_AUDIT_BUNDLE.targetProcedureStatusBefore}</code> →{' '}
+                <span className="wb-kv-val wb-kv-inline-flow">
+                  <code>{STAGE1_CHPL_AUDIT_BUNDLE.targetProcedureStatusBefore}</code>{' '}
+                  <ArrowRight size={14} aria-hidden="true" />{' '}
                   <code>{STAGE1_CHPL_AUDIT_BUNDLE.targetProcedureStatusAfter}</code>
                 </span>
               </div>
@@ -1369,6 +1456,28 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
           )}
         </div>
       </section>
+
+      {/* 6. Sekcja E — Rejestr Dokumentów Źródłowych (Etap B2) */}
+      <WorkbenchSourceRegistryPanel
+        sources={sourceRegistry}
+        activeDocumentFilterId={evidenceFilters.documentId}
+        onSelectDocumentForEvidence={handleSelectDocumentForEvidence}
+      />
+
+      {/* 7. Sekcja F — Identyfikowalność dowodów, QRD/PDF, notatki robocze oraz eksport/import JSON */}
+      <WorkbenchEvidenceLedgerPanel
+        sources={sourceRegistry}
+        checklist={STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist}
+        baselineEntries={baselineEvidenceEntries}
+        workingEntries={workingEvidenceEntries}
+        workingNotes={workingNotes}
+        questionSummaries={questionSummaries}
+        filters={evidenceFilters}
+        onFiltersChange={setEvidenceFilters}
+        onSaveWorkingEntries={handleSaveWorkingEntries}
+        onSaveWorkingNotes={handleSaveWorkingNotes}
+        ledgerSectionRef={evidenceLedgerRef}
+      />
     </div>
   );
 };

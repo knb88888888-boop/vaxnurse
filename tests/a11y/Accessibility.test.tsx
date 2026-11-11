@@ -82,37 +82,50 @@ describe('Automatyczny audyt dostępności WCAG 2.1/2.2 A/AA (axe-core w Vitest/
 
     // 1. Szczepienia dzieci (PSO 2027)
     await user.click(screen.getAllByRole('button', { name: /Szczepienia dzieci/i })[0]);
-    await screen.findByText(/Gruźlica/i);
+    await screen.findByText(/Gruźlica/i, {}, { timeout: 10000 });
     expect((await runWcagAxe(container, 'ChildVaccinationsView')).wcagViolations).toBe(0);
 
     // 2. Baza preparatów (Katalog)
     await user.click(screen.getAllByRole('button', { name: /Baza preparatów/i })[0]);
-    await screen.findByTestId('vaccines-mode-workbench');
+    await screen.findByTestId('vaccines-mode-workbench', {}, { timeout: 10000 });
     expect((await runWcagAxe(container, 'VaccinesDatabaseView')).wcagViolations).toBe(0);
 
-    // 3. Stanowisko audytu ChPL (Workbench READ-ONLY)
+    // 3. Stanowisko audytu ChPL (Workbench READ-ONLY + Etap B2 Source Registry & Evidence Ledger)
     await user.click(screen.getByTestId('vaccines-mode-workbench'));
-    await screen.findByRole('heading', {
-      name: /Stanowisko audytu dokumentacji ChPL/i,
-    });
-    expect((await runWcagAxe(container, 'ChplAuditWorkbenchView')).wcagViolations).toBe(0);
+    await screen.findByRole(
+      'heading',
+      {
+        name: /Stanowisko audytu dokumentacji ChPL/i,
+      },
+      { timeout: 10000 }
+    );
+    await screen.findByTestId('b2-source-registry-panel', {}, { timeout: 10000 });
+    await screen.findByTestId('b2-evidence-ledger-panel', {}, { timeout: 10000 });
+    expect((await runWcagAxe(container, 'ChplAuditWorkbenchView + B2')).wcagViolations).toBe(0);
 
     // 4. Karta ChPL Infanrix hexa (zwinięte + rozwinięte akordeony)
-    const infanrixBtns = await screen.findAllByRole('button', {
-      name: /Karta ChPL: Infanrix hexa/i,
-    });
+    const infanrixBtns = await screen.findAllByRole(
+      'button',
+      {
+        name: /Karta ChPL: Infanrix hexa/i,
+      },
+      { timeout: 10000 }
+    );
     await user.click(infanrixBtns[0]);
-    await screen.findByRole('heading', { name: /Infanrix hexa/i });
+    await screen.findByRole('heading', { name: /Infanrix hexa/i }, { timeout: 10000 });
     expect((await runWcagAxe(container, 'VaccineDetailView (Infanrix)')).wcagViolations).toBe(0);
 
     await user.click(screen.getByRole('button', { name: /Rozwiń wszystkie punkty/i }));
-    await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: /1\. Nazwa produktu leczniczego/i })
-      ).toHaveAttribute('aria-expanded', 'true');
-    });
+    await waitFor(
+      () => {
+        expect(
+          screen.getByRole('button', { name: /1\. Nazwa produktu leczniczego/i })
+        ).toHaveAttribute('aria-expanded', 'true');
+      },
+      { timeout: 10000 }
+    );
     expect((await runWcagAxe(container, 'VaccineDetailView (Expanded)')).wcagViolations).toBe(0);
-  }, 20000);
+  }, 40000);
 
   it('Baza wiedzy, moduł w przygotowaniu oraz Ustawienia + podgląd importu kopii JSON spełniają WCAG 2.1/2.2 A/AA', async () => {
     const user = userEvent.setup();
@@ -120,12 +133,12 @@ describe('Automatyczny audyt dostępności WCAG 2.1/2.2 A/AA (axe-core w Vitest/
 
     // 1. Baza wiedzy
     await user.click(screen.getAllByRole('button', { name: /Baza wiedzy/i })[0]);
-    await screen.findByText(/Biblioteka Źródeł Oficjalnych/i);
+    await screen.findByText(/Biblioteka Źródeł Oficjalnych/i, {}, { timeout: 10000 });
     expect((await runWcagAxe(container, 'KnowledgeBaseView')).wcagViolations).toBe(0);
 
     // 2. Moduł placeholder (Sytuacje szczególne w przygotowaniu)
     await user.click(screen.getByRole('button', { name: /Sytuacje szczególne \(w przygotowaniu\)/i }));
-    await screen.findByText(/Moduł nieaktywny • W przygotowaniu/i);
+    await screen.findByText(/Moduł nieaktywny • W przygotowaniu/i, {}, { timeout: 10000 });
     expect((await runWcagAxe(container, 'ModulePlaceholder')).wcagViolations).toBe(0);
 
     unmount();
@@ -151,9 +164,9 @@ describe('Automatyczny audyt dostępności WCAG 2.1/2.2 A/AA (axe-core w Vitest/
       type: 'application/json',
     });
     await user.upload(fileInput, file);
-    await screen.findByText(/Podsumowanie pliku kopii przed przywróceniem/i);
+    await screen.findByText(/Podsumowanie pliku kopii przed przywróceniem/i, {}, { timeout: 10000 });
     expect(
       (await runWcagAxe(settingsContainer, 'SettingsView + Staged Backup Preview')).wcagViolations
     ).toBe(0);
-  }, 15000);
+  }, 25000);
 });

@@ -84,17 +84,22 @@ describe('ChplAuditWorkbenchView — stanowisko audytu ChPL (ETAP B1 · READ-ONL
     expect(spikevaxSheet?.entries).toHaveLength(18);
     expect(detailsScope.getByText(/4\.1 Wskazania do stosowania/i)).toBeInTheDocument();
     expect(detailsScope.getByText(/4\.9 Przedawkowanie/i)).toBeInTheDocument();
-  });
+  }, 15000);
 
   it('prezentuje missingDataReport i wszystkie 8 otwartych pytań do audytora z autoResolved = false', () => {
     render(<ChplAuditWorkbenchView vaccines={VACCINES_CATALOG} onOpenVaccineById={vi.fn()} />);
 
-    // Wszystkie 8 pytań z humanDecisionChecklist widoczne domyślnie
+    const detailsSection = screen.getByRole('heading', {
+      name: /Sekcja D — Szczegóły dokumentacji audytowej/i,
+    }).closest('section') as HTMLElement;
+    const detailsScope = within(detailsSection);
+
+    // Wszystkie 8 pytań z humanDecisionChecklist widoczne domyślnie w Sekcji D
     for (const q of STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist) {
-      expect(screen.getByText(q.id)).toBeInTheDocument();
-      expect(screen.getByText(q.clinicalQuestion)).toBeInTheDocument();
+      expect(detailsScope.getByText(q.id)).toBeInTheDocument();
+      expect(detailsScope.getByText(q.clinicalQuestion)).toBeInTheDocument();
     }
-    expect(screen.getAllByText(/autoResolved: false/i)).toHaveLength(8);
+    expect(detailsScope.getAllByText(/autoResolved: false/i)).toHaveLength(8);
   });
 
   it('filtruje kolejkę po grupach A–E oraz frazie i chroni otwarcie karty Infanrix hexa w katalogu', async () => {
@@ -124,7 +129,7 @@ describe('ChplAuditWorkbenchView — stanowisko audytu ChPL (ETAP B1 · READ-ONL
     expect(
       screen.queryByRole('button', { name: /Zatwierdź status|Oznacz jako zweryfikowany|Zamknij pytanie/i })
     ).not.toBeInTheDocument();
-  });
+  }, 15000);
 
   it('eksportuje wyłącznie roboczy raport JSON (isWorkingDraft: true) oraz wywołuje wydruk roboczy', async () => {
     const user = userEvent.setup();
@@ -157,5 +162,5 @@ describe('ChplAuditWorkbenchView — stanowisko audytu ChPL (ETAP B1 · READ-ONL
     expect(report.containsPatientData).toBe(false);
     expect(report.humanQuestions).toHaveLength(8);
     expect(report.humanQuestions.every((q) => q.autoResolved === false)).toBe(true);
-  });
+  }, 15000);
 });

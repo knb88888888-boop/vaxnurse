@@ -256,23 +256,26 @@
 
 /* Header Styles */
 .app-header {
-  height: var(--header-height);
+  min-height: var(--header-height);
+  height: auto;
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border-light);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 36px;
+  gap: 12px;
+  padding: 10px 36px;
   position: sticky;
   top: 0;
   z-index: 30;
-  backdrop-filter: blur(8px);
 }
 
 .header-left {
   display: flex;
   align-items: center;
   gap: 16px;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .mobile-menu-trigger {
@@ -289,7 +292,10 @@
 .header-breadcrumb {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: 2px;
   gap: 8px;
+  min-width: 0;
   font-size: 0.9375rem;
 }
 
@@ -297,6 +303,7 @@
   font-weight: 500;
   color: var(--text-tertiary);
   cursor: pointer;
+  white-space: nowrap;
   transition: color var(--transition-fast);
 }
 
@@ -312,13 +319,15 @@
 .breadcrumb-current {
   font-weight: 600;
   color: var(--navy-900);
+  min-width: 0;
 }
 
 /* Header Center (Search) */
 .header-center {
   flex: 1;
-  max-width: 460px;
-  margin: 0 24px;
+  min-width: 160px;
+  max-width: 440px;
+  margin: 0 12px;
 }
 
 .header-search-bar {
@@ -375,7 +384,9 @@
 .header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .header-status-badge {

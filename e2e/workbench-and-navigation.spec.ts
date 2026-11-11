@@ -32,9 +32,12 @@ test.describe('E2E — Stanowisko audytu ChPL (READ-ONLY), nawigacja klawiaturą
 
     // Dokument Spikevax XFG (EMA EPAR PL 177 str. + EN 158 str.)
     await page.getByRole('button', { name: /Spikevax XFG/i }).click();
-    await expect(page.locator('.wb-details-section')).toContainText('177 str.');
-    await expect(page.locator('.wb-details-section')).toContainText('158 str.');
-    await expect(page.locator('.wb-details-section')).toContainText('EU/1/20/1507/041–050');
+    const detailsSection = page.getByRole('region', {
+      name: /Sekcja D — Szczegóły/i
+    });
+    await expect(detailsSection).toContainText('177 str.');
+    await expect(detailsSection).toContainText('158 str.');
+    await expect(detailsSection).toContainText('EU/1/20/1507/041–050');
 
     // Wszystkie 8 pytań z autoResolved = false widoczne
     await expect(page.locator('.wb-question-card')).toHaveCount(8);
