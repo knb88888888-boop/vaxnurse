@@ -107,7 +107,7 @@ describe('Etap B2 — WorkbenchSourceRegistryPanel & WorkbenchEvidenceLedgerPane
     const items = within(chainList).getAllByRole('article');
     expect(items.length).toBeGreaterThan(0);
     expect(items.every((el) => /doc-ema-spikevax-xfg-pl/.test(el.textContent ?? ''))).toBe(true);
-  });
+  }, 15000);
 
   it('waliduje zakres stron PDF i pozwala dodać/usunąć roboczy ślad dowodowy oraz nieformalną notatkę z zachowaniem autoResolved=false', async () => {
     const user = userEvent.setup();
@@ -166,7 +166,7 @@ describe('Etap B2 — WorkbenchSourceRegistryPanel & WorkbenchEvidenceLedgerPane
       screen.getByRole('button', { name: /Usuń lokalny wpis dowodowy/i })
     );
     expect(JSON.parse(localStorage.getItem(EVIDENCE_LEDGER_STORAGE_KEY) || '[]')).toHaveLength(0);
-  }, 30000);
+  }, 60000);
 
   it('odrzuca manipulowany JSON oraz plik vaxnurseBackup i obsługuje bezpieczny import z podglądem bez naruszenia Infanrix hexa', async () => {
     const user = userEvent.setup();

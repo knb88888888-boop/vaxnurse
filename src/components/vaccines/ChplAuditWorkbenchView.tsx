@@ -47,11 +47,31 @@ import {
 } from '../../utils/chplWorkbench.ts';
 import { triggerJsonDownload } from '../../utils/backup.ts';
 import type {
+  AuditDossierImportPreview,
+  AuditSessionDraftInput,
+  AuditSessionRecord,
+  AuditSessionStatus,
   EvidenceLedgerEntry,
   EvidenceTraceabilityFilters,
   InformalWorkingNote,
+  PersistedSourceIntakeRecord,
   SourceRegistryEntry
 } from '../../types/evidenceLedger.ts';
+import {
+  applyPdfInspectionToPersistedIntake,
+  applyPreviewedAuditDossierImport,
+  buildQuestionReviewQueueB5,
+  buildSourceIntakeItems,
+  computeAuditProgressB5Metrics,
+  createAuditSession,
+  loadAuditSessionsFromStorage,
+  loadSourceIntakeRecordsFromStorage,
+  reconcileSessionsAfterReload,
+  reconcileSessionsOnArtifactChange,
+  saveAuditSessionsToStorage,
+  saveSourceIntakeRecordsToStorage,
+  transitionAuditSession
+} from '../../utils/chplAuditDossier.ts';
 import {
   DEFAULT_EVIDENCE_FILTERS,
   buildBaseSourceRegistry,
@@ -72,6 +92,7 @@ import {
   type RegisterLocalPdfSessionInput,
   type WorkingEvidenceDraftInput
 } from '../../utils/chplEvidenceLedger.ts';
+import { AuditWorkspaceB5Panel } from './AuditWorkspaceB5Panel.tsx';
 import { WorkbenchSourceRegistryPanel } from './WorkbenchSourceRegistryPanel.tsx';
 import { LocalPdfBridgePanel } from './LocalPdfBridgePanel.tsx';
 import { WorkbenchEvidenceLedgerPanel } from './WorkbenchEvidenceLedgerPanel.tsx';
@@ -169,6 +190,26 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
   );
   const sourceRegistryRef = useRef<SourceRegistryEntry[]>(sourceRegistry);
   const workingEntriesRef = useRef<EvidenceLedgerEntry[]>(workingEvidenceEntries);
+  const [sourceIntakeRecords, setSourceIntakeRecords] = useState<
+    Record<string, PersistedSourceIntakeRecord>
+  >(() =>
+    loadSourceIntakeRecordsFromStorage(
+      typeof localStorage !== 'undefined' ? localStorage : null,
+      sourceRegistry
+    )
+  );
+  const [auditSessions, setAuditSessions] = useState<AuditSessionRecord[]>(() =>
+    loadAuditSessionsFromStorage(
+      typeof localStorage !== 'undefined' ? localStorage : null,
+      sourceRegistry,
+      STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist
+    )
+  );
+  const [activeAuditSessionId, setActiveAuditSessionId] = useState<string | null>(null);
+  const sourceIntakeRef = useRef(sourceIntakeRecords);
+  const auditSessionsRef = useRef(auditSessions);
+  const workingNotesRef = useRef(workingNotes);
+  const activeAuditSessionIdRef = useRef(activeAuditSessionId);
 
   useEffect(() => {
     sourceRegistryRef.current = sourceRegistry;
@@ -177,6 +218,22 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
   useEffect(() => {
     workingEntriesRef.current = workingEvidenceEntries;
   }, [workingEvidenceEntries]);
+
+  useEffect(() => {
+    sourceIntakeRef.current = sourceIntakeRecords;
+  }, [sourceIntakeRecords]);
+
+  useEffect(() => {
+    auditSessionsRef.current = auditSessions;
+  }, [auditSessions]);
+
+  useEffect(() => {
+    workingNotesRef.current = workingNotes;
+  }, [workingNotes]);
+
+  useEffect(() => {
+    activeAuditSessionIdRef.current = activeAuditSessionId;
+  }, [activeAuditSessionId]);
   const [evidenceFilters, setEvidenceFilters] = useState<EvidenceTraceabilityFilters>(
     DEFAULT_EVIDENCE_FILTERS
   );
@@ -204,6 +261,39 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
         workingNotes
       ),
     [allEvidenceEntries, workingNotes]
+  );
+
+  const b5IntakeItems = useMemo(
+    () =>
+      buildSourceIntakeItems({
+        sources: sourceRegistry,
+        persistedRecords: sourceIntakeRecords,
+        allEntries: allEvidenceEntries
+      }),
+    [sourceRegistry, sourceIntakeRecords, allEvidenceEntries]
+  );
+
+  const b5QuestionQueue = useMemo(
+    () =>
+      buildQuestionReviewQueueB5({
+        checklist: STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
+        sources: sourceRegistry,
+        allEntries: allEvidenceEntries,
+        sessions: auditSessions
+      }),
+    [sourceRegistry, allEvidenceEntries, auditSessions]
+  );
+
+  const b5ProgressMetrics = useMemo(
+    () =>
+      computeAuditProgressB5Metrics({
+        sources: sourceRegistry,
+        intakeItems: b5IntakeItems,
+        sessions: auditSessions,
+        allEntries: allEvidenceEntries,
+        queue: b5QuestionQueue
+      }),
+    [sourceRegistry, b5IntakeItems, auditSessions, allEvidenceEntries, b5QuestionQueue]
   );
 
   const handleSaveWorkingEntries = useCallback((nextEntries: EvidenceLedgerEntry[]) => {
@@ -292,6 +382,28 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
         saveWorkingEvidenceToStorage(storage, result.updatedEntries);
         setWorkingEvidenceEntries(result.updatedEntries);
       }
+
+      const nextIntakeMap = {
+        ...sourceIntakeRef.current,
+        [inspection.documentId]: applyPdfInspectionToPersistedIntake(
+          sourceIntakeRef.current[inspection.documentId],
+          result.updatedSource
+        )
+      };
+      sourceIntakeRef.current = nextIntakeMap;
+      setSourceIntakeRecords(nextIntakeMap);
+      saveSourceIntakeRecordsToStorage(storage, nextIntakeMap);
+
+      const nextSessions = reconcileSessionsOnArtifactChange(
+        auditSessionsRef.current,
+        inspection.documentId,
+        result.updatedSource.currentArtifact?.artifactId ?? null,
+        inspection.sha256Hex ?? null
+      );
+      auditSessionsRef.current = nextSessions;
+      setAuditSessions(nextSessions);
+      saveAuditSessionsToStorage(storage, nextSessions);
+
       return {
         updatedSource: result.updatedSource,
         versionCreated: result.versionCreated,
@@ -303,10 +415,22 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
 
   const handleCreatePdfEvidenceEntry = useCallback(
     (draft: WorkingEvidenceDraftInput) => {
+      const storage = typeof localStorage !== 'undefined' ? localStorage : null;
       const currentSources = sourceRegistryRef.current;
       const currentEntries = workingEntriesRef.current;
+      const matchingActiveSession = auditSessionsRef.current.find(
+        (s) =>
+          (activeAuditSessionIdRef.current
+            ? s.sessionId === activeAuditSessionIdRef.current
+            : s.documentId === draft.documentId && s.sessionStatus === 'in_progress') &&
+          s.documentId === draft.documentId
+      );
+      const effectiveDraft: WorkingEvidenceDraftInput = {
+        ...draft,
+        verificationSessionId: draft.verificationSessionId ?? matchingActiveSession?.sessionId ?? null
+      };
       const validation = validateWorkingEvidenceInput(
-        draft,
+        effectiveDraft,
         STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
         currentSources
       );
@@ -315,7 +439,7 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
       }
       try {
         const entry = createWorkingEvidenceEntry(
-          draft,
+          effectiveDraft,
           STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
           currentSources
         );
@@ -328,6 +452,21 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
           };
         }
         workingEntriesRef.current = nextEntries;
+        if (matchingActiveSession) {
+          const nextSessions = auditSessionsRef.current.map((s) =>
+            s.sessionId === matchingActiveSession.sessionId
+              ? {
+                  ...s,
+                  createdEvidenceIds: Array.from(new Set([...s.createdEvidenceIds, entry.evidenceId])),
+                  linkedQuestionIds: Array.from(new Set([...s.linkedQuestionIds, entry.questionId])),
+                  updatedAt: new Date().toISOString()
+                }
+              : s
+          );
+          auditSessionsRef.current = nextSessions;
+          setAuditSessions(nextSessions);
+          saveAuditSessionsToStorage(storage, nextSessions);
+        }
         return { success: true, entry };
       } catch (err) {
         return {
@@ -342,8 +481,142 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
   const handleClearPersistedArtifacts = useCallback(() => {
     const storage = typeof localStorage !== 'undefined' ? localStorage : null;
     clearLocalSourceArtifactsFromStorage(storage);
-    setSourceRegistry(buildBaseSourceRegistry(STAGE1_CHPL_AUDIT_BUNDLE));
+    const resetSources = buildBaseSourceRegistry(STAGE1_CHPL_AUDIT_BUNDLE);
+    sourceRegistryRef.current = resetSources;
+    setSourceRegistry(resetSources);
+    const reconciledSessions = reconcileSessionsAfterReload(auditSessionsRef.current, resetSources);
+    auditSessionsRef.current = reconciledSessions;
+    setAuditSessions(reconciledSessions);
+    saveAuditSessionsToStorage(storage, reconciledSessions);
   }, []);
+
+  const handleUpdateIntakeRecord = useCallback((record: PersistedSourceIntakeRecord) => {
+    const storage = typeof localStorage !== 'undefined' ? localStorage : null;
+    const nextMap = { ...sourceIntakeRef.current, [record.documentId]: record };
+    const res = saveSourceIntakeRecordsToStorage(storage, nextMap);
+    if (res.success) {
+      sourceIntakeRef.current = nextMap;
+      setSourceIntakeRecords(nextMap);
+    }
+    return res;
+  }, []);
+
+  const handleCreateB5Session = useCallback((draft: AuditSessionDraftInput) => {
+    const storage = typeof localStorage !== 'undefined' ? localStorage : null;
+    try {
+      const session = createAuditSession(
+        draft,
+        sourceRegistryRef.current,
+        STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist
+      );
+      const nextSessions = [session, ...auditSessionsRef.current];
+      const saveRes = saveAuditSessionsToStorage(storage, nextSessions);
+      if (!saveRes.success) {
+        return { success: false, error: saveRes.error ?? 'Błąd zapisu sesji audytu.' };
+      }
+      auditSessionsRef.current = nextSessions;
+      setAuditSessions(nextSessions);
+      return { success: true, session };
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : 'Nie udało się utworzyć sesji audytu.'
+      };
+    }
+  }, []);
+
+  const handleTransitionB5Session = useCallback(
+    (
+      sessionId: string,
+      patch: {
+        sessionStatus?: AuditSessionStatus;
+        reviewedSections?: string[];
+        linkedQuestionIds?: string[];
+        pendingItems?: string[];
+        sessionNotes?: string;
+      }
+    ) => {
+      const storage = typeof localStorage !== 'undefined' ? localStorage : null;
+      const target = auditSessionsRef.current.find((s) => s.sessionId === sessionId);
+      if (!target) {
+        return { success: false, error: `Nie znaleziono sesji ${sessionId}.` };
+      }
+      const doc =
+        sourceRegistryRef.current.find((s) => s.documentId === target.documentId) ?? null;
+      const res = transitionAuditSession(
+        target,
+        patch,
+        doc,
+        STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist
+      );
+      if (!res.updated) {
+        return { success: false, error: res.errors.join(' ') };
+      }
+      const nextSessions = auditSessionsRef.current.map((s) =>
+        s.sessionId === sessionId ? res.updated! : s
+      );
+      const saveRes = saveAuditSessionsToStorage(storage, nextSessions);
+      if (!saveRes.success) {
+        return { success: false, error: saveRes.error ?? 'Błąd zapisu statusu sesji.' };
+      }
+      auditSessionsRef.current = nextSessions;
+      setAuditSessions(nextSessions);
+      return { success: true };
+    },
+    []
+  );
+
+  const handleApplyB5DossierImport = useCallback(
+    (preview: AuditDossierImportPreview) => {
+      const storage = typeof localStorage !== 'undefined' ? localStorage : null;
+      try {
+        const merged = applyPreviewedAuditDossierImport(preview, {
+          sources: sourceRegistryRef.current,
+          sessions: auditSessionsRef.current,
+          workingEntries: workingEntriesRef.current,
+          workingNotes: workingNotesRef.current,
+          intakeRecords: sourceIntakeRef.current
+        });
+        const entriesNotesRes = handleSaveEntriesAndNotesAtomically(
+          merged.mergedEntries,
+          merged.mergedNotes
+        );
+        if (!entriesNotesRes.success) {
+          return {
+            success: false,
+            error: entriesNotesRes.error ?? 'Błąd zapisu dowodów z importu dossier.'
+          };
+        }
+        const sessRes = saveAuditSessionsToStorage(storage, merged.mergedSessions);
+        if (!sessRes.success) {
+          return {
+            success: false,
+            error: sessRes.error ?? 'Błąd zapisu sesji z importu dossier.'
+          };
+        }
+        const intakeRes = saveSourceIntakeRecordsToStorage(storage, merged.mergedIntakeRecords);
+        if (!intakeRes.success) {
+          return {
+            success: false,
+            error: intakeRes.error ?? 'Błąd zapisu intake z importu dossier.'
+          };
+        }
+        workingEntriesRef.current = merged.mergedEntries;
+        workingNotesRef.current = merged.mergedNotes;
+        auditSessionsRef.current = merged.mergedSessions;
+        sourceIntakeRef.current = merged.mergedIntakeRecords;
+        setAuditSessions(merged.mergedSessions);
+        setSourceIntakeRecords(merged.mergedIntakeRecords);
+        return { success: true };
+      } catch (err) {
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : 'Nie udało się scalić dossier.'
+        };
+      }
+    },
+    [handleSaveEntriesAndNotesAtomically]
+  );
 
   const snapshot = useMemo(
     () =>
@@ -1710,6 +1983,27 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
         activeDocumentFilterId={evidenceFilters.documentId}
         onSelectDocumentForEvidence={handleSelectDocumentForEvidence}
         onOpenDocumentInPdfBridge={handleOpenDocumentInPdfBridge}
+      />
+
+      {/* 7a. Sekcja E1 — Przestrzeń robocza audytu ChPL Etapu B5 */}
+      <AuditWorkspaceB5Panel
+        sources={sourceRegistry}
+        checklist={STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist}
+        allEntries={allEvidenceEntries}
+        workingEntries={workingEvidenceEntries}
+        workingNotes={workingNotes}
+        persistedIntake={sourceIntakeRecords}
+        intakeItems={b5IntakeItems}
+        sessions={auditSessions}
+        activeSessionId={activeAuditSessionId}
+        questionQueue={b5QuestionQueue}
+        progressMetrics={b5ProgressMetrics}
+        onSelectActiveSession={setActiveAuditSessionId}
+        onOpenDocumentInPdfBridge={handleOpenDocumentInPdfBridge}
+        onUpdateIntakeRecord={handleUpdateIntakeRecord}
+        onCreateSession={handleCreateB5Session}
+        onTransitionSession={handleTransitionB5Session}
+        onApplyDossierImport={handleApplyB5DossierImport}
       />
 
       {/* 7b. Sekcja E2 — Lokalny Most Weryfikacji PDF i Inspekcji QRD (Etap B4) */}

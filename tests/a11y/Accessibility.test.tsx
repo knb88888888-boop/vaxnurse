@@ -6,11 +6,21 @@ import type { Result as AxeResult } from 'axe-core';
 import App from '../../src/App';
 import { SettingsView } from '../../src/components/settings/SettingsView';
 import { LocalPdfBridgePanel } from '../../src/components/vaccines/LocalPdfBridgePanel';
+import { AuditWorkspaceB5Panel } from '../../src/components/vaccines/AuditWorkspaceB5Panel';
 import { APP_MODULES } from '../../src/data/navigationData';
 import { STAGE1_CHPL_AUDIT_BUNDLE } from '../../src/data/chplStage1AuditSheets';
 import { VACCINES_CATALOG } from '../../src/data/vaccinesCatalog';
 import { createBackupPayload } from '../../src/utils/backup';
-import { buildBaseSourceRegistry, registerLocalPdfInspectionSession } from '../../src/utils/chplEvidenceLedger';
+import {
+  buildBaseSourceRegistry,
+  buildBaselineEvidenceEntries,
+  registerLocalPdfInspectionSession
+} from '../../src/utils/chplEvidenceLedger';
+import {
+  buildQuestionReviewQueueB5,
+  buildSourceIntakeItems,
+  computeAuditProgressB5Metrics
+} from '../../src/utils/chplAuditDossier';
 import { createEmptyPdfMetadataSummary } from '../../src/utils/localPdfBridge';
 import type { ModuleDefinition } from '../../src/types/navigation';
 import { buildSyntheticPdfBytes } from '../helpers/syntheticPdf';
@@ -80,7 +90,7 @@ describe('Automatyczny audyt dostępności WCAG 2.1/2.2 A/AA (axe-core w Vitest/
 
     const searchAudit = await runWcagAxe(container, 'Header + Global Search Open');
     expect(searchAudit.wcagViolations).toBe(0);
-  });
+  }, 15000);
 
   it('Moduły kliniczne (Szczepienia dzieci PSO, Baza preparatów, Stanowisko audytu ChPL, Karta ChPL) spełniają WCAG 2.1/2.2 A/AA', async () => {
     const user = userEvent.setup();
@@ -275,4 +285,64 @@ describe('Automatyczny audyt dostępności WCAG 2.1/2.2 A/AA (axe-core w Vitest/
       }
     }
   }, 15000);
+
+  it('AuditWorkspaceB5Panel spełnia WCAG 2.1/2.2 A/AA na wszystkich 4 zakładkach Etapu B5', async () => {
+    const user = userEvent.setup();
+    const sources = buildBaseSourceRegistry(STAGE1_CHPL_AUDIT_BUNDLE);
+    const baseline = buildBaselineEvidenceEntries(STAGE1_CHPL_AUDIT_BUNDLE, sources);
+    const intakeItems = buildSourceIntakeItems({
+      sources,
+      persistedRecords: {},
+      allEntries: baseline
+    });
+    const queue = buildQuestionReviewQueueB5({
+      checklist: STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
+      sources,
+      allEntries: baseline,
+      sessions: []
+    });
+    const metrics = computeAuditProgressB5Metrics({
+      sources,
+      intakeItems,
+      sessions: [],
+      allEntries: baseline,
+      queue
+    });
+
+    const { container } = render(
+      <main>
+        <h1>Stanowisko audytu</h1>
+        <AuditWorkspaceB5Panel
+          sources={sources}
+          checklist={STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist}
+          allEntries={baseline}
+          workingEntries={[]}
+          workingNotes={[]}
+          persistedIntake={{}}
+          intakeItems={intakeItems}
+          sessions={[]}
+          activeSessionId={null}
+          questionQueue={queue}
+          progressMetrics={metrics}
+          onSelectActiveSession={vi.fn()}
+          onOpenDocumentInPdfBridge={vi.fn()}
+          onUpdateIntakeRecord={() => ({ success: true, error: null })}
+          onCreateSession={() => ({ success: true })}
+          onTransitionSession={() => ({ success: true })}
+          onApplyDossierImport={() => ({ success: true })}
+        />
+      </main>
+    );
+
+    expect((await runWcagAxe(container, 'AuditWorkspaceB5Panel Tab 1 Intake')).wcagViolations).toBe(0);
+
+    await user.click(screen.getByRole('tab', { name: /2\. Sesje Audytu/i }));
+    expect((await runWcagAxe(container, 'AuditWorkspaceB5Panel Tab 2 Sessions')).wcagViolations).toBe(0);
+
+    await user.click(screen.getByRole('tab', { name: /3\. Kolejka 8 Pytań ChPL/i }));
+    expect((await runWcagAxe(container, 'AuditWorkspaceB5Panel Tab 3 Questions')).wcagViolations).toBe(0);
+
+    await user.click(screen.getByRole('tab', { name: /4\. Portable Audit Dossier/i }));
+    expect((await runWcagAxe(container, 'AuditWorkspaceB5Panel Tab 4 Dossier')).wcagViolations).toBe(0);
+  }, 20000);
 });

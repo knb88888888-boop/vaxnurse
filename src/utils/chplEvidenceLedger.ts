@@ -1982,7 +1982,7 @@ function inferLegacyQualificationClass(
   return 'traceability_reference';
 }
 
-function validateImportedEvidenceEntryObject(
+export function validateImportedEvidenceEntryObject(
   raw: unknown,
   index: number,
   sourceMap: ReadonlyMap<string, SourceRegistryEntry>,
@@ -2375,7 +2375,7 @@ function validateImportedEvidenceEntryObject(
   return { entry, importedVerificationClaim, versionMismatchConflict };
 }
 
-function validateImportedWorkingNoteObject(
+export function validateImportedWorkingNoteObject(
   raw: unknown,
   index: number,
   sourceMap: ReadonlyMap<string, SourceRegistryEntry>,
@@ -3912,7 +3912,7 @@ export function registerLocalPdfInspectionSession(params: {
   };
 }
 
-function sanitizeStoredArtifactRecord(raw: unknown): DocumentArtifactRecord | null {
+export function sanitizeStoredArtifactRecord(raw: unknown): DocumentArtifactRecord | null {
   if (!isPlainRecord(raw) || hasPrototypePollutionKey(raw)) {
     return null;
   }

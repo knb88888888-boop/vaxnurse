@@ -562,3 +562,362 @@ export interface EvidenceLedgerImportPreview {
     sourceCount: number;
   };
 }
+
+// ============================================================================
+// Etap B5: Source Intake, Provenance, Audit Session, Portable Audit Dossier
+// ============================================================================
+
+export type DocumentAuditReadinessStatus =
+  | 'not_started'
+  | 'file_selected'
+  | 'technical_inspection_complete'
+  | 'metadata_comparison_pending'
+  | 'ready_for_manual_review'
+  | 'manual_review_in_progress'
+  | 'review_requires_rework'
+  | 'review_complete_pending_human_decision';
+
+export type SourceIntakeChecklistItemKey =
+  | 'identified_official_source'
+  | 'downloaded_local_pdf'
+  | 'selected_pdf_in_app'
+  | 'verified_signature_and_structure'
+  | 'calculated_sha256'
+  | 'read_page_count'
+  | 'checked_language'
+  | 'checked_version_and_date'
+  | 'compared_available_metadata'
+  | 'reviewed_in_preview'
+  | 'identified_qrd_sections'
+  | 'registered_local_evidence'
+  | 'flagged_remaining_human_decisions';
+
+export type SourceIntakeChecklistState = Record<SourceIntakeChecklistItemKey, boolean>;
+
+export type DocumentProvenanceLevel =
+  | 'official_origin_independently_confirmed'
+  | 'official_origin_operator_declared'
+  | 'origin_unknown'
+  | 'origin_mismatch'
+  | 'manual_review_required';
+
+export interface OperatorProvenanceDeclaration {
+  documentId: string;
+  declaredOriginLevel: DocumentProvenanceLevel;
+  declaredSourceUrl: string;
+  declaredSourceName: string;
+  declaredDocumentIdentifier: string;
+  declaredAt: string;
+  operatorNote: string;
+  isOperatorDeclaredOnly: true;
+}
+
+export type MetadataFieldKey =
+  | 'authorizationNumber'
+  | 'rplId'
+  | 'eparId'
+  | 'title'
+  | 'holder'
+  | 'language'
+  | 'documentDate'
+  | 'versionLabel'
+  | 'pageCount';
+
+export type MetadataFieldComparisonResult =
+  | 'matches'
+  | 'missing_in_pdf_or_registry'
+  | 'conflict_requires_review'
+  | 'not_checked';
+
+export interface MetadataFieldComparison {
+  field: MetadataFieldKey;
+  label: string;
+  registryValue: string | null;
+  observedValue: string | null;
+  status: MetadataFieldComparisonResult;
+  operatorNote?: string | null;
+}
+
+export interface PersistedSourceIntakeRecord {
+  documentId: string;
+  checklist: SourceIntakeChecklistState;
+  provenanceDeclaration: OperatorProvenanceDeclaration | null;
+  metadataOverrides: Partial<Record<MetadataFieldKey, string>>;
+  operatorNotes: string;
+  manualReviewMarkedCompletePendingDecision: boolean;
+  updatedAt: string;
+}
+
+export interface SourceIntakeRecord {
+  checklistSlotId: string;
+  expectedLabel: string;
+  isExpectedChecklistTarget: boolean;
+  isMissingRegistryRecord: boolean;
+  isHistoricalRejectedForCurrentSeason: boolean;
+  isFailedEndpointRecord: boolean;
+  requiresStage1ManualAcquisition: boolean;
+  source: SourceRegistryEntry | null;
+  readinessStatus: DocumentAuditReadinessStatus;
+  provenanceLevel: DocumentProvenanceLevel;
+  checklist: SourceIntakeChecklistState;
+  checklistCompletedCount: number;
+  checklistTotalCount: number;
+  provenanceDeclaration: OperatorProvenanceDeclaration | null;
+  metadataComparisons: MetadataFieldComparison[];
+  hasMetadataConflict: boolean;
+  historicalVersionsCount: number;
+  assignedEvidenceCount: number;
+  reverificationEvidenceCount: number;
+  physicalPdfAvailableInSession: boolean;
+  wasPreviouslySelectedLocally: boolean;
+  operatorNotes: string;
+  manualReviewMarkedCompletePendingDecision: boolean;
+  updatedAt: string | null;
+}
+
+export type AuditSessionStatus =
+  | 'draft'
+  | 'in_progress'
+  | 'paused'
+  | 'completed_as_working_record'
+  | 'requires_follow_up';
+
+export interface AuditSessionRecord {
+  sessionId: string;
+  documentId: string;
+  artifactId: string | null;
+  artifactSha256: string | null;
+  sourceRegistryId: string;
+  startedAt: string;
+  endedAt: string | null;
+  updatedAt: string;
+  operatorLabel: string | null;
+  scope: string;
+  reviewedSections: string[];
+  linkedQuestionIds: string[];
+  createdEvidenceIds: string[];
+  pendingItems: string[];
+  sessionStatus: AuditSessionStatus;
+  sessionNotes: string;
+  requiresFileReselectionAfterReload: boolean;
+  invalidatedByArtifactChange: boolean;
+  disclaimer: string;
+}
+
+export interface AuditSessionDraftInput {
+  documentId: string;
+  artifactId?: string | null;
+  artifactSha256?: string | null;
+  operatorLabel?: string | null;
+  scope: string;
+  reviewedSections: string[];
+  linkedQuestionIds: string[];
+  pendingItems?: string[];
+  sessionNotes?: string;
+}
+
+export type QuestionB5WorkStatus =
+  | 'not_started'
+  | 'sources_pending'
+  | 'document_available'
+  | 'evidence_review_in_progress'
+  | 'conflicting_evidence'
+  | 'awaiting_human_decision'
+  | 'awaiting_authority_clarification'
+  | 'work_record_complete';
+
+export interface QuestionTechnicalReadinessCheck {
+  hasAppropriateDocument: boolean;
+  hasIdentifiedFragment: boolean;
+  hasProperQrdSection: boolean;
+  hasPhysicalPdfPageIndex: boolean;
+  hasSavedArtifactSha256: boolean;
+  hasOperatorManualAssessment: boolean;
+  missingRequirements: string[];
+  technicalCompletenessPercent: number;
+  completenessMetricDisclaimer: string;
+}
+
+export interface QuestionEvidenceReviewQueueItem {
+  questionId: string;
+  productKey: Stage1ChplProductKey;
+  productDisplayName: string;
+  chplSectionOrSubpoint: string;
+  clinicalQuestion: string;
+  ambiguitySummary: string;
+  autoResolved: false;
+  workStatus: QuestionB5WorkStatus;
+  requiredDocumentIds: string[];
+  requiredDocuments: Array<{
+    documentId: string;
+    documentTitle: string;
+    objectType: SourceObjectType;
+    fileAvailability: FileAvailabilityStatus;
+    acquisitionStatus: SourceAcquisitionAxisStatus;
+    hasPhysicalPdfInSession: boolean;
+  }>;
+  bundleReferenceCount: number;
+  confirmedExcerptCount: number;
+  pendingReviewCount: number;
+  conflictsCount: number;
+  linkedSessionsCount: number;
+  linkedSessionIds: string[];
+  readiness: QuestionTechnicalReadinessCheck;
+  nextRequiredStep: string;
+}
+
+export interface AuditProgressB5Metrics {
+  totalSourceRecords: number;
+  physicallyAcquiredInHistoryCount: number;
+  reloadReselectionRequiredCount: number;
+  unconfirmedOriginCount: number;
+  artifactsWithSha256Count: number;
+  artifactsComparedWithTrustedReferenceCount: number;
+  totalSessionsCount: number;
+  pausedOrInterruptedSessionsCount: number;
+  completedWorkingSessionsCount: number;
+  evidencePendingReviewCount: number;
+  operatorConfirmedExcerptsCount: number;
+  evidenceRequiringReverificationCount: number;
+  questionsWithoutConfirmedExcerptsCount: number;
+  questionsAwaitingHumanDecisionCount: number;
+  disclaimer: string;
+}
+
+export interface AuditSessionReport {
+  vaxnurseSessionReport: true;
+  generatedAt: string;
+  clinicalApprovalGranted: false;
+  containsPdfBytes: false;
+  containsPatientData: false;
+  disclaimer: string;
+  session: AuditSessionRecord;
+  documentTitle: string;
+  sourceAuthority: string;
+  officialSourceUrl: string;
+  language: 'PL' | 'EN' | 'unknown';
+  fileSizeBytes: number | null;
+  pageCount: number | null;
+  linkedQuestions: Array<{
+    questionId: string;
+    chplSectionOrSubpoint: string;
+    clinicalQuestion: string;
+    autoResolved: false;
+  }>;
+  linkedEvidenceEntries: EvidenceLedgerEntry[];
+  linkedNotes: InformalWorkingNote[];
+  conflictsAndOpenIssues: string[];
+  limitations: string[];
+}
+
+export type AuditDossierExportScope =
+  | 'full_metadata_and_history'
+  | 'without_notes'
+  | 'selected_sessions'
+  | 'selected_product'
+  | 'selected_question';
+
+export interface AuditDossierExportOptions {
+  scope: AuditDossierExportScope;
+  includeNotes: boolean;
+  selectedSessionIds?: string[];
+  selectedProductKey?: SourceProductScopeKey | null;
+  selectedQuestionId?: string | null;
+  includeBaselineExtracts?: boolean;
+}
+
+export interface AuditDossierReverificationRecord {
+  documentId: string;
+  artifactId: string;
+  previousArtifactId: string | null;
+  sha256: string | null;
+  changeCategory: ArtifactChangeCategory;
+  detectedAt: string | null;
+  reason: string;
+}
+
+export interface AuditDossierPayload {
+  vaxnurseAuditDossier: true;
+  schemaVersion: '1.2.0-b5';
+  dossierId: string;
+  exportedAt: string;
+  sourceRegistryVersion: string;
+  exportScope: AuditDossierExportScope;
+  includesNotes: boolean;
+  containsPdfBytes: false;
+  containsBase64: false;
+  containsPatientData: false;
+  clinicalApprovalGranted: false;
+  isWorkingDraft: true;
+  dossierJsonSha256: string | null;
+  hashDistinctionNotice: string;
+  disclaimer: string;
+  missingFilesSummary: Array<{
+    documentId: string;
+    documentTitle: string;
+    acquisitionStatus: SourceAcquisitionAxisStatus;
+    fileAvailability: FileAvailabilityStatus;
+  }>;
+  sources: SourceRegistryEntry[];
+  artifactHistoryByDocument: Record<string, DocumentArtifactRecord[]>;
+  intakeStates: PersistedSourceIntakeRecord[];
+  provenanceDeclarations: OperatorProvenanceDeclaration[];
+  sessions: AuditSessionRecord[];
+  questionChecklistSnapshots: Array<{
+    questionId: string;
+    productKey: Stage1ChplProductKey;
+    chplSectionOrSubpoint: string;
+    workStatus: QuestionB5WorkStatus;
+    autoResolved: false;
+  }>;
+  entries: EvidenceLedgerEntry[];
+  workingNotes: InformalWorkingNote[];
+  reverificationHistory: AuditDossierReverificationRecord[];
+}
+
+export interface AuditDossierImportConflict {
+  kind:
+    | 'artifact_hash_mismatch'
+    | 'evidence_content_mismatch'
+    | 'session_scope_mismatch'
+    | 'document_version_mismatch'
+    | 'provenance_declaration_conflict'
+    | 'unknown_source_id'
+    | 'hash_mismatch_with_local_registry';
+  id: string;
+  details: string;
+}
+
+export interface AuditDossierImportPreview {
+  isValid: boolean;
+  canImport: boolean;
+  sourceFormatVersion: '1.2.0-b5' | '1.1.0' | '1.0.0' | 'unknown';
+  migrationNote: string | null;
+  errors: string[];
+  warnings: string[];
+  validSessions: AuditSessionRecord[];
+  validIntakeRecords: PersistedSourceIntakeRecord[];
+  validEntries: EvidenceLedgerEntry[];
+  validNotes: InformalWorkingNote[];
+  incomingSourcesCount: number;
+  incomingArtifactsCount: number;
+  incomingSessionsCount: number;
+  incomingEntriesCount: number;
+  incomingNotesCount: number;
+  incomingQuestionsCount: number;
+  conflictsCount: number;
+  conflicts: AuditDossierImportConflict[];
+  unknownSourceIds: string[];
+  missingSourcesCount: number;
+  reverificationRequiredCount: number;
+  externalVerificationClaimsCount: number;
+  rejectedItems: EvidenceLedgerImportRejectedItem[];
+  payloadMetadata: {
+    schemaVersion: string | null;
+    dossierId: string | null;
+    exportedAt: string | null;
+    exportScope: string | null;
+    dossierJsonSha256: string | null;
+    sourceRegistryVersion: string | null;
+  };
+}
