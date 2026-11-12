@@ -88,7 +88,7 @@ describe('operationalTools — Łańcuch chłodniczy, checklista i zestaw przeci
     });
     expect(valid.ok).toBe(true);
     if (!valid.ok) return;
-    expect(evaluateColdChainStatus(valid.reading)).toBe('excursion_high');
+    expect(evaluateColdChainStatus(valid.reading)).toBe('above_configured_range');
 
     saveColdChainReadings(localStorage, [valid.reading]);
     expect(loadColdChainReadings(localStorage)).toHaveLength(1);
@@ -109,7 +109,7 @@ describe('operationalTools — Łańcuch chłodniczy, checklista i zestaw przeci
     const kit = validateKitDraft({ name: 'Zestaw A', quantity: '2', expiryDate: '2026-11-20' });
     expect(kit.ok).toBe(true);
     if (!kit.ok) return;
-    expect(evaluateKitItemStatus(kit.item, '2026-11-12')).toBe('expiring');
+    expect(evaluateKitItemStatus(kit.item, '2026-11-12')).toBe('requires_review');
     expect(evaluateKitItemStatus(kit.item, '2026-11-25')).toBe('expired');
     saveEmergencyKit(localStorage, [kit.item]);
     expect(loadEmergencyKit(localStorage)).toHaveLength(1);

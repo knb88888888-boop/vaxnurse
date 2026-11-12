@@ -628,9 +628,13 @@ const ProceduresView: React.FC = () => {
 // ---------------------------------------------------------------------------
 
 const COLD_STATUS_META: Record<ColdChainStatus, { label: string; tone: string }> = {
-  in_range: { label: 'W zakresie', tone: 'ok' },
-  excursion_low: { label: 'Poniżej zakresu', tone: 'danger' },
-  excursion_high: { label: 'Powyżej zakresu', tone: 'danger' }
+  within_configured_range: { label: 'W skonfigurowanym zakresie', tone: 'ok' },
+  below_configured_range: { label: 'Poniżej zakresu', tone: 'danger' },
+  above_configured_range: { label: 'Powyżej zakresu', tone: 'danger' },
+  measurement_missing: { label: 'Brak pomiaru', tone: 'danger' },
+  sensor_or_device_uncertain: { label: 'Czujnik/urządzenie niepewne', tone: 'danger' },
+  awaiting_review: { label: 'Oczekuje na ocenę', tone: 'danger' },
+  excursion_documented: { label: 'Odchylenie udokumentowane', tone: 'danger' }
 };
 
 const nowLocalDateTime = (): string => {
@@ -730,9 +734,9 @@ const ColdChainView: React.FC = () => {
             if (
               persist(
                 sortColdChainReadings([res.reading, ...readings]),
-                status === 'in_range'
-                  ? 'Zapisano odczyt w zakresie referencyjnym.'
-                  : 'Zapisano odczyt POZA zakresem referencyjnym wraz z opisem działań.'
+                status === 'within_configured_range'
+                  ? 'Zapisano odczyt w skonfigurowanym zakresie. Nie zastępuje formalnej dokumentacji punktu szczepień.'
+                  : 'UWAGA: Odchylenie! Nie używać preparatu do czasu wyjaśnienia odchylenia i potwierdzenia dalszej możliwości jego wykorzystania przez osobę odpowiedzialną zgodnie z właściwą procedurą.'
               )
             ) {
               setDraft((d) => ({ ...emptyDraft(), deviceLabel: d.deviceLabel, recordedBy: d.recordedBy }));
@@ -811,7 +815,7 @@ const ColdChainView: React.FC = () => {
                     <tr key={r.id}>
                       <td>{r.measuredAt.replace('T', ' ')}</td>
                       <td>{r.deviceLabel}</td>
-                      <td>{r.currentC.toFixed(1)}°C</td>
+                      <td>{r.currentC !== null ? `${r.currentC.toFixed(1)}°C` : 'Brak pomiaru'}</td>
                       <td>
                         {r.minC !== null ? `${r.minC.toFixed(1)}°C` : '—'} /{' '}
                         {r.maxC !== null ? `${r.maxC.toFixed(1)}°C` : '—'}
@@ -851,10 +855,12 @@ const ColdChainView: React.FC = () => {
 // ---------------------------------------------------------------------------
 
 const KIT_STATUS_META: Record<KitItemStatus, { label: string; tone: string }> = {
-  ok: { label: 'Aktualna', tone: 'ok' },
-  expiring: { label: `Kończy się ważność (≤ ${KIT_EXPIRY_WARNING_DAYS} dni)`, tone: 'warn' },
+  available: { label: 'Dostępna', tone: 'ok' },
+  requires_review: { label: `Wymaga przeglądu (≤ ${KIT_EXPIRY_WARNING_DAYS} dni)`, tone: 'warn' },
   expired: { label: 'Przeterminowana', tone: 'danger' },
-  missing: { label: 'Brak na stanie', tone: 'danger' }
+  missing: { label: 'Brak na stanie', tone: 'danger' },
+  damaged: { label: 'Uszkodzona', tone: 'danger' },
+  not_assessed: { label: 'Nieoceniona', tone: 'warn' }
 };
 
 const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => void }> = ({
@@ -866,7 +872,7 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
   const [errors, setErrors] = useState<string[]>([]);
   const [success, setSuccess] = useState<string | null>(null);
   const today = todayIsoDate();
-  const problems = items.filter((i) => evaluateKitItemStatus(i, today) !== 'ok').length;
+  const problems = items.filter((i) => evaluateKitItemStatus(i, today) !== 'available').length;
   const sources = KNOWLEDGE_SOURCES.filter((s) => s.category === 'gis-gif' || s.category === 'pso');
 
   const persist = (next: EmergencyKitItem[], msg: string) => {

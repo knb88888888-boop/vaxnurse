@@ -119,6 +119,24 @@ export function addDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * MS_PER_DAY);
 }
 
+/**
+ * Dodaje miesiące kalendarzowe w UTC z jawnym przycięciem końca miesiąca
+ * (np. 31.01 + 1 mies. -> 28.02 lub 29.02 w roku przestępnym).
+ */
+export function addMonths(date: Date, months: number): Date {
+  const y = date.getUTCFullYear();
+  const m = date.getUTCMonth() + months;
+  const targetYear = y + Math.floor(m / 12);
+  const targetMonth = ((m % 12) + 12) % 12;
+  const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  const day = Math.min(date.getUTCDate(), lastDayOfTargetMonth);
+  return new Date(Date.UTC(targetYear, targetMonth, day));
+}
+
+export function addYears(date: Date, years: number): Date {
+  return addMonths(date, years * 12);
+}
+
 export function diffDays(from: Date, to: Date): number {
   return Math.round((to.getTime() - from.getTime()) / MS_PER_DAY);
 }
@@ -130,9 +148,12 @@ export function todayIsoDate(now: Date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
+export type IntervalUnit = 'days' | 'months' | 'years';
+
 export interface NextDoseCalculationInput {
   lastDoseDate: string;
   minIntervalDays: string;
+  intervalUnit?: IntervalUnit;
   plannedDate?: string;
   referenceToday?: string;
 }
@@ -158,10 +179,14 @@ export function calculateNextDoseDate(input: NextDoseCalculationInput): NextDose
   const last = parseIsoDate(input.lastDoseDate);
   if (!last) errors.push('Podaj poprawną datę ostatniej dawki (RRRR-MM-DD).');
 
+  const unit: IntervalUnit = input.intervalUnit ?? 'days';
+  const maxByUnit: Record<IntervalUnit, number> = { days: 3650, months: 120, years: 100 };
   const intervalRaw = input.minIntervalDays.trim();
   const interval = /^\d{1,4}$/.test(intervalRaw) ? Number(intervalRaw) : NaN;
-  if (!Number.isInteger(interval) || interval < 1 || interval > 3650) {
-    errors.push('Minimalny odstęp musi być liczbą całkowitą dni z zakresu 1–3650 (wartość z ChPL / PSO).');
+  if (!Number.isInteger(interval) || interval < 1 || interval > maxByUnit[unit]) {
+    errors.push(
+      `Minimalny odstęp musi być liczbą całkowitą z zakresu 1–${maxByUnit[unit]} (wartość z ChPL / PSO).`
+    );
   }
 
   const today = parseIsoDate(input.referenceToday ?? todayIsoDate()) ?? new Date();
@@ -187,7 +212,8 @@ export function calculateNextDoseDate(input: NextDoseCalculationInput): NextDose
     };
   }
 
-  const earliest = addDays(last, interval);
+  const earliest =
+    unit === 'months' ? addMonths(last, interval) : unit === 'years' ? addYears(last, interval) : addDays(last, interval);
   let plannedStatus: PlannedDateStatus = 'not_set';
   let shortfall: number | null = null;
   if (planned) {
@@ -246,15 +272,67 @@ export function calculateAgeAt(birthDate: string, referenceDate: string): AgeCal
 // Łańcuch chłodniczy — rejestr odczytów manualnych
 // ---------------------------------------------------------------------------
 
-export type ColdChainStatus = 'in_range' | 'excursion_low' | 'excursion_high';
+export type ColdChainProfileId = 'standard_2_8' | 'frozen_minus25_minus15' | 'custom_chpl' | 'unspecified';
+
+export interface ColdChainProfile {
+  id: ColdChainProfileId;
+  label: string;
+  minC: number | null;
+  maxC: number | null;
+  source: string;
+}
+
+export const COLD_CHAIN_PROFILES: Record<ColdChainProfileId, ColdChainProfile> = {
+  standard_2_8: {
+    id: 'standard_2_8',
+    label: 'Standardowy łańcuch chłodniczy (+2°C do +8°C, wg ChPL i GIS/GIF 17.09.2026)',
+    minC: 2,
+    maxC: 8,
+    source: 'Wytyczne GIS i GIF z 17.09.2026 r. / ChPL produktu'
+  },
+  frozen_minus25_minus15: {
+    id: 'frozen_minus25_minus15',
+    label: 'Przechowywanie zamrożone (-25°C do -15°C, jeśli wskazane w ChPL)',
+    minC: -25,
+    maxC: -15,
+    source: 'ChPL konkretnego produktu'
+  },
+  custom_chpl: {
+    id: 'custom_chpl',
+    label: 'Zakres indywidualny wg ChPL produktu (np. rozmrożone / niestandardowe)',
+    minC: null,
+    maxC: null,
+    source: 'ChPL konkretnego produktu'
+  },
+  unspecified: {
+    id: 'unspecified',
+    label: 'Nieokreślony profil magazynowania (brak deklaracji zgodności)',
+    minC: null,
+    maxC: null,
+    source: 'Brak wybranego profilu'
+  }
+};
+
+export type ColdChainStatus =
+  | 'within_configured_range'
+  | 'below_configured_range'
+  | 'above_configured_range'
+  | 'measurement_missing'
+  | 'sensor_or_device_uncertain'
+  | 'awaiting_review'
+  | 'excursion_documented';
 
 export interface ColdChainReading {
   id: string;
   deviceLabel: string;
   measuredAt: string; // RRRR-MM-DDTHH:mm (czas lokalny)
-  currentC: number;
+  currentC: number | null;
   minC: number | null;
   maxC: number | null;
+  profileId?: ColdChainProfileId;
+  customMinC?: number | null;
+  customMaxC?: number | null;
+  sensorUncertain?: boolean;
   actionNote: string;
   recordedBy: string;
   createdAt: string;
@@ -286,14 +364,25 @@ function isValidLocalDateTime(value: string): boolean {
 }
 
 export function evaluateColdChainStatus(
-  reading: Pick<ColdChainReading, 'currentC' | 'minC' | 'maxC'>
+  reading: Pick<ColdChainReading, 'currentC' | 'minC' | 'maxC' | 'profileId' | 'customMinC' | 'customMaxC' | 'sensorUncertain' | 'actionNote'>
 ): ColdChainStatus {
+  if (reading.sensorUncertain) return 'sensor_or_device_uncertain';
   const values = [reading.currentC, reading.minC, reading.maxC].filter(
     (v): v is number => typeof v === 'number'
   );
-  if (values.some((v) => v < COLD_CHAIN_REFERENCE_MIN_C)) return 'excursion_low';
-  if (values.some((v) => v > COLD_CHAIN_REFERENCE_MAX_C)) return 'excursion_high';
-  return 'in_range';
+  if (values.length === 0) return 'measurement_missing';
+
+  const profileId = reading.profileId ?? 'standard_2_8';
+  if (profileId === 'unspecified') return 'awaiting_review';
+
+  const profile = COLD_CHAIN_PROFILES[profileId];
+  const minBound = profileId === 'custom_chpl' ? (reading.customMinC ?? null) : profile.minC;
+  const maxBound = profileId === 'custom_chpl' ? (reading.customMaxC ?? null) : profile.maxC;
+  if (minBound === null || maxBound === null) return 'awaiting_review';
+
+  if (values.some((v) => v < minBound)) return 'below_configured_range';
+  if (values.some((v) => v > maxBound)) return 'above_configured_range';
+  return 'within_configured_range';
 }
 
 export function validateColdChainDraft(
@@ -339,7 +428,7 @@ export function validateColdChainDraft(
     createdAt: now.toISOString()
   };
 
-  if (errors.length === 0 && evaluateColdChainStatus(reading) !== 'in_range' && actionNote.length < 5) {
+  if (errors.length === 0 && evaluateColdChainStatus(reading) !== 'within_configured_range' && actionNote.length < 5) {
     errors.push(
       'Odczyt poza zakresem referencyjnym +2°C do +8°C wymaga opisu podjętych działań (min. 5 znaków) zgodnie z procedurą placówki.'
     );
@@ -411,17 +500,17 @@ export function summarizeColdChain(readings: readonly ColdChainReading[]): ColdC
   const sorted = sortColdChainReadings(readings);
   return {
     total: readings.length,
-    excursions: readings.filter((r) => evaluateColdChainStatus(r) !== 'in_range').length,
+    excursions: readings.filter((r) => evaluateColdChainStatus(r) !== 'within_configured_range').length,
     devices: new Set(readings.map((r) => r.deviceLabel.toLowerCase())).size,
     lastReadingAt: sorted[0]?.measuredAt ?? null
   };
 }
 
-/** Pole CSV z ochroną przed wstrzyknięciem formuł arkusza (=, +, -, @). */
+/** Pole CSV z ochroną przed wstrzyknięciem formuł arkusza (=, +, -, @, tab, CR, LF). */
 export function escapeCsvField(value: string | number | null): string {
   if (value === null) return '';
   let s = String(value);
-  if (typeof value === 'string' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  if (typeof value === 'string' && /^[=+\-@\t\r\n]/.test(s)) s = `'${s}`;
   return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
@@ -437,9 +526,13 @@ export function buildColdChainCsv(readings: readonly ColdChainReading[]): string
     'Osoba odczytująca'
   ];
   const statusLabel: Record<ColdChainStatus, string> = {
-    in_range: 'W zakresie',
-    excursion_low: 'Poniżej zakresu',
-    excursion_high: 'Powyżej zakresu'
+    within_configured_range: 'W skonfigurowanym zakresie',
+    below_configured_range: 'Poniżej zakresu',
+    above_configured_range: 'Powyżej zakresu',
+    measurement_missing: 'Brak pomiaru',
+    sensor_or_device_uncertain: 'Czujnik/urządzenie niepewne',
+    awaiting_review: 'Oczekuje na ocenę',
+    excursion_documented: 'Odchylenie udokumentowane'
   };
   const rows = sortColdChainReadings(readings).map((r) =>
     [
@@ -504,7 +597,22 @@ export function saveLocalChecklist(
 // Inwentarz zestawu przeciwwstrząsowego (nazwy i ilości definiuje placówka)
 // ---------------------------------------------------------------------------
 
-export type KitItemStatus = 'ok' | 'expiring' | 'expired' | 'missing';
+export type FacilityCareCategory =
+  | 'ambulatory_home'
+  | 'ambulatory_dental'
+  | 'ambulatory_facility'
+  | 'inpatient_non_hospital'
+  | 'hospital';
+
+export const FACILITY_CARE_CATEGORIES: ReadonlyArray<{ id: FacilityCareCategory; label: string }> = [
+  { id: 'ambulatory_home', label: 'Ambulatoryjne świadczenia zdrowotne udzielane w miejscu pobytu pacjenta' },
+  { id: 'ambulatory_dental', label: 'Ambulatoryjne świadczenia zdrowotne z zakresu stomatologii' },
+  { id: 'ambulatory_facility', label: 'Ambulatoryjne świadczenia zdrowotne udzielane w pomieszczeniach zakładu leczniczego' },
+  { id: 'inpatient_non_hospital', label: 'Stacjonarne i całodobowe świadczenia zdrowotne inne niż szpitalne' },
+  { id: 'hospital', label: 'Świadczenia szpitalne' }
+];
+
+export type KitItemStatus = 'available' | 'missing' | 'expired' | 'damaged' | 'requires_review' | 'not_assessed';
 
 export interface EmergencyKitItem {
   id: string;
@@ -521,8 +629,8 @@ export function evaluateKitItemStatus(item: EmergencyKitItem, today: string = to
   if (!exp || !ref) return 'expired';
   const left = diffDays(ref, exp);
   if (left < 0) return 'expired';
-  if (left <= KIT_EXPIRY_WARNING_DAYS) return 'expiring';
-  return 'ok';
+  if (left <= KIT_EXPIRY_WARNING_DAYS) return 'requires_review';
+  return 'available';
 }
 
 export function validateKitDraft(draft: {
