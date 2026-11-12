@@ -25,9 +25,11 @@ import {
   ALLOWED_SOURCE_VERIFICATION_STATUSES,
   getAcquisitionAxisStatusLabel,
   getContentReviewAxisStatusLabel,
+  getFileAvailabilityLabel,
   getHashComparisonStatusLabel,
   getIntegrityAxisStatusLabel,
   getOriginAxisStatusLabel,
+  getPdfStorageLocationLabel,
   getProductScopeLabel,
   getSourceObjectTypePresentation
 } from '../../utils/chplEvidenceLedger';
@@ -36,6 +38,7 @@ interface WorkbenchSourceRegistryPanelProps {
   sources: SourceRegistryEntry[];
   activeDocumentFilterId: string;
   onSelectDocumentForEvidence: (documentId: string) => void;
+  onOpenDocumentInPdfBridge?: (documentId: string) => void;
 }
 
 function getSourceBadgeTone(src: SourceRegistryEntry): 'info' | 'warning' | 'danger' | 'neutral' | 'historical' {
@@ -45,7 +48,10 @@ function getSourceBadgeTone(src: SourceRegistryEntry): 'info' | 'warning' | 'dan
   if (src.statusAxes.acquisitionStatus === 'access_failed' || src.objectType === 'official_endpoint') {
     return 'danger';
   }
-  if (src.statusAxes.acquisitionStatus === 'acquired') {
+  if (
+    src.statusAxes.acquisitionStatus === 'acquired' ||
+    src.statusAxes.acquisitionStatus === 'session_local_file_selected'
+  ) {
     return 'info';
   }
   if (src.sourceVerificationStatus === 'requires_manual_review' || src.statusAxes.originStatus !== 'official_origin_confirmed') {
@@ -57,7 +63,8 @@ function getSourceBadgeTone(src: SourceRegistryEntry): 'info' | 'warning' | 'dan
 export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanelProps> = React.memo(({
   sources,
   activeDocumentFilterId,
-  onSelectDocumentForEvidence
+  onSelectDocumentForEvidence,
+  onOpenDocumentInPdfBridge
 }) => {
   const [objectTypeFilter, setObjectTypeFilter] = useState<SourceObjectType | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<SourceVerificationStatus | 'all'>('all');
@@ -239,7 +246,8 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
                     <span>{objectMeta.badgeText}</span>
                   </span>
                   <span className={`wb-b2-status-pill tone-${tone}`}>
-                    {src.statusAxes.acquisitionStatus === 'acquired' ? (
+                    {src.statusAxes.acquisitionStatus === 'acquired' ||
+                    src.statusAxes.acquisitionStatus === 'session_local_file_selected' ? (
                       <CheckCircle2 size={13} aria-hidden="true" />
                     ) : src.sourceVerificationStatus === 'official_source_unavailable' ? (
                       <XCircle size={13} aria-hidden="true" />
@@ -248,6 +256,12 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
                     )}
                     <span>{src.sourceVerificationStatusLabel}</span>
                   </span>
+                  {src.hasPersistedLocalArtifactMetadata &&
+                    src.statusAxes.fileAvailability === 'metadata_only_reload_required' && (
+                      <span className="wb-b4-reload-pill">
+                        Po odświeżeniu: wymaga ponownego wskazania PDF
+                      </span>
+                    )}
                   <span className="wb-b2-lang-pill">
                     <Globe2 size={12} aria-hidden="true" />
                     <span>Język: {src.language}</span>
@@ -271,8 +285,8 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
                 </p>
               </div>
 
-              {/* Cztery niezależne osie statusu B3 */}
-              <div className="wb-b3-axes-grid" role="group" aria-label="Cztery niezależne osie statusu źródła">
+              {/* Niezależne osie statusu B3 / B4 */}
+              <div className="wb-b3-axes-grid" role="group" aria-label="Niezależne osie statusu i dostępności źródła">
                 <div className="wb-b3-axis-item">
                   <span className="wb-b3-axis-name">1. Pochodzenie</span>
                   <span className="wb-b3-axis-value">{getOriginAxisStatusLabel(src.statusAxes.originStatus)}</span>
@@ -288,6 +302,18 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
                 <div className="wb-b3-axis-item">
                   <span className="wb-b3-axis-name">4. Kontrola treści</span>
                   <span className="wb-b3-axis-value">{getContentReviewAxisStatusLabel(src.statusAxes.contentReviewStatus)}</span>
+                </div>
+                <div className="wb-b3-axis-item">
+                  <span className="wb-b3-axis-name">5. Dostępność w sesji</span>
+                  <span className="wb-b3-axis-value">
+                    {getFileAvailabilityLabel(src.statusAxes.fileAvailability)}
+                  </span>
+                </div>
+                <div className="wb-b3-axis-item">
+                  <span className="wb-b3-axis-name">6. Przechowywanie</span>
+                  <span className="wb-b3-axis-value">
+                    {getPdfStorageLocationLabel(src.statusAxes.storageMode)}
+                  </span>
                 </div>
               </div>
 
@@ -326,6 +352,13 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
                     {src.physicalPageCount !== null ? `${src.physicalPageCount} str.` : 'Liczba stron nieustalona'} ·{' '}
                     {src.pdfScopeRange}
                     {src.fileSizeBytes !== null ? ` · ${src.fileSizeBytes.toLocaleString('pl-PL')} B` : ''}
+                    {src.pageCountComparisonStatus === 'mismatch' &&
+                    src.activeSessionPageCount !== undefined &&
+                    src.registryReferencePageCount != null && (
+                      <span className="wb-b4-inline-warn">
+                        {' '}· Rozbieżność stron PDF ({src.activeSessionPageCount}) vs rejestr ({src.registryReferencePageCount})
+                      </span>
+                    )}
                   </dd>
                 </div>
                 <div className="wb-b2-meta-row">
@@ -406,6 +439,17 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
                   <ExternalLink size={14} aria-hidden="true" />
                   <span>Otwórz oficjalne źródło ({src.language})</span>
                 </a>
+                {onOpenDocumentInPdfBridge && (
+                  <button
+                    type="button"
+                    className="wb-action-btn"
+                    data-testid={`open-pdf-bridge-${src.documentId}`}
+                    onClick={() => onOpenDocumentInPdfBridge(src.documentId)}
+                  >
+                    <FileCheck2 size={14} aria-hidden="true" />
+                    <span>Otwórz w Moście PDF</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   className="wb-action-btn"

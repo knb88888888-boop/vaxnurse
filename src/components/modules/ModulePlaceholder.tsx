@@ -75,7 +75,7 @@ export const ModulePlaceholder: React.FC<ModulePlaceholderProps> = ({
           </div>
           <div className="special-banner-content">
             <div className="special-banner-badge amber">Moduł w przygotowaniu — brak aktywnych algorytmów</div>
-            <h3 className="special-banner-title">Sytuacje szczególne i bezpieczeństwo (sekcja nieaktywna)</h3>
+            <h2 className="special-banner-title">Sytuacje szczególne i bezpieczeństwo (sekcja nieaktywna)</h2>
             <p className="special-banner-desc">
               Ten ekran przedstawia wyłącznie planowany zakres przyszłego modułu. <strong>Nie stanowi aktywnego protokołu postępowania nagłego ani narzędzia kwalifikacji.</strong> W sytuacjach nagłych należy kierować się wyłącznie obowiązującymi procedurami placówki, aktualną ChPL oraz dokumentacją medyczną.
             </p>
@@ -91,7 +91,7 @@ export const ModulePlaceholder: React.FC<ModulePlaceholderProps> = ({
           </div>
           <div className="special-banner-content">
             <div className="special-banner-badge">Źródło oficjalne</div>
-            <h3 className="special-banner-title">Program Szczepień Ochronnych na 2027 rok</h3>
+            <h2 className="special-banner-title">Program Szczepień Ochronnych na 2027 rok</h2>
             <p className="special-banner-desc">
               Pełny, oficjalny tekst komunikatu Głównego Inspektora Sanitarnego dotyczący schematów szczepień obowiązkowych i zalecanych na 2027 rok jest dostępny na portalu rządowym.
             </p>
@@ -116,7 +116,7 @@ export const ModulePlaceholder: React.FC<ModulePlaceholderProps> = ({
           </div>
           <div className="special-banner-content">
             <div className="special-banner-badge amber">Ważna uwaga techniczna</div>
-            <h3 className="special-banner-title">Kontrola łańcucha chłodniczego – zakres referencyjny</h3>
+            <h2 className="special-banner-title">Kontrola łańcucha chłodniczego – zakres referencyjny</h2>
             <p className="special-banner-desc">
               Zakres <strong>+2°C do +8°C</strong> stanowi <strong>zakres referencyjny</strong> dla standardowego przechowywania produktów leczniczych i szczepionek.
             </p>
@@ -153,7 +153,7 @@ export const ModulePlaceholder: React.FC<ModulePlaceholderProps> = ({
           <div className="safety-header">
             <ShieldCheck size={24} className="safety-icon" />
             <div>
-              <h3 className="safety-title">Zasady bezpieczeństwa VaxNurse</h3>
+              <h2 className="safety-title">Zasady bezpieczeństwa VaxNurse</h2>
               <span className="safety-subtitle">Prywatność i rzetelność medyczna</span>
             </div>
           </div>

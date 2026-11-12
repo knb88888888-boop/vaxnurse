@@ -5,10 +5,16 @@ import axe from 'axe-core';
 import type { Result as AxeResult } from 'axe-core';
 import App from '../../src/App';
 import { SettingsView } from '../../src/components/settings/SettingsView';
+import { LocalPdfBridgePanel } from '../../src/components/vaccines/LocalPdfBridgePanel';
 import { APP_MODULES } from '../../src/data/navigationData';
+import { STAGE1_CHPL_AUDIT_BUNDLE } from '../../src/data/chplStage1AuditSheets';
 import { VACCINES_CATALOG } from '../../src/data/vaccinesCatalog';
 import { createBackupPayload } from '../../src/utils/backup';
+import { buildBaseSourceRegistry, registerLocalPdfInspectionSession } from '../../src/utils/chplEvidenceLedger';
+import { createEmptyPdfMetadataSummary } from '../../src/utils/localPdfBridge';
 import type { ModuleDefinition } from '../../src/types/navigation';
+import { buildSyntheticPdfBytes } from '../helpers/syntheticPdf';
+import { webcrypto } from 'node:crypto';
 
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -101,8 +107,9 @@ describe('Automatyczny audyt dostępności WCAG 2.1/2.2 A/AA (axe-core w Vitest/
     );
     await screen.findByTestId('b3-quality-dashboard', {}, { timeout: 10000 });
     await screen.findByTestId('b2-source-registry-panel', {}, { timeout: 10000 });
+    await screen.findByTestId('b4-local-pdf-bridge', {}, { timeout: 10000 });
     await screen.findByTestId('b2-evidence-ledger-panel', {}, { timeout: 10000 });
-    expect((await runWcagAxe(container, 'ChplAuditWorkbenchView + B3')).wcagViolations).toBe(0);
+    expect((await runWcagAxe(container, 'ChplAuditWorkbenchView + B3/B4')).wcagViolations).toBe(0);
 
     // 3b. Stanowisko audytu ChPL w trybie compact + large
     document.documentElement.setAttribute('data-density', 'compact');
@@ -147,7 +154,9 @@ describe('Automatyczny audyt dostępności WCAG 2.1/2.2 A/AA (axe-core w Vitest/
     // 2. Moduł placeholder (Sytuacje szczególne w przygotowaniu)
     await user.click(screen.getByRole('button', { name: /Sytuacje szczególne \(w przygotowaniu\)/i }));
     await screen.findByText(/Moduł nieaktywny • W przygotowaniu/i, {}, { timeout: 10000 });
-    expect((await runWcagAxe(container, 'ModulePlaceholder')).wcagViolations).toBe(0);
+    const placeholderAudit = await runWcagAxe(container, 'ModulePlaceholder');
+    expect(placeholderAudit.wcagViolations).toBe(0);
+    expect(placeholderAudit.bestPracticeViolations.map((v) => v.id)).not.toContain('heading-order');
 
     unmount();
 
@@ -177,4 +186,93 @@ describe('Automatyczny audyt dostępności WCAG 2.1/2.2 A/AA (axe-core w Vitest/
       (await runWcagAxe(settingsContainer, 'SettingsView + Staged Backup Preview')).wcagViolations
     ).toBe(0);
   }, 25000);
+
+  it('LocalPdfBridgePanel po załadowaniu lokalnego PDF (inspekcja, podgląd, formularz kontrolowany) spełnia WCAG 2.1/2.2 A/AA', async () => {
+    const user = userEvent.setup();
+    const originalCryptoDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
+    Object.defineProperty(globalThis, 'crypto', {
+      value: {
+        randomUUID: () => '11111111-1111-1111-1111-111111111111',
+        subtle: {
+          digest: async (algorithm: AlgorithmIdentifier, data: BufferSource) => {
+            const view =
+              data instanceof ArrayBuffer
+                ? new Uint8Array(data)
+                : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+            return webcrypto.subtle.digest(algorithm, Buffer.from(view));
+          }
+        }
+      },
+      configurable: true
+    });
+
+    try {
+      const initialSources = buildBaseSourceRegistry(STAGE1_CHPL_AUDIT_BUNDLE);
+      const { container } = render(
+        <main>
+          <LocalPdfBridgePanel
+            sources={initialSources}
+            checklist={STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist}
+            workingEntries={[]}
+            selectedDocumentId="doc-rpl-bcg10-19535"
+            onSelectDocumentId={vi.fn()}
+            onRegisterLocalPdfSession={(inspection) => {
+              const res = registerLocalPdfInspectionSession({
+                sources: initialSources,
+                entries: [],
+                inspection
+              });
+              return {
+                updatedSource: res.updatedSource,
+                versionCreated: res.versionCreated,
+                reverificationTriggered: res.reverificationTriggered
+              };
+            }}
+            onCreatePdfEvidenceEntry={() => ({ success: true })}
+            onClearPersistedArtifacts={vi.fn()}
+            openPdfDocumentFn={async () => ({
+              pageCount: 2,
+              parserVersion: '6.5.438',
+              metadataStatus: 'extracted',
+              textLayerStatus: 'text_layer_available',
+              metadata: createEmptyPdfMetadataSummary({ title: 'BCG Test A11y' }),
+              getPage: vi.fn() as never,
+              getPagePlainText: async (p) => `Treść warstwy tekstowej strony ${p}`,
+              searchPlainText: async (q) => ({
+                query: q,
+                pagesScanned: 2,
+                totalPages: 2,
+                matches: [{ pageNumber: 2, snippet: 'Podanie śródskórne 0,1 ml' }],
+                truncated: false,
+                disclaimer: 'Test disclaimer'
+              }),
+              renderPageToCanvas: () => ({
+                renderTaskPromise: Promise.resolve({} as never),
+                done: Promise.resolve({ widthPx: 400, heightPx: 560 }),
+                cancel: vi.fn()
+              }),
+              destroy: async () => undefined
+            })}
+          />
+        </main>
+      );
+
+      expect((await runWcagAxe(container, 'LocalPdfBridgePanel Initial')).wcagViolations).toBe(0);
+
+      const fileInput = screen.getByTestId('b4-local-pdf-input') as HTMLInputElement;
+      const pdfFile = new File([buildSyntheticPdfBytes()], 'bcg10-a11y.pdf', {
+        type: 'application/pdf'
+      });
+      await user.upload(fileInput, pdfFile);
+      await screen.findByTestId('b4-inspection-summary');
+      await screen.findByTestId('b4-pdf-preview-pane');
+
+      const openedAudit = await runWcagAxe(container, 'LocalPdfBridgePanel Opened PDF');
+      expect(openedAudit.wcagViolations).toBe(0);
+    } finally {
+      if (originalCryptoDescriptor) {
+        Object.defineProperty(globalThis, 'crypto', originalCryptoDescriptor);
+      }
+    }
+  }, 15000);
 });

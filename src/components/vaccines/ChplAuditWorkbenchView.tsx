@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Check,
@@ -49,21 +49,31 @@ import { triggerJsonDownload } from '../../utils/backup.ts';
 import type {
   EvidenceLedgerEntry,
   EvidenceTraceabilityFilters,
-  InformalWorkingNote
+  InformalWorkingNote,
+  SourceRegistryEntry
 } from '../../types/evidenceLedger.ts';
 import {
   DEFAULT_EVIDENCE_FILTERS,
   buildBaseSourceRegistry,
   buildBaselineEvidenceEntries,
   buildQuestionTraceabilitySummaries,
+  clearLocalSourceArtifactsFromStorage,
   computeSourceQualityMetrics,
+  createWorkingEvidenceEntry,
+  loadSourceRegistryWithLocalArtifacts,
   loadWorkingNotesFromStorage,
   migrateMaster04EvidenceStorage,
+  registerLocalPdfInspectionSession,
   saveEvidenceAndNotesAtomically,
+  saveLocalSourceArtifactsToStorage,
   saveWorkingEvidenceToStorage,
-  saveWorkingNotesToStorage
+  saveWorkingNotesToStorage,
+  validateWorkingEvidenceInput,
+  type RegisterLocalPdfSessionInput,
+  type WorkingEvidenceDraftInput
 } from '../../utils/chplEvidenceLedger.ts';
 import { WorkbenchSourceRegistryPanel } from './WorkbenchSourceRegistryPanel.tsx';
+import { LocalPdfBridgePanel } from './LocalPdfBridgePanel.tsx';
 import { WorkbenchEvidenceLedgerPanel } from './WorkbenchEvidenceLedgerPanel.tsx';
 import '../../styles/workbench.css';
 
@@ -121,15 +131,24 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
   onOpenVaccineById,
 }) => {
   const detailsRef = useRef<HTMLElement>(null);
+  const pdfBridgeRef = useRef<HTMLElement | null>(null);
   const evidenceLedgerRef = useRef<HTMLElement | null>(null);
 
-  const sourceRegistry = useMemo(
+  const baseSourceRegistry = useMemo(
     () => buildBaseSourceRegistry(STAGE1_CHPL_AUDIT_BUNDLE),
     []
   );
+  const [sourceRegistry, setSourceRegistry] = useState<SourceRegistryEntry[]>(() =>
+    loadSourceRegistryWithLocalArtifacts(
+      STAGE1_CHPL_AUDIT_BUNDLE,
+      typeof localStorage !== 'undefined' ? localStorage : null
+    )
+  );
+  const [selectedBridgeDocId, setSelectedBridgeDocId] = useState<string>('doc-rpl-bcg10-19535');
+
   const baselineEvidenceEntries = useMemo(
-    () => buildBaselineEvidenceEntries(STAGE1_CHPL_AUDIT_BUNDLE, sourceRegistry),
-    [sourceRegistry]
+    () => buildBaselineEvidenceEntries(STAGE1_CHPL_AUDIT_BUNDLE, baseSourceRegistry),
+    [baseSourceRegistry]
   );
 
   const [workingEvidenceEntries, setWorkingEvidenceEntries] = useState<EvidenceLedgerEntry[]>(
@@ -137,7 +156,7 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
       migrateMaster04EvidenceStorage(
         typeof localStorage !== 'undefined' ? localStorage : null,
         STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
-        buildBaseSourceRegistry(STAGE1_CHPL_AUDIT_BUNDLE),
+        sourceRegistry,
         { persistIfMigrated: true }
       ).entries
   );
@@ -145,9 +164,19 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
     loadWorkingNotesFromStorage(
       typeof localStorage !== 'undefined' ? localStorage : null,
       STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
-      buildBaseSourceRegistry(STAGE1_CHPL_AUDIT_BUNDLE)
+      sourceRegistry
     )
   );
+  const sourceRegistryRef = useRef<SourceRegistryEntry[]>(sourceRegistry);
+  const workingEntriesRef = useRef<EvidenceLedgerEntry[]>(workingEvidenceEntries);
+
+  useEffect(() => {
+    sourceRegistryRef.current = sourceRegistry;
+  }, [sourceRegistry]);
+
+  useEffect(() => {
+    workingEntriesRef.current = workingEvidenceEntries;
+  }, [workingEvidenceEntries]);
   const [evidenceFilters, setEvidenceFilters] = useState<EvidenceTraceabilityFilters>(
     DEFAULT_EVIDENCE_FILTERS
   );
@@ -177,7 +206,7 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
     [allEvidenceEntries, workingNotes]
   );
 
-  const handleSaveWorkingEntries = (nextEntries: EvidenceLedgerEntry[]) => {
+  const handleSaveWorkingEntries = useCallback((nextEntries: EvidenceLedgerEntry[]) => {
     const res = saveWorkingEvidenceToStorage(
       typeof localStorage !== 'undefined' ? localStorage : null,
       nextEntries
@@ -186,9 +215,9 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
       setWorkingEvidenceEntries(nextEntries);
     }
     return res;
-  };
+  }, []);
 
-  const handleSaveWorkingNotes = (nextNotes: InformalWorkingNote[]) => {
+  const handleSaveWorkingNotes = useCallback((nextNotes: InformalWorkingNote[]) => {
     const res = saveWorkingNotesToStorage(
       typeof localStorage !== 'undefined' ? localStorage : null,
       nextNotes
@@ -197,41 +226,124 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
       setWorkingNotes(nextNotes);
     }
     return res;
-  };
+  }, []);
 
-  const handleSaveEntriesAndNotesAtomically = (
-    nextEntries: EvidenceLedgerEntry[],
-    nextNotes: InformalWorkingNote[]
-  ) => {
-    const res = saveEvidenceAndNotesAtomically(
-      typeof localStorage !== 'undefined' ? localStorage : null,
-      nextEntries,
-      nextNotes
-    );
-    if (res.success) {
-      setWorkingEvidenceEntries(nextEntries);
-      setWorkingNotes(nextNotes);
-    }
-    return res;
-  };
+  const handleSaveEntriesAndNotesAtomically = useCallback(
+    (nextEntries: EvidenceLedgerEntry[], nextNotes: InformalWorkingNote[]) => {
+      const res = saveEvidenceAndNotesAtomically(
+        typeof localStorage !== 'undefined' ? localStorage : null,
+        nextEntries,
+        nextNotes
+      );
+      if (res.success) {
+        setWorkingEvidenceEntries(nextEntries);
+        setWorkingNotes(nextNotes);
+      }
+      return res;
+    },
+    []
+  );
 
-  const handleNavigateToSourceDocument = (documentId: string) => {
-    setEvidenceFilters((prev) => ({
-      ...prev,
-      documentId
-    }));
-    const targetEl =
-      typeof document !== 'undefined' ? document.getElementById(`source-card-${documentId}`) : null;
-    targetEl?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-  };
+  const handleNavigateToSourceDocument = useCallback(
+    (documentId: string) => {
+      setEvidenceFilters((prev) => ({
+        ...prev,
+        documentId
+      }));
+      const targetEl =
+        typeof document !== 'undefined' ? document.getElementById(`source-card-${documentId}`) : null;
+      targetEl?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    },
+    [setEvidenceFilters]
+  );
 
-  const handleSelectDocumentForEvidence = (documentId: string) => {
-    setEvidenceFilters((prev) => ({
-      ...prev,
-      documentId
-    }));
-    evidenceLedgerRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-  };
+  const handleSelectDocumentForEvidence = useCallback(
+    (documentId: string) => {
+      setEvidenceFilters((prev) => ({
+        ...prev,
+        documentId
+      }));
+      evidenceLedgerRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    },
+    [setEvidenceFilters]
+  );
+
+  const handleOpenDocumentInPdfBridge = useCallback(
+    (documentId: string) => {
+      setSelectedBridgeDocId(documentId);
+      pdfBridgeRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    },
+    [setSelectedBridgeDocId]
+  );
+
+  const handleRegisterLocalPdfSession = useCallback(
+    (inspection: RegisterLocalPdfSessionInput) => {
+      const storage = typeof localStorage !== 'undefined' ? localStorage : null;
+      const result = registerLocalPdfInspectionSession({
+        sources: sourceRegistryRef.current,
+        entries: workingEntriesRef.current,
+        inspection
+      });
+      sourceRegistryRef.current = result.updatedSources;
+      setSourceRegistry(result.updatedSources);
+      saveLocalSourceArtifactsToStorage(storage, result.updatedSources);
+      if (result.reverificationTriggered) {
+        workingEntriesRef.current = result.updatedEntries;
+        saveWorkingEvidenceToStorage(storage, result.updatedEntries);
+        setWorkingEvidenceEntries(result.updatedEntries);
+      }
+      return {
+        updatedSource: result.updatedSource,
+        versionCreated: result.versionCreated,
+        reverificationTriggered: result.reverificationTriggered
+      };
+    },
+    []
+  );
+
+  const handleCreatePdfEvidenceEntry = useCallback(
+    (draft: WorkingEvidenceDraftInput) => {
+      const currentSources = sourceRegistryRef.current;
+      const currentEntries = workingEntriesRef.current;
+      const validation = validateWorkingEvidenceInput(
+        draft,
+        STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
+        currentSources
+      );
+      if (!validation.valid) {
+        return { success: false, error: validation.errors.join(' ') };
+      }
+      try {
+        const entry = createWorkingEvidenceEntry(
+          draft,
+          STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
+          currentSources
+        );
+        const nextEntries = [entry, ...currentEntries];
+        const saveRes = handleSaveWorkingEntries(nextEntries);
+        if (!saveRes.success) {
+          return {
+            success: false,
+            error: saveRes.error ?? 'Nie udało się zapisać nowego dowodu w localStorage.'
+          };
+        }
+        workingEntriesRef.current = nextEntries;
+        return { success: true, entry };
+      } catch (err) {
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : 'Nie udało się zapisać wpisu dowodowego z sesji PDF.'
+        };
+      }
+    },
+    [handleSaveWorkingEntries]
+  );
+
+  const handleClearPersistedArtifacts = useCallback(() => {
+    const storage = typeof localStorage !== 'undefined' ? localStorage : null;
+    clearLocalSourceArtifactsFromStorage(storage);
+    setSourceRegistry(buildBaseSourceRegistry(STAGE1_CHPL_AUDIT_BUNDLE));
+  }, []);
 
   const snapshot = useMemo(
     () =>
@@ -1524,14 +1636,14 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
           )}
         </div>
 
-        <div className="wb-b3-quality-grid" role="region" aria-label="12 wskaźników jakości źródeł i dowodów">
+        <div className="wb-b3-quality-grid" role="region" aria-label="Wskaźniki jakości źródeł, artefaktów PDF i dowodów">
           <div className="wb-b3-metric-card" data-testid="b3-metric-total-sources">
             <span className="wb-b3-metric-num">{sourceQualityMetrics.totalSourceRecords}</span>
             <span className="wb-b3-metric-label">1. Wszystkie rekordy źródeł</span>
           </div>
           <div className="wb-b3-metric-card" data-testid="b3-metric-acquired">
             <span className="wb-b3-metric-num">{sourceQualityMetrics.acquiredDocumentsCount}</span>
-            <span className="wb-b3-metric-label">2. Rzeczywiste dokumenty pozyskane lokalnie</span>
+            <span className="wb-b3-metric-label">2. Dokumenty repozytoryjne / pozyskane z sesji</span>
           </div>
           <div className="wb-b3-metric-card" data-testid="b3-metric-registry-only">
             <span className="wb-b3-metric-num">{sourceQualityMetrics.registryEntriesWithoutPdfCount}</span>
@@ -1567,20 +1679,50 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
           </div>
           <div className="wb-b3-metric-card wb-b3-metric-danger" data-testid="b3-metric-conflicting">
             <span className="wb-b3-metric-num">{sourceQualityMetrics.conflictingExcerptsCount}</span>
-            <span className="wb-b3-metric-label">11. Fragmenty sprzeczne / rozbieżności</span>
+            <span className="wb-b3-metric-label">11. Potwierdzone sprzeczne fragmenty PDF</span>
           </div>
           <div className="wb-b3-metric-card wb-b3-metric-warning" data-testid="b3-metric-open-questions">
             <span className="wb-b3-metric-num">{sourceQualityMetrics.questionsWithoutConfirmedExcerptsCount}</span>
             <span className="wb-b3-metric-label">12. Pytania bez potwierdzonych fragmentów PDF</span>
           </div>
+          <div className="wb-b3-metric-card wb-b3-metric-warning" data-testid="b4-metric-conflicting-refs">
+            <span className="wb-b3-metric-num">{sourceQualityMetrics.conflictingReferencesCount}</span>
+            <span className="wb-b3-metric-label">13. Niejednoznaczności / spory referencyjne (bez PDF)</span>
+          </div>
+          <div className="wb-b3-metric-card" data-testid="b4-metric-session-pdfs">
+            <span className="wb-b3-metric-num">{sourceQualityMetrics.sessionVerifiedPdfCount}</span>
+            <span className="wb-b3-metric-label">14. Lokalne PDF aktywne w bieżącej sesji</span>
+          </div>
+          <div className="wb-b3-metric-card wb-b3-metric-warning" data-testid="b4-metric-reload-required">
+            <span className="wb-b3-metric-num">{sourceQualityMetrics.reloadRequiredPdfCount}</span>
+            <span className="wb-b3-metric-label">15. Artefakty po reload (wymagają wskazania PDF)</span>
+          </div>
+          <div className="wb-b3-metric-card wb-b3-metric-danger" data-testid="b4-metric-reverification">
+            <span className="wb-b3-metric-num">{sourceQualityMetrics.reverificationRequiredCount}</span>
+            <span className="wb-b3-metric-label">16. Wpisy / artefakty do re-weryfikacji (zmiana SHA)</span>
+          </div>
         </div>
       </section>
 
-      {/* 7. Sekcja E — Rejestr Źródeł, Artefaktów i Prób Pobierań (Etap B2/B3) */}
+      {/* 7. Sekcja E — Rejestr Źródeł, Artefaktów i Prób Pobierań (Etap B2/B3/B4) */}
       <WorkbenchSourceRegistryPanel
         sources={sourceRegistry}
         activeDocumentFilterId={evidenceFilters.documentId}
         onSelectDocumentForEvidence={handleSelectDocumentForEvidence}
+        onOpenDocumentInPdfBridge={handleOpenDocumentInPdfBridge}
+      />
+
+      {/* 7b. Sekcja E2 — Lokalny Most Weryfikacji PDF i Inspekcji QRD (Etap B4) */}
+      <LocalPdfBridgePanel
+        sources={sourceRegistry}
+        checklist={STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist}
+        workingEntries={workingEvidenceEntries}
+        selectedDocumentId={selectedBridgeDocId}
+        onSelectDocumentId={setSelectedBridgeDocId}
+        sectionRef={pdfBridgeRef}
+        onRegisterLocalPdfSession={handleRegisterLocalPdfSession}
+        onCreatePdfEvidenceEntry={handleCreatePdfEvidenceEntry}
+        onClearPersistedArtifacts={handleClearPersistedArtifacts}
       />
 
       {/* 8. Sekcja F — Identyfikowalność dowodów, QRD/PDF, notatki robocze oraz eksport/import JSON */}

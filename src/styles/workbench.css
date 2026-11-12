@@ -2149,3 +2149,410 @@ html[data-density="compact"] .wb-details-section {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ============================================================================
+ * ETAP B4: LOCAL PDF ARTIFACT VERIFICATION BRIDGE & PREVIEW
+ * ============================================================================ */
+
+.wb-b4-reload-pill,
+.wb-b4-session-evidence-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  font-size: 0.74rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.wb-b4-reload-pill {
+  background-color: #fef3c7;
+  border-color: #d97706;
+  color: #78350f;
+}
+
+.wb-b4-session-evidence-pill {
+  background-color: #ecfdf5;
+  border-color: #059669;
+  color: #065f46;
+}
+
+.wb-b4-inline-warn {
+  color: #9a3412;
+  font-weight: 700;
+}
+
+.wb-b4-inline-ok {
+  color: #065f46;
+  font-weight: 700;
+}
+
+.wb-b4-inline-page-sync {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.wb-b4-inline-page-sync .wb-text-input {
+  flex: 1 1 90px;
+}
+
+.wb-text-input,
+.wb-file-input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 8px 11px;
+  border: 1px solid #94a3b8;
+  border-radius: var(--radius-md);
+  background-color: #ffffff;
+  color: var(--navy-900);
+  font-size: 0.86rem;
+}
+
+.wb-text-input:focus,
+.wb-file-input:focus-visible {
+  outline: 2px solid #0369a1;
+  outline-offset: 1px;
+  border-color: #0369a1;
+}
+
+.wb-b4-pdf-bridge-section .wb-action-btn {
+  max-width: 100%;
+  white-space: normal;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.wb-b4-pdf-bridge-section code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.wb-b4-local-pdf-section,
+.wb-b4-pdf-bridge-section {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.wb-b4-local-pdf-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--navy-900);
+}
+
+.wb-b4-bridge-top-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.wb-b4-setup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.wb-b4-card {
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  background-color: #f8fafc;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.wb-b4-card h3 {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: var(--navy-900);
+}
+
+.wb-b4-source-status-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  font-size: 0.82rem;
+  color: var(--navy-900);
+}
+
+.wb-b4-status-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-wrap: anywhere;
+}
+
+.wb-b4-inspection-panel {
+  border: 1px solid #93c5fd;
+  border-radius: var(--radius-md);
+  background-color: #f8fafc;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.wb-b4-inspection-panel h3 {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: var(--navy-900);
+}
+
+.wb-b4-meta-dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 8px 12px;
+}
+
+.wb-b4-meta-dl > div {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.wb-b4-meta-dl dt {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--navy-700);
+}
+
+.wb-b4-meta-dl dd {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--navy-900);
+  overflow-wrap: anywhere;
+}
+
+.wb-b4-small-disclaimer {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--navy-800);
+}
+
+.wb-b4-workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.wb-b4-preview-pane,
+.wb-b4-evidence-form {
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  background-color: #f8fafc;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.wb-b4-viewer-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+}
+
+.wb-b4-toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.wb-b4-page-indicator,
+.wb-b4-zoom-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--navy-900);
+}
+
+.wb-b4-page-input {
+  width: 4.5rem;
+  max-width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #94a3b8;
+  border-radius: var(--radius-sm);
+  font-size: 0.84rem;
+  color: var(--navy-900);
+  background-color: #ffffff;
+}
+
+.wb-b4-canvas-frame {
+  width: 100%;
+  max-width: 100%;
+  overflow: auto;
+  min-height: 240px;
+  background-color: #e2e8f0;
+  border: 1px solid #94a3b8;
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+.wb-b4-pdf-canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.14);
+}
+
+.wb-b4-canvas-loading {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--navy-900);
+}
+
+.wb-b4-text-search-box {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.wb-b4-search-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.wb-b4-search-form .wb-select-input,
+.wb-b4-search-form .wb-text-input {
+  flex: 1 1 160px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.wb-b4-search-results {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wb-b4-match-jump-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid #1d4ed8;
+  background-color: #eff6ff;
+  color: #1e3a8a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wb-b4-match-jump-btn:hover,
+.wb-b4-match-jump-btn:focus-visible {
+  background-color: #dbeafe;
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+.wb-b4-plain-text-excerpt {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: var(--navy-800);
+  overflow-wrap: anywhere;
+}
+
+.wb-b4-bound-summary {
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--navy-900);
+  overflow-wrap: anywhere;
+}
+
+.wb-b4-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+@media (max-width: 1024px) {
+  .wb-b4-setup-grid,
+  .wb-b4-workspace-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .wb-b4-local-pdf-section,
+  .wb-b4-pdf-bridge-section {
+    padding: 12px;
+  }
+
+  .wb-b4-meta-dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

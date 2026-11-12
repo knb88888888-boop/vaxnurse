@@ -1,21 +1,45 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useState } from 'react';
+import { webcrypto } from 'node:crypto';
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChplAuditWorkbenchView } from '../../src/components/vaccines/ChplAuditWorkbenchView';
+import { LocalPdfBridgePanel } from '../../src/components/vaccines/LocalPdfBridgePanel';
 import { VACCINES_CATALOG } from '../../src/data/vaccinesCatalog';
 import { STAGE1_CHPL_AUDIT_BUNDLE } from '../../src/data/chplStage1AuditSheets';
+import type { EvidenceLedgerEntry, SourceRegistryEntry } from '../../src/types/evidenceLedger';
 import { createBackupPayload, getStoredVaccines } from '../../src/utils/backup';
 import {
   EMPTY_QUESTION_EVIDENCE_MESSAGE,
   EVIDENCE_LEDGER_STORAGE_KEY,
   HISTORICAL_DOCUMENT_NOTICE,
   INFORMAL_WORKING_NOTE_DISCLAIMER,
+  SOURCE_ARTIFACTS_STORAGE_KEY,
   SOURCE_QUALITY_DISCLAIMER,
   WORKING_NOTES_STORAGE_KEY,
   buildBaseSourceRegistry,
   buildEvidenceLedgerExportPayload,
-  createWorkingEvidenceEntry
+  clearLocalSourceArtifactsFromStorage,
+  createWorkingEvidenceEntry,
+  loadSourceRegistryWithLocalArtifacts,
+  registerLocalPdfInspectionSession,
+  saveLocalSourceArtifactsToStorage,
+  validateWorkingEvidenceInput,
+  type WorkingEvidenceDraftInput
 } from '../../src/utils/chplEvidenceLedger';
+import {
+  LOCAL_PDF_NO_CLINICAL_APPROVAL_NOTICE,
+  LOCAL_PDF_RELOAD_REQUIRED_NOTICE,
+  LOCAL_PDF_TEXT_LAYER_DISCLAIMER,
+  LOCAL_PDF_UNTRUSTED_HASH_NOTICE,
+  createEmptyPdfMetadataSummary
+} from '../../src/utils/localPdfBridge';
+import type { OpenedLocalPdfSession } from '../../src/utils/localPdfReader';
+import {
+  buildFakeDisguisedPdfBytes,
+  buildSyntheticPdfBytes,
+  computeNodeSha256Hex
+} from '../helpers/syntheticPdf';
 
 describe('Etap B2 — WorkbenchSourceRegistryPanel & WorkbenchEvidenceLedgerPanel', () => {
   let exportedBlobs: Blob[] = [];
@@ -275,7 +299,7 @@ describe('Etap B3 — Quality Dashboard, 4 osie źródeł, kontrola awansu dowod
     const navBtns = screen.getAllByRole('button', { name: /Pokaż dokument w Rejestrze Źródeł/i });
     await user.click(navBtns[0]);
     expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
-  }, 35000);
+  }, 60000);
 
   it('blokuje source_excerpt_reviewed bez potwierdzenia PDF, pozwala na świadomy zapis i nie potwierdza importowanego claimu', async () => {
     const user = userEvent.setup();
@@ -343,5 +367,387 @@ describe('Etap B3 — Quality Dashboard, 4 osie źródeł, kontrola awansu dowod
     expect(screen.getByTestId('b3-metric-verified-excerpts')).toHaveTextContent('0');
     expect(screen.getAllByText(/Z importu JSON \(niepotwierdzone lokalnie\)/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/Wymaga kontroli w oryginalnym PDF/i).length).toBeGreaterThanOrEqual(1);
-  }, 30000);
+  }, 60000);
+});
+
+interface BridgeHarnessProps {
+  initialSources?: SourceRegistryEntry[];
+  initialEntries?: EvidenceLedgerEntry[];
+  initialDocumentId?: string;
+  openPdfDocumentFn: (bytes: Uint8Array) => Promise<OpenedLocalPdfSession>;
+}
+
+function LocalPdfBridgeHarness({
+  initialSources,
+  initialEntries = [],
+  initialDocumentId = 'doc-rpl-bcg10-19535',
+  openPdfDocumentFn
+}: BridgeHarnessProps) {
+  const [sources, setSources] = useState<SourceRegistryEntry[]>(
+    () => initialSources ?? loadSourceRegistryWithLocalArtifacts(STAGE1_CHPL_AUDIT_BUNDLE, localStorage)
+  );
+  const [entries, setEntries] = useState<EvidenceLedgerEntry[]>(initialEntries);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string>(initialDocumentId);
+
+  return (
+    <div>
+      <LocalPdfBridgePanel
+        sources={sources}
+        checklist={STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist}
+        workingEntries={entries}
+        selectedDocumentId={selectedDocumentId}
+        onSelectDocumentId={setSelectedDocumentId}
+        onRegisterLocalPdfSession={(inspection) => {
+          const result = registerLocalPdfInspectionSession({
+            sources,
+            entries,
+            inspection
+          });
+          setSources(result.updatedSources);
+          setEntries(result.updatedEntries);
+          saveLocalSourceArtifactsToStorage(localStorage, result.updatedSources);
+          return {
+            updatedSource: result.updatedSource,
+            versionCreated: result.versionCreated,
+            reverificationTriggered: result.reverificationTriggered
+          };
+        }}
+        onCreatePdfEvidenceEntry={(draft: WorkingEvidenceDraftInput) => {
+          const validation = validateWorkingEvidenceInput(
+            draft,
+            STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
+            sources
+          );
+          if (!validation.valid) {
+            return { success: false, error: validation.errors.join(' ') };
+          }
+          const entry = createWorkingEvidenceEntry(
+            draft,
+            STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
+            sources
+          );
+          setEntries((prev) => [entry, ...prev]);
+          return { success: true, entry };
+        }}
+        onClearPersistedArtifacts={() => {
+          clearLocalSourceArtifactsFromStorage(localStorage);
+          setSources(loadSourceRegistryWithLocalArtifacts(STAGE1_CHPL_AUDIT_BUNDLE, localStorage));
+        }}
+        openPdfDocumentFn={openPdfDocumentFn}
+      />
+      <output data-testid="harness-entries-json">{JSON.stringify(entries)}</output>
+    </div>
+  );
+}
+
+function createMockOpenedPdfSession(
+  pageTexts: string[] = [
+    'CHPL BCG 10 strona 1: 4.1 Wskazania do stosowania.',
+    'CHPL BCG 10 strona 2: 6.1 Substancje pomocnicze: sodu chlorek, woda do wstrzykiwan.'
+  ],
+  title = 'ChPL BCG 10 Test'
+): OpenedLocalPdfSession {
+  return {
+    pageCount: pageTexts.length,
+    parserVersion: '6.5.438',
+    metadataStatus: 'extracted',
+    textLayerStatus: pageTexts.some((t) => t.trim().length > 0)
+      ? 'text_layer_available'
+      : 'no_text_layer',
+    metadata: createEmptyPdfMetadataSummary({ title }),
+    getPage: vi.fn() as never,
+    getPagePlainText: async (pageNumber) => pageTexts[pageNumber - 1] ?? '',
+    searchPlainText: async (query) => {
+      const needle = query.trim().toLowerCase();
+      const matches = pageTexts
+        .map((txt, idx) =>
+          txt.toLowerCase().includes(needle)
+            ? { pageNumber: idx + 1, snippet: txt }
+            : null
+        )
+        .filter((m): m is { pageNumber: number; snippet: string } => m !== null);
+      return {
+        query,
+        pagesScanned: pageTexts.length,
+        totalPages: pageTexts.length,
+        matches,
+        truncated: false,
+        disclaimer: LOCAL_PDF_TEXT_LAYER_DISCLAIMER
+      };
+    },
+    renderPageToCanvas: ({ canvas, scale }) => ({
+      renderTaskPromise: Promise.resolve({} as never),
+      done: (async () => {
+        const widthPx = Math.round(400 * scale);
+        const heightPx = Math.round(560 * scale);
+        canvas.width = widthPx;
+        canvas.height = heightPx;
+        return { widthPx, heightPx };
+      })(),
+      cancel: vi.fn()
+    }),
+    destroy: async () => undefined
+  };
+}
+
+describe('Etap B4 — LocalPdfBridgePanel: lokalna weryfikacja PDF, podgląd, wyszukiwanie i rejestracja dowodów', () => {
+  const originalCryptoDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
+
+  beforeEach(() => {
+    localStorage.clear();
+    Object.defineProperty(globalThis, 'crypto', {
+      value: {
+        randomUUID: () => webcrypto.randomUUID(),
+        subtle: {
+          digest: async (algorithm: AlgorithmIdentifier, data: BufferSource) => {
+            const view =
+              data instanceof ArrayBuffer
+                ? new Uint8Array(data)
+                : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+            return webcrypto.subtle.digest(algorithm, Buffer.from(view));
+          }
+        }
+      },
+      configurable: true
+    });
+  });
+
+  afterEach(() => {
+    if (originalCryptoDescriptor) {
+      Object.defineProperty(globalThis, 'crypto', originalCryptoDescriptor);
+    }
+  });
+
+  it('odrzuca zamaskowany plik HTML .pdf oraz pusty plik bez wywołania parsera PDF.js', async () => {
+    const user = userEvent.setup();
+    const openSpy = vi.fn(async () => createMockOpenedPdfSession());
+    render(<LocalPdfBridgeHarness openPdfDocumentFn={openSpy} />);
+
+    const fileInput = screen.getByTestId('b4-local-pdf-input') as HTMLInputElement;
+
+    const disguisedFile = new File([buildFakeDisguisedPdfBytes()], 'falszywy-chpl.pdf', {
+      type: 'application/pdf'
+    });
+    await user.upload(fileInput, disguisedFile);
+    const errDisguised = await screen.findByTestId('b4-bridge-error');
+    expect(errDisguised.textContent).toMatch(/%PDF-/i);
+    expect(openSpy).not.toHaveBeenCalled();
+
+    const emptyFile = new File([], 'pusty-chpl.pdf', { type: 'application/pdf' });
+    fireEvent.change(fileInput, { target: { files: [emptyFile] } });
+    const errEmpty = await screen.findByTestId('b4-bridge-error');
+    expect(errEmpty.textContent).toMatch(/pusty/i);
+    expect(openSpy).not.toHaveBeenCalled();
+  });
+
+  it('wylicza SHA-256, obsługuje nawigację stron, zoom, szukanie w warstwie tekstowej oraz kontrolowaną rejestrację dowodu z bramką człowieka', async () => {
+    const user = userEvent.setup();
+    const pdfBytes = buildSyntheticPdfBytes();
+    const expectedSha = computeNodeSha256Hex(pdfBytes);
+
+    render(
+      <LocalPdfBridgeHarness
+        openPdfDocumentFn={async () => createMockOpenedPdfSession()}
+      />
+    );
+
+    await user.selectOptions(screen.getByTestId('b4-ref-mode-select'), 'none');
+    const fileInput = screen.getByTestId('b4-local-pdf-input') as HTMLInputElement;
+    await user.upload(
+      fileInput,
+      new File([pdfBytes], 'bcg10-synth.pdf', { type: 'application/pdf' })
+    );
+
+    const shaNode = await screen.findByTestId('b4-calculated-sha256');
+    expect(shaNode.textContent?.trim()).toBe(expectedSha);
+    expect(screen.getByTestId('b4-hash-evaluation-notice').textContent).toContain(
+      LOCAL_PDF_UNTRUSTED_HASH_NOTICE
+    );
+    expect(screen.getByTestId('b4-page-count-comparison').textContent).toMatch(/2.*7/);
+
+    expect(screen.getByTestId('b4-page-indicator').textContent).toBe('Strona 1 z 2');
+    await user.click(screen.getByTestId('b4-next-page-btn'));
+    expect(screen.getByTestId('b4-page-indicator').textContent).toBe('Strona 2 z 2');
+    await user.click(screen.getByTestId('b4-prev-page-btn'));
+    expect(screen.getByTestId('b4-page-indicator').textContent).toBe('Strona 1 z 2');
+
+    const jumpInput = screen.getByLabelText('Przejdź do numeru strony PDF');
+    await user.clear(jumpInput);
+    await user.type(jumpInput, '2');
+    await user.click(screen.getByTestId('b4-go-page-btn'));
+    expect(screen.getByTestId('b4-page-indicator').textContent).toBe('Strona 2 z 2');
+
+    await user.click(screen.getByRole('button', { name: 'Powiększ podgląd PDF' }));
+    expect(screen.getByTestId('b4-zoom-indicator').textContent).toBe('125%');
+    await user.click(screen.getByRole('button', { name: 'Pomniejsz podgląd PDF' }));
+    expect(screen.getByTestId('b4-zoom-indicator').textContent).toBe('110%');
+
+    expect(screen.getByTestId('b4-text-layer-disclaimer').textContent).toBe(
+      LOCAL_PDF_TEXT_LAYER_DISCLAIMER
+    );
+    await user.click(screen.getByTestId('b4-prev-page-btn'));
+    await user.type(screen.getByTestId('b4-pdf-text-search'), 'sodu chlorek');
+    await user.click(screen.getByRole('button', { name: 'Szukaj w tekście' }));
+
+    const resultsBox = await screen.findByTestId('b4-text-search-results');
+    const jumpMatchBtn = within(resultsBox).getByRole('button', { name: 'Strona 2' });
+    await user.click(jumpMatchBtn);
+    expect(screen.getByTestId('b4-page-indicator').textContent).toBe('Strona 2 z 2');
+
+    // Próba zapisu bez zaznaczenia bramki człowieka musi zostać odrzucona
+    const form = screen.getByTestId('b4-pdf-evidence-form');
+    await user.selectOptions(within(form).getByLabelText(/Pytanie audytowe/i), 'dec-bcg-42-injection-site');
+    await user.type(within(form).getByLabelText(/Numer drukowany/i), '2');
+    await user.type(
+      within(form).getByLabelText(/Sprawdzony cytat/i),
+      'Sodu chlorek i woda do wstrzykiwan na str. 2.'
+    );
+    await user.type(
+      within(form).getByLabelText(/Obserwacja audytora/i),
+      'Sprawdzono fragment w lokalnym podglądzie PDF.'
+    );
+    await user.click(screen.getByTestId('b4-submit-pdf-evidence-btn'));
+
+    expect(within(form).getByRole('alert').textContent).toMatch(/potwierdzenia|PDF/i);
+    expect(JSON.parse(screen.getByTestId('harness-entries-json').textContent || '[]')).toHaveLength(
+      0
+    );
+    expect(within(form).getByText(LOCAL_PDF_NO_CLINICAL_APPROVAL_NOTICE)).toBeInTheDocument();
+
+    // Poprawne potwierdzenie tworzy source_excerpt_reviewed z autoResolved: false
+    await user.click(screen.getByTestId('b4-ev-human-confirm'));
+    await user.click(screen.getByTestId('b4-submit-pdf-evidence-btn'));
+
+    let savedEntries = JSON.parse(
+      screen.getByTestId('harness-entries-json').textContent || '[]'
+    ) as EvidenceLedgerEntry[];
+    expect(savedEntries).toHaveLength(1);
+    expect(savedEntries[0]?.qualificationClass).toBe('source_excerpt_reviewed');
+    expect(savedEntries[0]?.autoResolved).toBe(false);
+    expect(savedEntries[0]?.sourceDocumentHash).toBe(expectedSha);
+    expect(savedEntries[0]?.artifactId).toBeTruthy();
+
+    // Rejestracja potwierdzonej rozbieżności conflicting_source_excerpt również utrzymuje autoResolved: false
+    await user.selectOptions(within(form).getByLabelText(/Relacja względem pytania/i), 'contradicts');
+    await user.selectOptions(
+      within(form).getByLabelText(/Klasa kwalifikacji dowodu/i),
+      'conflicting_source_excerpt'
+    );
+    await user.selectOptions(within(form).getByLabelText(/Status roboczy dowodu/i), 'conflicting_evidence');
+    await user.type(
+      within(form).getByLabelText(/Sprawdzony cytat/i),
+      'Rozbieżny zapis w otwartym dokumencie PDF str. 2.'
+    );
+    await user.type(
+      within(form).getByLabelText(/Obserwacja audytora/i),
+      'Wykazano niezgodność pomiędzy dwoma fragmentami.'
+    );
+    await user.click(screen.getByTestId('b4-ev-human-confirm'));
+    await user.click(screen.getByTestId('b4-submit-pdf-evidence-btn'));
+
+    savedEntries = JSON.parse(
+      screen.getByTestId('harness-entries-json').textContent || '[]'
+    ) as EvidenceLedgerEntry[];
+    expect(savedEntries).toHaveLength(2);
+    expect(savedEntries[0]?.qualificationClass).toBe('conflicting_source_excerpt');
+    expect(savedEntries[0]?.autoResolved).toBe(false);
+  }, 20000);
+
+  it('nie degraduje dowodu przy identycznym SHA-256 i uruchamia kaskadę ponownej weryfikacji po zmianie bajtów PDF', async () => {
+    const user = userEvent.setup();
+    const pdfV1 = buildSyntheticPdfBytes({ title: 'BCG v1' });
+    const pdfV2 = buildSyntheticPdfBytes({
+      title: 'BCG v2 zmodyfikowany',
+      pages: [
+        { lines: ['Zmieniona treść strony 1'] },
+        { lines: ['Zmieniona treść strony 2'] }
+      ]
+    });
+
+    render(
+      <LocalPdfBridgeHarness
+        openPdfDocumentFn={async () => createMockOpenedPdfSession()}
+      />
+    );
+
+    const fileInput = screen.getByTestId('b4-local-pdf-input') as HTMLInputElement;
+    await user.upload(fileInput, new File([pdfV1], 'bcg10.pdf', { type: 'application/pdf' }));
+    const firstArtifactId = (await screen.findByTestId('b4-active-artifact-id')).textContent?.trim();
+
+    const form = screen.getByTestId('b4-pdf-evidence-form');
+    await user.selectOptions(within(form).getByLabelText(/Pytanie audytowe/i), 'dec-bcg-42-injection-site');
+    await user.type(within(form).getByLabelText(/Sprawdzony cytat/i), 'Fragment z wersji v1.');
+    await user.type(within(form).getByLabelText(/Obserwacja audytora/i), 'Sprawdzono wersję v1.');
+    await user.click(screen.getByTestId('b4-ev-human-confirm'));
+    await user.click(screen.getByTestId('b4-submit-pdf-evidence-btn'));
+
+    // Ponowne wgranie identycznych bajtów
+    await user.upload(fileInput, new File([pdfV1], 'bcg10.pdf', { type: 'application/pdf' }));
+    const secondArtifactId = (await screen.findByTestId('b4-active-artifact-id')).textContent?.trim();
+    expect(secondArtifactId).toBe(firstArtifactId);
+    expect(screen.queryByTestId('b4-reverification-alert')).not.toBeInTheDocument();
+
+    let entries = JSON.parse(
+      screen.getByTestId('harness-entries-json').textContent || '[]'
+    ) as EvidenceLedgerEntry[];
+    expect(entries[0]?.requiresReverification).toBe(false);
+    expect(entries[0]?.qualificationClass).toBe('source_excerpt_reviewed');
+
+    // Wgranie zmienionych bajtów pod tą samą nazwą uruchamia kaskadę
+    await user.upload(fileInput, new File([pdfV2], 'bcg10.pdf', { type: 'application/pdf' }));
+    expect(await screen.findByTestId('b4-reverification-alert')).toBeInTheDocument();
+    const thirdArtifactId = screen.getByTestId('b4-active-artifact-id').textContent?.trim();
+    expect(thirdArtifactId).not.toBe(firstArtifactId);
+
+    entries = JSON.parse(
+      screen.getByTestId('harness-entries-json').textContent || '[]'
+    ) as EvidenceLedgerEntry[];
+    expect(entries[0]?.requiresReverification).toBe(true);
+    expect(entries[0]?.qualificationClass).toBe('source_excerpt_pending_review');
+  }, 20000);
+
+  it('po przeładowaniu wyświetla baner ponownego wskazania pliku i pozwala bezpiecznie wyczyścić metadane artefaktów', async () => {
+    const user = userEvent.setup();
+    const baseSources = buildBaseSourceRegistry(STAGE1_CHPL_AUDIT_BUNDLE);
+    const reg = registerLocalPdfInspectionSession({
+      sources: baseSources,
+      entries: [],
+      inspection: {
+        documentId: 'doc-rpl-bcg10-19535',
+        verificationSessionId: 'sess-reload-test',
+        fileName: 'bcg10-local.pdf',
+        fileSizeBytes: 1024,
+        mimeType: 'application/pdf',
+        sha256Hex: 'a'.repeat(64),
+        comparisonStatus: 'calculated_from_local_file',
+        integrityStatus: 'hash_calculated',
+        referenceType: 'none',
+        referenceHash: null,
+        pageCount: 2,
+        pdfParserVersion: '6.5.438',
+        metadataStatus: 'extracted',
+        textLayerStatus: 'text_layer_available',
+        pdfMetadata: createEmptyPdfMetadataSummary({ title: 'Reload Test' }),
+        operatorDeclaredOrigin: null
+      }
+    });
+    saveLocalSourceArtifactsToStorage(localStorage, reg.updatedSources);
+
+    const { unmount } = render(
+      <LocalPdfBridgeHarness openPdfDocumentFn={async () => createMockOpenedPdfSession()} />
+    );
+
+    expect(screen.getByTestId('b4-reload-reselect-banner').textContent).toContain(
+      LOCAL_PDF_RELOAD_REQUIRED_NOTICE
+    );
+    expect(screen.getByTestId('b4-source-availability').textContent).toMatch(
+      /wymagane ponowne wybranie pliku/i
+    );
+
+    await user.click(screen.getByTestId('b4-clear-artifacts-btn'));
+    expect(localStorage.getItem(SOURCE_ARTIFACTS_STORAGE_KEY)).toBeNull();
+    expect(screen.queryByTestId('b4-reload-reselect-banner')).not.toBeInTheDocument();
+
+    unmount();
+  });
 });

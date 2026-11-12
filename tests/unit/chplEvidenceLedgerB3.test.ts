@@ -167,7 +167,7 @@ describe('Etap B3 — Autentyczność źródeł, kwalifikacja dowodów, migracja
     const sources = buildBaseSourceRegistry(STAGE1_CHPL_AUDIT_BUNDLE);
     const baseline = buildBaselineEvidenceEntries(STAGE1_CHPL_AUDIT_BUNDLE, sources);
 
-    expect(ALLOWED_EVIDENCE_QUALIFICATION_CLASSES).toHaveLength(6);
+    expect(ALLOWED_EVIDENCE_QUALIFICATION_CLASSES).toHaveLength(7);
     for (const qClass of ALLOWED_EVIDENCE_QUALIFICATION_CLASSES) {
       expect(getQualificationClassPresentation(qClass).label.length).toBeGreaterThan(5);
     }
@@ -175,7 +175,8 @@ describe('Etap B3 — Autentyczność źródeł, kwalifikacja dowodów, migracja
     expect(baseline.some((e) => e.qualificationClass === 'source_excerpt_reviewed')).toBe(false);
     expect(baseline.some((e) => e.qualificationClass === 'unavailable_source_reference')).toBe(true);
     expect(baseline.some((e) => e.qualificationClass === 'secondary_reference')).toBe(true);
-    expect(baseline.some((e) => e.qualificationClass === 'conflicting_source_excerpt')).toBe(true);
+    expect(baseline.some((e) => e.qualificationClass === 'conflicting_reference')).toBe(true);
+    expect(baseline.some((e) => e.qualificationClass === 'conflicting_source_excerpt')).toBe(false);
     expect(baseline.some((e) => e.qualificationClass === 'traceability_reference')).toBe(true);
 
     // Próba nadania source_excerpt_reviewed bez checkboxa potwierdzenia treści PDF
@@ -256,7 +257,10 @@ describe('Etap B3 — Autentyczność źródeł, kwalifikacja dowodów, migracja
     expect(metrics.historicalDocumentsCount).toBe(1);
     expect(metrics.documentsWithoutSha256Count).toBe(1);
     expect(metrics.documentsWithCalculatedSha256Count).toBe(8);
+    expect(metrics.documentsWithComparedHashCount).toBe(1);
     expect(metrics.verifiedExcerptsCount).toBe(0);
+    expect(metrics.conflictingReferencesCount).toBe(14);
+    expect(metrics.conflictingExcerptsCount).toBe(0);
     expect(metrics.questionsWithoutConfirmedExcerptsCount).toBe(8);
     expect(metrics.disclaimer).toBe(SOURCE_QUALITY_DISCLAIMER);
   });

@@ -773,6 +773,7 @@ export const WorkbenchEvidenceLedgerPanel: React.FC<WorkbenchEvidenceLedgerPanel
                     {entry.qualificationClass === 'source_excerpt_reviewed' ? (
                       <CheckCircle2 size={13} aria-hidden="true" />
                     ) : entry.qualificationClass === 'conflicting_source_excerpt' ||
+                      entry.qualificationClass === 'conflicting_reference' ||
                       entry.qualificationClass === 'unavailable_source_reference' ? (
                       <AlertTriangle size={13} aria-hidden="true" />
                     ) : (
@@ -788,6 +789,11 @@ export const WorkbenchEvidenceLedgerPanel: React.FC<WorkbenchEvidenceLedgerPanel
                       ? 'Odniesienie bazowe Etapu I (read-only)'
                       : 'Roboczy wpis lokalny audytora'}
                   </span>
+                  {entry.reviewedInLocalPdfSession && (
+                    <span className="wb-b4-session-evidence-pill">
+                      Sprawdzono w sesji PDF (B4){entry.artifactId ? ` · ${entry.artifactId}` : ''}
+                    </span>
+                  )}
                   {entry.requiresReverification && (
                     <span className="wb-b3-reverify-pill">Wymaga kontroli w oryginalnym PDF</span>
                   )}
@@ -1049,7 +1055,8 @@ export const WorkbenchEvidenceLedgerPanel: React.FC<WorkbenchEvidenceLedgerPanel
             </select>
           </div>
 
-          {evidenceForm.qualificationClass === 'source_excerpt_reviewed' && (
+          {(evidenceForm.qualificationClass === 'source_excerpt_reviewed' ||
+            evidenceForm.qualificationClass === 'conflicting_source_excerpt') && (
             <div className="wb-b2-form-row">
               <label className="wb-b2-checkbox-label">
                 <input

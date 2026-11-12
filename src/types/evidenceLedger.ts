@@ -53,20 +53,41 @@ export type SourceOriginAxisStatus =
 export type SourceAcquisitionAxisStatus =
   | 'not_acquired'
   | 'acquired'
+  | 'session_local_file_selected'
   | 'temporarily_unavailable'
   | 'permanently_unavailable_unknown'
   | 'access_failed'
   | 'historical_copy_only';
 
 /**
- * Oś 3 (B3): Integralność pliku / SHA-256 (File Integrity).
+ * Oś B4: Dostępność rzeczywistego pliku PDF w bieżącej sesji przeglądarki.
+ */
+export type FileAvailabilityStatus =
+  | 'no_file'
+  | 'selected_in_session'
+  | 'verified_in_session'
+  | 'metadata_only_reload_required';
+
+/**
+ * Oś B4: Miejsce i trwałość przechowywania artefaktu PDF (nigdy bajtów PDF w localStorage).
+ */
+export type PdfStorageLocationStatus =
+  | 'no_binary_file'
+  | 'repository_local_file_metadata'
+  | 'session_memory_only'
+  | 'metadata_persisted_reload_required';
+
+/**
+ * Oś 3 (B3/B4): Integralność pliku / SHA-256 (File Integrity).
  */
 export type FileIntegrityAxisStatus =
   | 'not_checked'
   | 'hash_calculated'
+  | 'reference_hash_recorded_no_local_file'
   | 'hash_matches_known_reference'
   | 'hash_mismatch'
-  | 'hash_reference_unavailable';
+  | 'hash_reference_unavailable'
+  | 'hash_calculation_failed';
 
 /**
  * Oś 4 (B3): Kontrola treści dokumentu (Content Review).
@@ -83,24 +104,31 @@ export interface SourceStatusAxes {
   acquisitionStatus: SourceAcquisitionAxisStatus;
   integrityStatus: FileIntegrityAxisStatus;
   contentReviewStatus: ContentReviewAxisStatus;
+  fileAvailability?: FileAvailabilityStatus;
+  storageMode?: PdfStorageLocationStatus;
 }
 
 export type HashComparisonStatus =
   | 'calculated_from_local_file'
   | 'compared_with_known_reference'
+  | 'compared_with_trusted_reference'
+  | 'reference_recorded_no_local_file'
+  | 'reference_untrusted'
   | 'not_compared'
   | 'hash_from_untrusted_source'
-  | 'hash_mismatch';
+  | 'hash_mismatch'
+  | 'calculation_failed';
 
 export type HashReferenceType =
   | 'none'
   | 'bundle_recorded_sha256'
   | 'local_workspace_sha256'
   | 'prior_session_snapshot'
+  | 'operator_untrusted'
   | 'imported_unverified_claim';
 
 /**
- * Pełna proweniencja sumy SHA-256 (B3).
+ * Pełna proweniencja sumy SHA-256 (B3/B4).
  * Sam hash potwierdza wyłącznie identyczność bajtową z ewentualnym wzorcem — nigdy autentyczność urzędową ani poprawność kliniczną.
  */
 export interface HashProvenanceRecord {
@@ -114,6 +142,32 @@ export interface HashProvenanceRecord {
   referenceType: HashReferenceType;
   referenceHash: string | null;
   comparisonStatus: HashComparisonStatus;
+  mimeType?: string | null;
+  pdfPageCount?: number | null;
+  verificationSessionId?: string | null;
+  referenceOriginNote?: string | null;
+}
+
+export type LocalPdfMetadataStatus = 'not_run' | 'extracted' | 'partial_or_empty' | 'failed';
+export type LocalPdfTextLayerStatus = 'not_run' | 'text_layer_available' | 'no_text_layer' | 'failed';
+export type LocalPdfPreviewStatus =
+  | 'not_opened'
+  | 'previewed_in_session'
+  | 'reselection_required_after_reload'
+  | 'failed';
+export type LocalPdfPageCountComparisonStatus = 'matches' | 'mismatch' | 'not_available';
+export type LocalPdfHashReferenceMode = 'registry_reference' | 'none' | 'operator_untrusted';
+
+export interface LocalPdfMetadataSummary {
+  title: string | null;
+  author: string | null;
+  subject: string | null;
+  creator: string | null;
+  producer: string | null;
+  creationDate: string | null;
+  modDate: string | null;
+  pdfVersion: string | null;
+  untrustedDisclaimer: string;
 }
 
 export type ArtifactChangeCategory =
@@ -145,6 +199,16 @@ export interface DocumentArtifactRecord {
   physicalPageCount: number | null;
   fileSizeBytes: number | null;
   hashProvenance: HashProvenanceRecord;
+  localArtifactId?: string | null;
+  mimeType?: string | null;
+  selectedInSessionAt?: string | null;
+  pdfParserVersion?: string | null;
+  metadataExtractionStatus?: LocalPdfMetadataStatus;
+  textExtractionStatus?: LocalPdfTextLayerStatus;
+  localPreviewStatus?: LocalPdfPreviewStatus;
+  operatorDeclaredOrigin?: string | null;
+  reverificationRequired?: boolean;
+  pdfMetadata?: LocalPdfMetadataSummary | null;
 }
 
 export type RetrievalAttemptResult =
@@ -215,6 +279,11 @@ export interface SourceRegistryEntry {
   registryVsFileDistinctionNote: string;
   historicalNotice?: string;
   isHistoricalRejectedForCurrentSeason?: boolean;
+  activeSessionPageCount?: number | null;
+  registryReferencePageCount?: number | null;
+  pageCountComparisonStatus?: LocalPdfPageCountComparisonStatus | null;
+  sessionFileName?: string | null;
+  hasPersistedLocalArtifactMetadata?: boolean;
 }
 
 export type PageNumberingType =
@@ -255,6 +324,7 @@ export type EvidenceQualificationClass =
   | 'traceability_reference'
   | 'source_excerpt_pending_review'
   | 'source_excerpt_reviewed'
+  | 'conflicting_reference'
   | 'conflicting_source_excerpt'
   | 'secondary_reference'
   | 'unavailable_source_reference';
@@ -316,6 +386,9 @@ export interface EvidenceLedgerEntry {
   isWorkingNote: boolean;
   requiresReverification: boolean;
   importProvenance?: EvidenceImportProvenance;
+  verificationSessionId?: string | null;
+  sourceAxisSummaryAtReview?: string | null;
+  reviewedInLocalPdfSession?: boolean;
   recordedAt: string;
   recordedBy: string;
 }
@@ -362,9 +435,14 @@ export interface SourceQualityMetrics {
   documentsWithoutSha256Count: number;
   documentsWithCalculatedSha256Count: number;
   documentsWithComparedHashCount: number;
+  referenceHashesWithoutLocalFileCount: number;
+  sessionVerifiedPdfCount: number;
+  reloadRequiredPdfCount: number;
   referencesRequiringReviewCount: number;
   verifiedExcerptsCount: number;
+  conflictingReferencesCount: number;
   conflictingExcerptsCount: number;
+  reverificationRequiredCount: number;
   questionsWithoutConfirmedExcerptsCount: number;
   importedUnconfirmedClaimsCount: number;
   disclaimer: string;
@@ -383,10 +461,38 @@ export interface QuestionTraceabilitySummary {
   totalEvidenceCount: number;
   verifiedExcerptsCount: number;
   pendingReviewCount: number;
+  conflictingReferencesCount: number;
   conflictingExcerptsCount: number;
   workingNotesCount: number;
   relationshipsCount: Record<EvidenceRelationship, number>;
   linkedDocumentIds: string[];
+}
+
+export interface PersistedLocalSourceArtifactEntry {
+  documentId: string;
+  currentArtifact: DocumentArtifactRecord | null;
+  artifactHistory: DocumentArtifactRecord[];
+  sha256: string | null;
+  sha256Basis: Sha256VerificationBasis;
+  sha256ScopeLabel: string;
+  physicalPageCount: number | null;
+  registryReferencePageCount: number | null;
+  pageCountComparisonStatus: LocalPdfPageCountComparisonStatus | null;
+  fileSizeBytes: number | null;
+  sessionFileName: string | null;
+  pageCountNote?: string;
+  statusAxes: Pick<
+    SourceStatusAxes,
+    'originStatus' | 'acquisitionStatus' | 'integrityStatus' | 'contentReviewStatus'
+  >;
+  updatedAt: string;
+}
+
+export interface SourceArtifactsStoragePayload {
+  schemaVersion: string;
+  savedAt: string;
+  bytesPersistedInLocalStorage: false;
+  items: PersistedLocalSourceArtifactEntry[];
 }
 
 export interface EvidenceLedgerStorageSaveResult {

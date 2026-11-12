@@ -169,4 +169,40 @@ describe('Globalna nawigacja: Header, Sidebar, DashboardView i ModulePlaceholder
     await user.click(screen.getAllByRole('button', { name: /Powrót do Pulpitu/i })[0]);
     expect(onBack).toHaveBeenCalledTimes(1);
   });
+
+  it('zachowuje poprawną hierarchię nagłówków h1 -> h2 bez przeskoku h1 -> h3 w ModulePlaceholder', () => {
+    const onBack = vi.fn();
+    const onNavigate = vi.fn();
+    const fallbackModule = APP_MODULES.find(
+      (m) =>
+        !m.isCore &&
+        m.id !== 'vaccination-calendar' &&
+        m.id !== 'special-situations' &&
+        m.id !== 'cold-chain'
+    );
+    const idsToCheck: ModuleId[] = [
+      'vaccination-calendar',
+      'special-situations',
+      'cold-chain',
+      ...(fallbackModule ? [fallbackModule.id] : [])
+    ];
+
+    for (const modId of idsToCheck) {
+      const { container, unmount } = render(
+        <ModulePlaceholder
+          module={getModule(modId)}
+          onBackToDashboard={onBack}
+          onNavigateToModule={onNavigate}
+        />
+      );
+      const headings = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6')).map((el) =>
+        Number(el.tagName.slice(1))
+      );
+      expect(headings[0]).toBe(1);
+      for (let i = 1; i < headings.length; i++) {
+        expect(headings[i] - headings[i - 1]).toBeLessThanOrEqual(1);
+      }
+      unmount();
+    }
+  });
 });

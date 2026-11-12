@@ -21,16 +21,24 @@ import type {
   EvidenceRelationship,
   EvidenceReviewStatus,
   EvidenceTraceabilityFilters,
+  FileAvailabilityStatus,
   FileIntegrityAxisStatus,
   HashComparisonStatus,
   HashProvenanceRecord,
   InformalWorkingNote,
+  LocalPdfMetadataSummary,
+  LocalPdfPageCountComparisonStatus,
+  LocalPdfTextLayerStatus,
+  LocalPdfMetadataStatus,
   PageNumberingType,
+  PdfStorageLocationStatus,
+  PersistedLocalSourceArtifactEntry,
   QrdLocationReference,
   QuestionTraceabilitySummary,
   QuestionWorkStatus,
   RetrievalAttemptRecord,
   SourceAcquisitionAxisStatus,
+  SourceArtifactsStoragePayload,
   SourceAuthorityType,
   SourceObjectType,
   SourceOriginAxisStatus,
@@ -53,9 +61,11 @@ export const SUPPORTED_EVIDENCE_LEDGER_SCHEMA_VERSIONS: readonly string[] = [
   LEGACY_B2_EVIDENCE_LEDGER_SCHEMA_VERSION,
   EVIDENCE_LEDGER_SCHEMA_VERSION
 ] as const;
-export const SOURCE_REGISTRY_VERSION = '2026.11.11-etap-b3-sources-2.0';
+export const SOURCE_REGISTRY_VERSION = '2026.11.12-etap-b4-sources-2.1';
 export const EVIDENCE_LEDGER_STORAGE_KEY = 'vaxnurse_chpl_evidence_ledger_v1';
 export const WORKING_NOTES_STORAGE_KEY = 'vaxnurse_chpl_working_notes_v1';
+export const SOURCE_ARTIFACTS_STORAGE_KEY = 'vaxnurse_chpl_source_artifacts_v1';
+export const SOURCE_ARTIFACTS_SCHEMA_VERSION = '1.0.0';
 
 export const SOURCE_QUALITY_DISCLAIMER =
   'Metryki pokazują stan dokumentacji i kontroli źródeł. Nie stanowią oceny klinicznej ani potwierdzenia poprawności wszystkich informacji o preparatach.';
@@ -97,6 +107,7 @@ export const ALLOWED_EVIDENCE_QUALIFICATION_CLASSES: readonly EvidenceQualificat
   'traceability_reference',
   'source_excerpt_pending_review',
   'source_excerpt_reviewed',
+  'conflicting_reference',
   'conflicting_source_excerpt',
   'secondary_reference',
   'unavailable_source_reference'
@@ -352,6 +363,8 @@ export function getAcquisitionAxisStatusLabel(status: SourceAcquisitionAxisStatu
   switch (status) {
     case 'acquired':
       return 'Dokument pozyskany (kopia obecna lokalnie w repozytorium)';
+    case 'session_local_file_selected':
+      return 'Plik PDF wybrany lokalnie przez operatora w bieżącej sesji przeglądarki (wyłącznie w RAM sesji)';
     case 'not_acquired':
       return 'Nie pozyskano lokalnej kopii PDF (wyłącznie metadane / weryfikacja HTTP)';
     case 'temporarily_unavailable':
@@ -365,18 +378,50 @@ export function getAcquisitionAxisStatusLabel(status: SourceAcquisitionAxisStatu
   }
 }
 
+export function getFileAvailabilityLabel(status: FileAvailabilityStatus | undefined): string {
+  switch (status) {
+    case 'verified_in_session':
+      return 'Otwarty i zweryfikowany technicznie w bieżącej sesji (PDF.js + SHA-256)';
+    case 'selected_in_session':
+      return 'Wybrany w bieżącej sesji (oczekuje na zakończenie walidacji / podglądu)';
+    case 'metadata_only_reload_required':
+      return 'Tylko metadane / po odświeżeniu wymagane ponowne wybranie pliku do podglądu';
+    case 'no_file':
+    default:
+      return 'Brak pliku PDF w sesji przeglądarki';
+  }
+}
+
+export function getPdfStorageLocationLabel(status: PdfStorageLocationStatus | undefined): string {
+  switch (status) {
+    case 'session_memory_only':
+      return 'Wyłącznie pamięć sesji przeglądarki (RAM) — bajty PDF nigdy nie są zapisywane w localStorage ani wysyłane na serwer';
+    case 'metadata_persisted_reload_required':
+      return 'Zapisano lokalnie wyłącznie metadane i SHA-256 — zawartość PDF nie jest trwała między przeładowaniami';
+    case 'repository_local_file_metadata':
+      return 'Lokalny plik referencyjny w repozytorium (akt.pdf) — do podglądu PDF.js wskaż plik z dysku';
+    case 'no_binary_file':
+    default:
+      return 'Brak lokalnego pliku binarnego PDF (wyłącznie rekord rejestrowy / metadane)';
+  }
+}
+
 export function getIntegrityAxisStatusLabel(status: FileIntegrityAxisStatus): string {
   switch (status) {
     case 'not_checked':
       return 'Integralność niesprawdzona (brak pliku PDF)';
     case 'hash_calculated':
-      return 'Wyłącznie obliczony SHA-256 (bez wzorca porównawczego — nie potwierdza autentyczności)';
+      return 'Wyłącznie obliczony SHA-256 bez wiarygodnego wzorca — nie potwierdza pochodzenia ani autentyczności';
+    case 'reference_hash_recorded_no_local_file':
+      return 'Zapisano wyłącznie skrót referencyjny z Etapu I — brak lokalnego pliku PDF do sprawdzenia w sesji';
     case 'hash_matches_known_reference':
-      return 'SHA-256 zgodny z wcześniej zapisanym wzorcem (identyczność bajtowa, nie certyfikat urzędowy)';
+      return 'SHA-256 lokalnego pliku zgodny z zapisanym wzorcem (identyczność bajtowa, nie certyfikat urzędowy)';
     case 'hash_mismatch':
-      return 'Rozbieżność SHA-256 względem znanego wzorca';
+      return 'Rozbieżność SHA-256 względem znanego wzorca lub poprzedniej wersji artefaktu';
     case 'hash_reference_unavailable':
       return 'Brak wzorca SHA-256 do porównania';
+    case 'hash_calculation_failed':
+      return 'Błąd wyliczania SHA-256 w przeglądarce — nie utworzono skrótu';
   }
 }
 
@@ -398,16 +443,35 @@ export function getContentReviewAxisStatusLabel(status: ContentReviewAxisStatus)
 export function getHashComparisonStatusLabel(status: HashComparisonStatus): string {
   switch (status) {
     case 'calculated_from_local_file':
-      return 'Hash wyliczony z lokalnego pliku';
+      return 'Hash wyliczony lokalnie z wybranego pliku PDF';
+    case 'compared_with_trusted_reference':
+      return 'Hash lokalnego pliku porównany i zgodny z referencyjnym wzorcem rejestrowym';
     case 'compared_with_known_reference':
       return 'Hash porównany z wcześniej zapisanym wzorcem';
+    case 'reference_recorded_no_local_file':
+      return 'Skrót referencyjny zapisany w Etapie I — brak lokalnego pliku PDF w sesji';
+    case 'reference_untrusted':
+      return 'Porównano wyłącznie z wzorcem podanym przez operatora / źródło zewnętrzne (NIEZAUFANY)';
     case 'not_compared':
-      return 'Hash nieporównany z żadnym wcześniejszym wzorcem';
+      return 'Hash nieporównany z żadnym wiarygodnym wzorcem';
     case 'hash_from_untrusted_source':
       return 'Hash z nieznanego / importowanego źródła (niezweryfikowany lokalnie)';
     case 'hash_mismatch':
       return 'Hash rozbieżny ze wzorcem';
+    case 'calculation_failed':
+      return 'Nie udało się obliczyć SHA-256 pliku';
   }
+}
+
+export function formatSourceAxisSummary(doc: SourceRegistryEntry): string {
+  const parts = [
+    `origin=${doc.statusAxes.originStatus}`,
+    `acq=${doc.statusAxes.acquisitionStatus}`,
+    `avail=${doc.statusAxes.fileAvailability ?? 'no_file'}`,
+    `storage=${doc.statusAxes.storageMode ?? 'no_binary_file'}`,
+    `integrity=${doc.statusAxes.integrityStatus}`
+  ];
+  return parts.join(' | ');
 }
 
 export function getQualificationClassPresentation(qClass: EvidenceQualificationClass): {
@@ -434,10 +498,16 @@ export function getQualificationClassPresentation(qClass: EvidenceQualificationC
         badgeText: 'Fragment zweryfikowany (lokalnie)',
         tone: 'verified'
       };
+    case 'conflicting_reference':
+      return {
+        label: 'Rozbieżność referencyjna z danych Etapu I lub wpisu roboczego (bez potwierdzonego lokalnego fragmentu PDF)',
+        badgeText: 'Rozbieżność referencyjna (bez PDF)',
+        tone: 'warning'
+      };
     case 'conflicting_source_excerpt':
       return {
-        label: 'Rozbieżność pomiędzy punktami dokumentu lub między źródłami',
-        badgeText: 'Rozbieżność źródłowa',
+        label: 'Rozbieżność potwierdzona przez operatora na podstawie sprawdzonego pliku PDF',
+        badgeText: 'Rozbieżność potwierdzona w PDF',
         tone: 'danger'
       };
     case 'secondary_reference':
@@ -537,7 +607,7 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       calculationMethod: 'SHA-256 odpowiedzi HTTP RPL (bez zapisu lokalnego pliku PDF w repozytorium)',
       referenceType: 'bundle_recorded_sha256',
       referenceHash: influvac.fileSha256,
-      comparisonStatus: 'compared_with_known_reference'
+      comparisonStatus: 'reference_recorded_no_local_file'
     });
     const attempt: RetrievalAttemptRecord = {
       attemptId: 'att-rpl-influvac-49462-20261111',
@@ -583,9 +653,12 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       statusAxes: {
         originStatus: 'official_origin_confirmed',
         acquisitionStatus: 'not_acquired',
-        integrityStatus: 'hash_matches_known_reference',
-        contentReviewStatus: 'awaiting_human_review'
+        integrityStatus: 'reference_hash_recorded_no_local_file',
+        contentReviewStatus: 'awaiting_human_review',
+        fileAvailability: 'no_file',
+        storageMode: 'no_binary_file'
       },
+      registryReferencePageCount: influvac.pageCount,
       currentArtifact: artifact,
       artifactHistory: [artifact],
       retrievalAttempts: [attempt],
@@ -609,7 +682,7 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       calculationMethod: 'SHA-256 odpowiedzi HTTP RPL (bez zapisu lokalnego pliku PDF w repozytorium)',
       referenceType: 'bundle_recorded_sha256',
       referenceHash: vaxigrip.fileSha256,
-      comparisonStatus: 'compared_with_known_reference'
+      comparisonStatus: 'reference_recorded_no_local_file'
     });
     const attempt: RetrievalAttemptRecord = {
       attemptId: 'att-rpl-vaxigrip-50032-20261111',
@@ -655,9 +728,12 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       statusAxes: {
         originStatus: 'official_origin_confirmed',
         acquisitionStatus: 'not_acquired',
-        integrityStatus: 'hash_matches_known_reference',
-        contentReviewStatus: 'awaiting_human_review'
+        integrityStatus: 'reference_hash_recorded_no_local_file',
+        contentReviewStatus: 'awaiting_human_review',
+        fileAvailability: 'no_file',
+        storageMode: 'no_binary_file'
       },
+      registryReferencePageCount: vaxigrip.pageCount,
       currentArtifact: artifact,
       artifactHistory: [artifact],
       retrievalAttempts: [attempt],
@@ -681,7 +757,7 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       calculationMethod: 'SHA-256 pełnego strumienia PDF EMA EPAR PL (177 str.) porównany ze skrótem Etapu I',
       referenceType: 'bundle_recorded_sha256',
       referenceHash: spikevax.fileSha256,
-      comparisonStatus: 'compared_with_known_reference'
+      comparisonStatus: 'reference_recorded_no_local_file'
     });
     const spikevaxPlAttempt: RetrievalAttemptRecord = {
       attemptId: 'att-ema-spikevax-pl-20261111',
@@ -727,9 +803,12 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       statusAxes: {
         originStatus: 'official_origin_confirmed',
         acquisitionStatus: 'not_acquired',
-        integrityStatus: 'hash_matches_known_reference',
-        contentReviewStatus: 'discrepancy_found'
+        integrityStatus: 'reference_hash_recorded_no_local_file',
+        contentReviewStatus: 'discrepancy_found',
+        fileAvailability: 'no_file',
+        storageMode: 'no_binary_file'
       },
+      registryReferencePageCount: spikevax.pageCount,
       currentArtifact: spikevaxPlArtifact,
       artifactHistory: [spikevaxPlArtifact],
       retrievalAttempts: [spikevaxPlAttempt],
@@ -752,7 +831,7 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       calculationMethod: 'SHA-256 pełnego strumienia PDF EMA EPAR EN (158 str.) porównany ze skrótem MASTER 04',
       referenceType: 'bundle_recorded_sha256',
       referenceHash: '8932b31f46e652f9ee4be89ad65cd6003f9fa5a63be0f2af64affd645a0d7024',
-      comparisonStatus: 'compared_with_known_reference'
+      comparisonStatus: 'reference_recorded_no_local_file'
     });
     const spikevaxEnAttempt: RetrievalAttemptRecord = {
       attemptId: 'att-ema-spikevax-en-20261111',
@@ -801,9 +880,12 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       statusAxes: {
         originStatus: 'official_origin_confirmed',
         acquisitionStatus: 'not_acquired',
-        integrityStatus: 'hash_matches_known_reference',
-        contentReviewStatus: 'awaiting_human_review'
+        integrityStatus: 'reference_hash_recorded_no_local_file',
+        contentReviewStatus: 'awaiting_human_review',
+        fileAvailability: 'no_file',
+        storageMode: 'no_binary_file'
       },
+      registryReferencePageCount: 158,
       currentArtifact: spikevaxEnArtifact,
       artifactHistory: [spikevaxEnArtifact],
       retrievalAttempts: [spikevaxEnAttempt],
@@ -859,8 +941,11 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
         originStatus: 'official_origin_confirmed',
         acquisitionStatus: 'access_failed',
         integrityStatus: 'not_checked',
-        contentReviewStatus: 'not_reviewed'
+        contentReviewStatus: 'not_reviewed',
+        fileAvailability: 'no_file',
+        storageMode: 'no_binary_file'
       },
+      registryReferencePageCount: null,
       currentArtifact: null,
       artifactHistory: [],
       retrievalAttempts: [spikevaxCenAttempt],
@@ -884,7 +969,7 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       calculationMethod: 'SHA-256 odpowiedzi HTTP RPL (bez zapisu lokalnego pliku PDF w repozytorium)',
       referenceType: 'bundle_recorded_sha256',
       referenceHash: bcg.fileSha256,
-      comparisonStatus: 'compared_with_known_reference'
+      comparisonStatus: 'reference_recorded_no_local_file'
     });
     const bcgAttempt: RetrievalAttemptRecord = {
       attemptId: 'att-rpl-bcg10-19535-20261111',
@@ -930,9 +1015,12 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       statusAxes: {
         originStatus: 'official_origin_confirmed',
         acquisitionStatus: 'not_acquired',
-        integrityStatus: 'hash_matches_known_reference',
-        contentReviewStatus: 'discrepancy_found'
+        integrityStatus: 'reference_hash_recorded_no_local_file',
+        contentReviewStatus: 'discrepancy_found',
+        fileAvailability: 'no_file',
+        storageMode: 'no_binary_file'
       },
+      registryReferencePageCount: bcg.pageCount,
       currentArtifact: bcgArtifact,
       artifactHistory: [bcgArtifact],
       retrievalAttempts: [bcgAttempt],
@@ -956,7 +1044,7 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
     calculationMethod: 'SHA-256 odpowiedzi HTTP historycznego rekordu RPL 35346 (sezon 2025/2026)',
     referenceType: 'bundle_recorded_sha256',
     referenceHash: '3d07b0b85de404187616b0acb158d4b0526a2e3e513f1cd98eda52adcaaaf044',
-    comparisonStatus: 'compared_with_known_reference',
+    comparisonStatus: 'reference_recorded_no_local_file',
     isHistoricalVersion: true
   });
   const histAttempt: RetrievalAttemptRecord = {
@@ -1005,9 +1093,12 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
     statusAxes: {
       originStatus: 'official_origin_confirmed',
       acquisitionStatus: 'historical_copy_only',
-      integrityStatus: 'hash_matches_known_reference',
-      contentReviewStatus: 'awaiting_human_review'
+      integrityStatus: 'reference_hash_recorded_no_local_file',
+      contentReviewStatus: 'awaiting_human_review',
+      fileAvailability: 'no_file',
+      storageMode: 'no_binary_file'
     },
+    registryReferencePageCount: null,
     currentArtifact: histArtifact,
     artifactHistory: [histArtifact],
     retrievalAttempts: [histAttempt],
@@ -1080,8 +1171,11 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       originStatus: 'manual_review_required',
       acquisitionStatus: 'not_acquired',
       integrityStatus: 'hash_calculated',
-      contentReviewStatus: 'discrepancy_found'
+      contentReviewStatus: 'discrepancy_found',
+      fileAvailability: 'no_file',
+      storageMode: 'no_binary_file'
     },
+    registryReferencePageCount: 48,
     currentArtifact: infanrixArtifact,
     artifactHistory: [infanrixArtifact],
     retrievalAttempts: [infanrixAttempt],
@@ -1152,8 +1246,11 @@ export function buildBaseSourceRegistry(bundle: Stage1ChplAuditBundle): SourceRe
       originStatus: 'official_origin_confirmed',
       acquisitionStatus: 'acquired',
       integrityStatus: 'hash_matches_known_reference',
-      contentReviewStatus: 'section_reviewed'
+      contentReviewStatus: 'section_reviewed',
+      fileAvailability: 'metadata_only_reload_required',
+      storageMode: 'repository_local_file_metadata'
     },
+    registryReferencePageCount: 48,
     currentArtifact: psoArtifact,
     artifactHistory: [psoArtifact],
     retrievalAttempts: [psoAttempt],
@@ -1298,7 +1395,7 @@ function qualifyBaselineEntry(params: {
     return 'secondary_reference';
   }
   if (params.outcome === 'ambiguity_flagged') {
-    return 'conflicting_source_excerpt';
+    return 'conflicting_reference';
   }
   if (params.hasPdfPage && params.hasExcerptRef) {
     return 'source_excerpt_pending_review';
@@ -1557,7 +1654,19 @@ export interface WorkingEvidenceDraftInput {
   relationship: EvidenceRelationship;
   qualificationClass?: EvidenceQualificationClass;
   confirmedRealPdfContent?: boolean;
+  verificationSessionId?: string | null;
+  reviewedInLocalPdfSession?: boolean;
   reviewStatus: EvidenceReviewStatus;
+}
+
+function canQualifyConfirmedPdfExcerpt(doc: SourceRegistryEntry | undefined): boolean {
+  return Boolean(
+    doc &&
+      doc.statusAxes.acquisitionStatus !== 'access_failed' &&
+      doc.objectType !== 'official_endpoint' &&
+      !doc.isHistoricalRejectedForCurrentSeason &&
+      Boolean(doc.sha256)
+  );
 }
 
 function inferDefaultQualificationClassForDraft(
@@ -1574,7 +1683,11 @@ function inferDefaultQualificationClassForDraft(
     return 'secondary_reference';
   }
   if (input.relationship === 'contradicts') {
-    return 'conflicting_source_excerpt';
+    return input.confirmedRealPdfContent === true &&
+      input.pdfPageIndex !== null &&
+      canQualifyConfirmedPdfExcerpt(doc)
+      ? 'conflicting_source_excerpt'
+      : 'conflicting_reference';
   }
   if (input.pdfPageIndex !== null) {
     return 'source_excerpt_pending_review';
@@ -1649,16 +1762,23 @@ export function validateWorkingEvidenceInput(
     errors.push(`Nieprawidłowa klasa kwalifikacji dowodu: ${String(input.qualificationClass)}.`);
   }
 
-  if (input.qualificationClass === 'source_excerpt_reviewed') {
+  if (
+    input.qualificationClass === 'source_excerpt_reviewed' ||
+    input.qualificationClass === 'conflicting_source_excerpt'
+  ) {
+    const classLabel =
+      input.qualificationClass === 'conflicting_source_excerpt'
+        ? 'potwierdzonej rozbieżności w PDF (conflicting_source_excerpt)'
+        : 'zweryfikowanego fragmentu PDF (source_excerpt_reviewed)';
     if (!doc || doc.statusAxes.acquisitionStatus === 'access_failed' || doc.objectType === 'official_endpoint') {
-      errors.push('Nie można oznaczyć fragmentu jako zweryfikowanego dla niedostępnego endpointu lub błędu pobrania.');
+      errors.push(`Nie można przypisać klasy ${classLabel} dla niedostępnego endpointu lub błędu pobrania.`);
     } else if (doc.isHistoricalRejectedForCurrentSeason) {
-      errors.push('Dokument historyczny (2025/2026) nie może zostać zakwalifikowany jako zweryfikowany dowód dla bieżącego audytu.');
+      errors.push(`Dokument historyczny (2025/2026) nie może zostać zakwalifikowany jako ${classLabel} dla bieżącego audytu.`);
     } else if (!doc.sha256) {
-      errors.push('Brak zidentyfikowanego pliku / sumy SHA-256 — nie można zadeklarować weryfikacji fragmentu z PDF.');
+      errors.push(`Brak zidentyfikowanego pliku / sumy SHA-256 — nie można zadeklarować ${classLabel}.`);
     }
     if (input.pdfPageIndex === null) {
-      errors.push('Oznaczenie fragmentu jako zweryfikowanego wymaga wskazania konkretnej strony PDF (>= 1).');
+      errors.push(`Klasa ${classLabel} wymaga wskazania konkretnej strony PDF (>= 1).`);
     }
     if (input.confirmedRealPdfContent !== true) {
       errors.push('Wymagane jest jawne potwierdzenie, że cytowany fragment został ręcznie porównany z treścią rzeczywistego pliku PDF.');
@@ -1733,7 +1853,9 @@ export function createWorkingEvidenceEntry(
     autoResolved: false,
     origin: 'auditor_working_entry',
     isWorkingNote: true,
-    requiresReverification: qualificationClass !== 'source_excerpt_reviewed',
+    requiresReverification:
+      qualificationClass !== 'source_excerpt_reviewed' &&
+      qualificationClass !== 'conflicting_source_excerpt',
     importProvenance: {
       isImported: false,
       importedAt: null,
@@ -1745,6 +1867,9 @@ export function createWorkingEvidenceEntry(
       localConfirmationState: 'local_session_author',
       migrationSourceVersion: null
     },
+    verificationSessionId: input.verificationSessionId ?? null,
+    reviewedInLocalPdfSession: Boolean(input.reviewedInLocalPdfSession ?? input.verificationSessionId),
+    sourceAxisSummaryAtReview: formatSourceAxisSummary(doc),
     recordedAt: iso,
     recordedBy: LOCAL_WORKING_NOTE_AUTHOR
   };
@@ -1849,7 +1974,7 @@ function inferLegacyQualificationClass(
     return 'secondary_reference';
   }
   if (relationship === 'contradicts') {
-    return 'conflicting_source_excerpt';
+    return 'conflicting_reference';
   }
   if (pdfPageIndex !== null && excerptLength >= 10) {
     return 'source_excerpt_pending_review';
@@ -1929,27 +2054,36 @@ function validateImportedEvidenceEntryObject(
 
   // Ochrona spójności SHA-256 ze znanym dokumentem
   const incomingHash = raw.sourceDocumentHash;
+  let localStorageHistoricalOrResetHashMismatch = false;
   if (incomingHash !== null && incomingHash !== undefined) {
     if (!isValidSha256Hex(incomingHash)) {
       return { rejection: { kind: 'entry', id, reason: 'Nieprawidłowy format skrótu SHA-256.' } };
     }
     if (canonicalDoc.sha256 && incomingHash.toLowerCase() !== canonicalDoc.sha256.toLowerCase()) {
+      if (options.isLocalStorageMigration) {
+        localStorageHistoricalOrResetHashMismatch = true;
+      } else {
+        return {
+          rejection: {
+            kind: 'entry',
+            id,
+            reason: `Niezgodność skrótu SHA-256 dla dokumentu ${canonicalDoc.documentId} (możliwa modyfikacja pliku).`
+          }
+        };
+      }
+    }
+  } else if (canonicalDoc.sha256) {
+    if (options.isLocalStorageMigration) {
+      localStorageHistoricalOrResetHashMismatch = true;
+    } else {
       return {
         rejection: {
           kind: 'entry',
           id,
-          reason: `Niezgodność skrótu SHA-256 dla dokumentu ${canonicalDoc.documentId} (możliwa modyfikacja pliku).`
+          reason: `Brak wymaganego skrótu SHA-256 dla dokumentu posiadającego zapisany hash (${canonicalDoc.documentId}).`
         }
       };
     }
-  } else if (canonicalDoc.sha256) {
-    return {
-      rejection: {
-        kind: 'entry',
-        id,
-        reason: `Brak wymaganego skrótu SHA-256 dla dokumentu posiadającego zapisany hash (${canonicalDoc.documentId}).`
-      }
-    };
   }
 
   if (
@@ -2092,34 +2226,51 @@ function validateImportedEvidenceEntryObject(
 
   const incomingClaimedVerified =
     rawQualificationClass === 'source_excerpt_reviewed' ||
+    rawQualificationClass === 'conflicting_source_excerpt' ||
     (isPlainRecord(raw.importProvenance) &&
       (raw.importProvenance.claimedQualificationClass === 'source_excerpt_reviewed' ||
+        raw.importProvenance.claimedQualificationClass === 'conflicting_source_excerpt' ||
         raw.importProvenance.claimedOriginConfirmedByImport === true));
 
-  // Przy zewnętrznym imporcie JSON nigdy nie uznajemy cudzego statusu source_excerpt_reviewed za lokalnie potwierdzony
+  // Przy zewnętrznym imporcie JSON nigdy nie uznajemy cudzego statusu zweryfikowanego z PDF za lokalnie potwierdzony
   if (!options.isLocalStorageMigration && origin === 'auditor_working_entry' && incomingClaimedVerified) {
     importedVerificationClaim = true;
-    effectiveQualificationClass = 'source_excerpt_pending_review';
+    effectiveQualificationClass =
+      effectiveQualificationClass === 'conflicting_source_excerpt'
+        ? 'conflicting_reference'
+        : 'source_excerpt_pending_review';
     requiresReverification = true;
-  } else if (options.isLocalStorageMigration && origin === 'bundle_extract' && effectiveQualificationClass === 'source_excerpt_reviewed') {
+  } else if (
+    options.isLocalStorageMigration &&
+    origin === 'bundle_extract' &&
+    (effectiveQualificationClass === 'source_excerpt_reviewed' ||
+      effectiveQualificationClass === 'conflicting_source_excerpt')
+  ) {
     effectiveQualificationClass = inferredClass;
     requiresReverification = true;
   }
 
-  // Konflikt wersji artefaktu
+  // Konflikt wersji artefaktu lub zmiana hasha po przeładowaniu / resecie
   const incomingArtifactId =
     typeof raw.artifactId === 'string' && raw.artifactId.trim() ? raw.artifactId.trim() : null;
   const currentArtifactId = canonicalDoc.currentArtifact?.artifactId ?? null;
   let versionMismatchConflict: EvidenceLedgerImportConflict | undefined;
-  if (incomingArtifactId && currentArtifactId && incomingArtifactId !== currentArtifactId) {
-    versionMismatchConflict = {
-      kind: 'artifact_version_mismatch',
-      id,
-      details: `Wpis ${id} odwołuje się do artefaktu ${incomingArtifactId}, podczas gdy bieżąca wersja dokumentu to ${currentArtifactId}. Wymaga ponownego sprawdzenia.`
-    };
+  if (
+    (incomingArtifactId && currentArtifactId && incomingArtifactId !== currentArtifactId) ||
+    localStorageHistoricalOrResetHashMismatch
+  ) {
+    if (incomingArtifactId && currentArtifactId && incomingArtifactId !== currentArtifactId) {
+      versionMismatchConflict = {
+        kind: 'artifact_version_mismatch',
+        id,
+        details: `Wpis ${id} odwołuje się do artefaktu ${incomingArtifactId}, podczas gdy bieżąca wersja dokumentu to ${currentArtifactId}. Wymaga ponownego sprawdzenia.`
+      };
+    }
     requiresReverification = true;
     if (effectiveQualificationClass === 'source_excerpt_reviewed') {
       effectiveQualificationClass = 'source_excerpt_pending_review';
+    } else if (effectiveQualificationClass === 'conflicting_source_excerpt') {
+      effectiveQualificationClass = 'conflicting_reference';
     }
   }
 
@@ -2132,10 +2283,13 @@ function validateImportedEvidenceEntryObject(
     productKey: canonicalDoc.productKey,
     productLabel: getProductScopeLabel(canonicalDoc.productKey),
     documentId: canonicalDoc.documentId,
-    artifactId: currentArtifactId,
+    artifactId: options.isLocalStorageMigration ? (incomingArtifactId ?? currentArtifactId) : currentArtifactId,
     documentTitle: canonicalDoc.documentTitle,
     officialSourceUrl: canonicalDoc.officialSourceUrl,
-    sourceDocumentHash: canonicalDoc.sha256,
+    sourceDocumentHash:
+      options.isLocalStorageMigration && typeof incomingHash === 'string'
+        ? incomingHash
+        : canonicalDoc.sha256,
     sha256Basis: canonicalDoc.sha256Basis,
     location: {
       qrdSection: normalizedQrd,
@@ -2201,6 +2355,14 @@ function validateImportedEvidenceEntryObject(
           localConfirmationState: 'unconfirmed_imported_claim',
           migrationSourceVersion: null
         },
+    verificationSessionId:
+      options.isLocalStorageMigration && typeof raw.verificationSessionId === 'string'
+        ? raw.verificationSessionId
+        : null,
+    reviewedInLocalPdfSession:
+      options.isLocalStorageMigration && raw.reviewedInLocalPdfSession === true,
+    sourceAxisSummaryAtReview:
+      typeof raw.sourceAxisSummaryAtReview === 'string' ? raw.sourceAxisSummaryAtReview : null,
     recordedAt: String(raw.recordedAt).trim(),
     recordedBy:
       origin === 'bundle_extract'
@@ -2746,7 +2908,9 @@ export function registerNewDocumentArtifactVersion(params: {
         : newFile.sha256
           ? 'hash_calculated'
           : 'not_checked',
-    contentReviewStatus: 'awaiting_human_review'
+    contentReviewStatus: 'awaiting_human_review',
+    fileAvailability: newFile.acquiredLocally ? 'verified_in_session' : 'no_file',
+    storageMode: newFile.acquiredLocally ? 'session_memory_only' : 'no_binary_file'
   };
 
   const updatedSource: SourceRegistryEntry = {
@@ -2782,10 +2946,12 @@ export function registerNewDocumentArtifactVersion(params: {
     if (entry.documentId !== source.documentId) {
       return entry;
     }
-    const downgradedClass: EvidenceQualificationClass =
-      entry.qualificationClass === 'source_excerpt_reviewed'
-        ? 'source_excerpt_pending_review'
-        : entry.qualificationClass;
+    let downgradedClass: EvidenceQualificationClass = entry.qualificationClass;
+    if (entry.qualificationClass === 'source_excerpt_reviewed') {
+      downgradedClass = 'source_excerpt_pending_review';
+    } else if (entry.qualificationClass === 'conflicting_source_excerpt') {
+      downgradedClass = 'conflicting_reference';
+    }
     return {
       ...entry,
       qualificationClass: downgradedClass,
@@ -3170,10 +3336,12 @@ export function applyPreviewedEvidenceLedgerImport(
   const importedAt = now.toISOString();
   const entryMap = new Map(existingWorkingEntries.map((e) => [e.evidenceId, e]));
   for (const entry of preview.validEntries) {
-    const safeQualification: EvidenceQualificationClass =
-      entry.qualificationClass === 'source_excerpt_reviewed'
-        ? 'source_excerpt_pending_review'
-        : entry.qualificationClass;
+    let safeQualification: EvidenceQualificationClass = entry.qualificationClass;
+    if (entry.qualificationClass === 'source_excerpt_reviewed') {
+      safeQualification = 'source_excerpt_pending_review';
+    } else if (entry.qualificationClass === 'conflicting_source_excerpt') {
+      safeQualification = 'conflicting_reference';
+    }
     entryMap.set(entry.evidenceId, {
       ...entry,
       qualificationClass: safeQualification,
@@ -3249,6 +3417,17 @@ export function computeSourceQualityMetrics(params: {
   const documentsWithComparedHashCount = sources.filter(
     (s) => s.statusAxes.integrityStatus === 'hash_matches_known_reference'
   ).length;
+  const referenceHashesWithoutLocalFileCount = sources.filter(
+    (s) => s.statusAxes.integrityStatus === 'reference_hash_recorded_no_local_file'
+  ).length;
+  const sessionVerifiedPdfCount = sources.filter(
+    (s) => s.statusAxes.fileAvailability === 'verified_in_session'
+  ).length;
+  const reloadRequiredPdfCount = sources.filter(
+    (s) =>
+      Boolean(s.hasPersistedLocalArtifactMetadata) &&
+      s.statusAxes.fileAvailability === 'metadata_only_reload_required'
+  ).length;
 
   const isLocallyVerifiedExcerpt = (entry: EvidenceLedgerEntry): boolean =>
     entry.qualificationClass === 'source_excerpt_reviewed' &&
@@ -3264,9 +3443,23 @@ export function computeSourceQualityMetrics(params: {
 
   const verifiedExcerptsCount = allEntries.filter(isLocallyVerifiedExcerpt).length;
 
+  const conflictingReferencesCount = allEntries.filter(
+    (e) => e.qualificationClass === 'conflicting_reference'
+  ).length;
+
   const conflictingExcerptsCount = allEntries.filter(
     (e) => e.qualificationClass === 'conflicting_source_excerpt'
   ).length;
+
+  const reverificationRequiredCount =
+    allEntries.filter(
+      (e) => e.origin === 'auditor_working_entry' && Boolean(e.requiresReverification)
+    ).length +
+    sources.filter(
+      (s) =>
+        !s.isHistoricalRejectedForCurrentSeason &&
+        Boolean(s.currentArtifact?.reverificationRequired)
+    ).length;
 
   const questionsWithoutConfirmedExcerptsCount = checklist.filter(
     (q) => !allEntries.some((e) => e.questionId === q.id && isLocallyVerifiedExcerpt(e))
@@ -3287,9 +3480,14 @@ export function computeSourceQualityMetrics(params: {
     documentsWithoutSha256Count,
     documentsWithCalculatedSha256Count,
     documentsWithComparedHashCount,
+    referenceHashesWithoutLocalFileCount,
+    sessionVerifiedPdfCount,
+    reloadRequiredPdfCount,
     referencesRequiringReviewCount,
     verifiedExcerptsCount,
+    conflictingReferencesCount,
     conflictingExcerptsCount,
+    reverificationRequiredCount,
     questionsWithoutConfirmedExcerptsCount,
     importedUnconfirmedClaimsCount,
     disclaimer: SOURCE_QUALITY_DISCLAIMER
@@ -3374,6 +3572,9 @@ export function buildQuestionTraceabilitySummaries(
         e.qualificationClass === 'source_excerpt_pending_review' ||
         e.requiresReverification
     ).length;
+    const conflictingReferencesCount = entriesForQ.filter(
+      (e) => e.qualificationClass === 'conflicting_reference'
+    ).length;
     const conflictingExcerptsCount = entriesForQ.filter(
       (e) => e.qualificationClass === 'conflicting_source_excerpt'
     ).length;
@@ -3393,7 +3594,11 @@ export function buildQuestionTraceabilitySummaries(
     }
 
     let workStatus: QuestionWorkStatus = 'open';
-    if (relationshipsCount.contradicts > 0 || conflictingExcerptsCount > 0) {
+    if (
+      relationshipsCount.contradicts > 0 ||
+      conflictingExcerptsCount > 0 ||
+      conflictingReferencesCount > 0
+    ) {
       workStatus = 'conflicting_evidence';
     } else if (relationshipsCount.missing_information > 0) {
       workStatus = 'requires_authority_clarification';
@@ -3418,10 +3623,484 @@ export function buildQuestionTraceabilitySummaries(
       totalEvidenceCount: entriesForQ.length,
       verifiedExcerptsCount,
       pendingReviewCount,
+      conflictingReferencesCount,
       conflictingExcerptsCount,
       workingNotesCount: notesForQ.length,
       relationshipsCount,
       linkedDocumentIds: Array.from(docIds)
     };
   });
+}
+
+// ============================================================================
+// Etap B4: Sesja lokalnego PDF, rejestracja wersji artefaktów i bezpieczne przechowywanie wyłącznie metadanych
+// ============================================================================
+
+export interface RegisterLocalPdfSessionInput {
+  documentId: string;
+  verificationSessionId: string;
+  fileName: string;
+  mimeType: string | null;
+  fileSizeBytes: number;
+  sha256Hex: string | null;
+  comparisonStatus: HashComparisonStatus;
+  integrityStatus: FileIntegrityAxisStatus;
+  referenceType: HashProvenanceRecord['referenceType'];
+  referenceHash: string | null;
+  referenceOriginNote?: string | null;
+  pageCount: number | null;
+  pdfParserVersion: string;
+  metadataStatus: LocalPdfMetadataStatus;
+  textLayerStatus: LocalPdfTextLayerStatus;
+  pdfMetadata: LocalPdfMetadataSummary | null;
+  operatorDeclaredOrigin: string | null;
+  now?: Date;
+}
+
+export function registerLocalPdfInspectionSession(params: {
+  sources: readonly SourceRegistryEntry[];
+  entries: readonly EvidenceLedgerEntry[];
+  inspection: RegisterLocalPdfSessionInput;
+}): {
+  updatedSources: SourceRegistryEntry[];
+  updatedEntries: EvidenceLedgerEntry[];
+  updatedSource: SourceRegistryEntry;
+  versionCreated: boolean;
+  reverificationTriggered: boolean;
+  pageCountComparisonStatus: LocalPdfPageCountComparisonStatus;
+} {
+  const { sources, entries, inspection } = params;
+  const source = sources.find((s) => s.documentId === inspection.documentId);
+  if (!source) {
+    throw new Error(`Nieznany dokument źródłowy w rejestrze: ${inspection.documentId}`);
+  }
+
+  const now = inspection.now ?? new Date();
+  const iso = now.toISOString();
+  const existingArtifact = source.currentArtifact;
+  const previousHash = existingArtifact?.hashProvenance.value ?? source.sha256 ?? null;
+  const normalizedIncoming = inspection.sha256Hex?.toLowerCase() ?? null;
+  const normalizedPrevious = previousHash?.toLowerCase() ?? null;
+
+  const registryExpectedPages =
+    source.registryReferencePageCount !== undefined
+      ? source.registryReferencePageCount
+      : source.physicalPageCount;
+
+  const pageCountComparisonStatus: LocalPdfPageCountComparisonStatus =
+    registryExpectedPages !== null && inspection.pageCount !== null
+      ? registryExpectedPages === inspection.pageCount
+        ? 'matches'
+        : 'mismatch'
+      : 'not_available';
+
+  // Jeśli istnieje już lokalny artefakt o identycznym SHA-256 -> nie twórz duplikatu wersji ani nie degraduj dowodów!
+  // Również jeśli Stage 1 wzorzec pasuje bajtowo 1:1 do otwartego PDF -> zachowaj v1 wzbogaconą o lokalną sesję.
+  const sameHashAsActive =
+    Boolean(normalizedIncoming) &&
+    Boolean(normalizedPrevious) &&
+    normalizedIncoming === normalizedPrevious &&
+    existingArtifact !== null;
+
+  const effectiveComparisonStatus: HashComparisonStatus =
+    normalizedIncoming && normalizedPrevious && !sameHashAsActive
+      ? 'hash_mismatch'
+      : inspection.comparisonStatus;
+
+  const effectiveIntegrityStatus: FileIntegrityAxisStatus =
+    effectiveComparisonStatus === 'hash_mismatch'
+      ? 'hash_mismatch'
+      : inspection.integrityStatus;
+
+  // Czy nastąpiła rzeczywista zmiana względem aktywnego wcześniej lokalnego pliku lub wzorca?
+  const hashChanged = Boolean(
+    normalizedIncoming &&
+      normalizedPrevious &&
+      normalizedIncoming !== normalizedPrevious
+  );
+
+  // Degraduj istniejące wpisy robocze tylko wtedy, gdy istnieje wcześniejszy lokalnie zweryfikowany wpis
+  // lub zmienił się hash aktywnego artefaktu (np. v2 -> v3).
+  const reverificationTriggered =
+    hashChanged &&
+    entries.some(
+      (e) =>
+        e.documentId === source.documentId &&
+        e.origin === 'auditor_working_entry'
+    );
+
+  let updatedArtifact: DocumentArtifactRecord;
+  let updatedHistory: DocumentArtifactRecord[];
+  let versionCreated = false;
+
+  if (sameHashAsActive && existingArtifact) {
+    updatedArtifact = {
+      ...existingArtifact,
+      localArtifactId:
+        existingArtifact.localArtifactId ??
+        `local-${source.documentId}-v${existingArtifact.versionSequence}`,
+      fileName: inspection.fileName,
+      fileSizeBytes: inspection.fileSizeBytes,
+      physicalPageCount: inspection.pageCount ?? existingArtifact.physicalPageCount,
+      mimeType: inspection.mimeType,
+      selectedInSessionAt: iso,
+      pdfParserVersion: inspection.pdfParserVersion,
+      metadataExtractionStatus: inspection.metadataStatus,
+      textExtractionStatus: inspection.textLayerStatus,
+      localPreviewStatus: 'previewed_in_session',
+      operatorDeclaredOrigin: inspection.operatorDeclaredOrigin,
+      pdfMetadata: inspection.pdfMetadata,
+      hashProvenance: {
+        ...existingArtifact.hashProvenance,
+        fileName: inspection.fileName,
+        fileSizeBytes: inspection.fileSizeBytes,
+        mimeType: inspection.mimeType,
+        pdfPageCount: inspection.pageCount,
+        verificationSessionId: inspection.verificationSessionId,
+        comparisonStatus:
+          inspection.comparisonStatus === 'hash_mismatch'
+            ? existingArtifact.hashProvenance.comparisonStatus
+            : inspection.comparisonStatus
+      }
+    };
+    updatedHistory = source.artifactHistory.map((item) =>
+      item.artifactId === updatedArtifact.artifactId ? updatedArtifact : item
+    );
+  } else {
+    const nextSeq = (source.artifactHistory[source.artifactHistory.length - 1]?.versionSequence ?? 0) + 1;
+    const newArtifactId = `art-${source.documentId}-v${nextSeq}`;
+    const archivedHistory = source.artifactHistory.map((item) => ({
+      ...item,
+      isCurrentActiveVersion: false,
+      isHistoricalVersion: true
+    }));
+
+    updatedArtifact = {
+      artifactId: newArtifactId,
+      localArtifactId: `local-${source.documentId}-v${nextSeq}`,
+      documentId: source.documentId,
+      language: source.language,
+      fileName: inspection.fileName,
+      documentDate: source.revisionDate,
+      retrievedAt: iso,
+      sourceUrl: source.officialSourceUrl,
+      previousArtifactId: existingArtifact?.artifactId ?? null,
+      versionSequence: nextSeq,
+      changeCategory: hashChanged
+        ? inspection.operatorDeclaredOrigin &&
+          source.statusAxes.originStatus !== 'official_origin_confirmed'
+          ? 'unverified_origin_copy'
+          : existingArtifact?.fileName === inspection.fileName
+            ? 'same_filename_modified_bytes'
+            : 'new_chpl_revision'
+        : 'updated_same_document',
+      isCurrentActiveVersion: true,
+      isHistoricalVersion: Boolean(source.isHistoricalRejectedForCurrentSeason),
+      requiresReverification: hashChanged || !inspection.referenceHash,
+      reverificationRequired: reverificationTriggered,
+      physicalPageCount: inspection.pageCount,
+      fileSizeBytes: inspection.fileSizeBytes,
+      mimeType: inspection.mimeType,
+      selectedInSessionAt: iso,
+      pdfParserVersion: inspection.pdfParserVersion,
+      metadataExtractionStatus: inspection.metadataStatus,
+      textExtractionStatus: inspection.textLayerStatus,
+      localPreviewStatus: 'previewed_in_session',
+      operatorDeclaredOrigin: inspection.operatorDeclaredOrigin,
+      pdfMetadata: inspection.pdfMetadata,
+      hashProvenance: {
+        algorithm: 'SHA-256',
+        value: inspection.sha256Hex,
+        artifactId: newArtifactId,
+        calculatedAt: iso,
+        calculationMethod:
+          'Web Crypto API (crypto.subtle.digest SHA-256) na pełnych bajtach pliku wybranego lokalnie w przeglądarce',
+        fileName: inspection.fileName,
+        fileSizeBytes: inspection.fileSizeBytes,
+        referenceType: normalizedPrevious ? 'prior_session_snapshot' : inspection.referenceType,
+        referenceHash: previousHash ?? inspection.referenceHash,
+        comparisonStatus: effectiveComparisonStatus,
+        mimeType: inspection.mimeType,
+        pdfPageCount: inspection.pageCount,
+        verificationSessionId: inspection.verificationSessionId,
+        referenceOriginNote: inspection.referenceOriginNote ?? null
+      }
+    };
+    updatedHistory = [...archivedHistory, updatedArtifact];
+    versionCreated = true;
+  }
+
+  const nextOriginStatus: SourceOriginAxisStatus =
+    source.statusAxes.originStatus === 'official_origin_confirmed' &&
+    effectiveIntegrityStatus === 'hash_matches_known_reference'
+      ? 'official_origin_confirmed'
+      : source.statusAxes.originStatus === 'official_origin_confirmed' &&
+          (effectiveIntegrityStatus === 'hash_mismatch' || !inspection.referenceHash)
+        ? 'manual_review_required'
+        : source.statusAxes.originStatus;
+
+  const updatedSource: SourceRegistryEntry = {
+    ...source,
+    retrievedAt: iso,
+    physicalPageCount: inspection.pageCount ?? source.physicalPageCount,
+    activeSessionPageCount: inspection.pageCount,
+    registryReferencePageCount: registryExpectedPages,
+    pageCountComparisonStatus,
+    sessionFileName: inspection.fileName,
+    hasPersistedLocalArtifactMetadata: true,
+    fileSizeBytes: inspection.fileSizeBytes,
+    sha256: inspection.sha256Hex ?? source.sha256,
+    sha256Basis:
+      effectiveIntegrityStatus === 'hash_matches_known_reference'
+        ? 'local_workspace_pdf_sha256'
+        : 'not_verified_binary',
+    sha256ScopeLabel:
+      effectiveIntegrityStatus === 'hash_matches_known_reference'
+        ? 'SHA-256 lokalnego pliku PDF z sesji zgodny z referencyjnym skrótem rejestrowym (brak wysyłki sieciowej)'
+        : effectiveIntegrityStatus === 'hash_mismatch'
+          ? 'Rozbieżność SHA-256 lokalnego pliku PDF względem wcześniejszego wzorca — poprzednie dowody wymagają re-weryfikacji'
+          : 'SHA-256 obliczony lokalnie z pliku PDF w przeglądarce (brak wiarygodnego wzorca urzędowego)',
+    statusAxes: {
+      originStatus: nextOriginStatus,
+      acquisitionStatus: source.isHistoricalRejectedForCurrentSeason
+        ? 'historical_copy_only'
+        : source.statusAxes.acquisitionStatus === 'acquired'
+          ? 'acquired'
+          : 'session_local_file_selected',
+      integrityStatus: effectiveIntegrityStatus,
+      contentReviewStatus: reverificationTriggered
+        ? 'awaiting_human_review'
+        : source.statusAxes.contentReviewStatus,
+      fileAvailability: 'verified_in_session',
+      storageMode: 'session_memory_only'
+    },
+    currentArtifact: updatedArtifact,
+    artifactHistory: updatedHistory
+  };
+
+  const updatedEntries = hashChanged
+    ? entries.map((entry) => {
+        if (entry.documentId !== source.documentId || entry.origin !== 'auditor_working_entry') {
+          return entry;
+        }
+        let downgraded: EvidenceQualificationClass = entry.qualificationClass;
+        if (entry.qualificationClass === 'source_excerpt_reviewed') {
+          downgraded = 'source_excerpt_pending_review';
+        } else if (entry.qualificationClass === 'conflicting_source_excerpt') {
+          downgraded = 'conflicting_reference';
+        }
+        return {
+          ...entry,
+          qualificationClass: downgraded,
+          requiresReverification: true,
+          autoResolved: false as const
+        };
+      })
+    : [...entries];
+
+  const updatedSources = sources.map((item) =>
+    item.documentId === source.documentId ? updatedSource : item
+  );
+
+  return {
+    updatedSources,
+    updatedEntries,
+    updatedSource,
+    versionCreated,
+    reverificationTriggered,
+    pageCountComparisonStatus
+  };
+}
+
+function sanitizeStoredArtifactRecord(raw: unknown): DocumentArtifactRecord | null {
+  if (!isPlainRecord(raw) || hasPrototypePollutionKey(raw)) {
+    return null;
+  }
+  if (typeof raw.artifactId !== 'string' || typeof raw.documentId !== 'string') {
+    return null;
+  }
+  // Bezpieczeństwo: nigdy nie przechowuj bajtów PDF / base64 w rekordach artefaktów
+  for (const forbidden of ['bytes', 'data', 'base64', 'pdfData', 'arrayBuffer', 'rawPdf', 'rawText']) {
+    if (forbidden in raw) {
+      return null;
+    }
+  }
+  if (!isPlainRecord(raw.hashProvenance) || hasPrototypePollutionKey(raw.hashProvenance)) {
+    return null;
+  }
+  const cloned = raw as unknown as DocumentArtifactRecord;
+  return {
+    ...cloned,
+    localPreviewStatus:
+      cloned.localArtifactId || cloned.localPreviewStatus === 'previewed_in_session'
+        ? 'reselection_required_after_reload'
+        : cloned.localPreviewStatus
+  };
+}
+
+export function saveLocalSourceArtifactsToStorage(
+  storage: Storage | null,
+  sources: readonly SourceRegistryEntry[],
+  now: Date = new Date()
+): EvidenceLedgerStorageSaveResult {
+  if (!storage) {
+    return { success: false, error: 'Brak dostępu do lokalnej pamięci przeglądarki (localStorage).' };
+  }
+  try {
+    const items: PersistedLocalSourceArtifactEntry[] = sources
+      .filter((s) => Boolean(s.hasPersistedLocalArtifactMetadata))
+      .map((s) => ({
+        documentId: s.documentId,
+        currentArtifact: s.currentArtifact
+          ? {
+              ...s.currentArtifact,
+              localPreviewStatus: 'reselection_required_after_reload'
+            }
+          : null,
+        artifactHistory: s.artifactHistory.map((item) => ({
+          ...item,
+          localPreviewStatus:
+            item.localArtifactId || item.localPreviewStatus === 'previewed_in_session'
+              ? 'reselection_required_after_reload'
+              : item.localPreviewStatus
+        })),
+        sha256: s.sha256,
+        sha256Basis: s.sha256Basis,
+        sha256ScopeLabel: s.sha256ScopeLabel,
+        physicalPageCount: s.physicalPageCount,
+        registryReferencePageCount: s.registryReferencePageCount ?? null,
+        pageCountComparisonStatus: s.pageCountComparisonStatus ?? null,
+        fileSizeBytes: s.fileSizeBytes,
+        sessionFileName: s.sessionFileName ?? null,
+        statusAxes: {
+          originStatus: s.statusAxes.originStatus,
+          acquisitionStatus: s.statusAxes.acquisitionStatus,
+          integrityStatus: s.statusAxes.integrityStatus,
+          contentReviewStatus: s.statusAxes.contentReviewStatus
+        },
+        updatedAt: now.toISOString()
+      }));
+
+    const payload: SourceArtifactsStoragePayload = {
+      schemaVersion: SOURCE_ARTIFACTS_SCHEMA_VERSION,
+      savedAt: now.toISOString(),
+      bytesPersistedInLocalStorage: false,
+      items
+    };
+    storage.setItem(SOURCE_ARTIFACTS_STORAGE_KEY, JSON.stringify(payload));
+    return { success: true, error: null };
+  } catch (err) {
+    const msg =
+      err instanceof Error && (err.name === 'QuotaExceededError' || /quota/i.test(err.message))
+        ? 'Przekroczono limit lokalnej pamięci przeglądarki (QuotaExceededError) podczas zapisu metadanych artefaktów.'
+        : 'Nie udało się zapisać metadanych artefaktów PDF w localStorage.';
+    return { success: false, error: msg };
+  }
+}
+
+export function clearLocalSourceArtifactsFromStorage(storage: Storage | null): void {
+  if (!storage) {
+    return;
+  }
+  try {
+    storage.removeItem(SOURCE_ARTIFACTS_STORAGE_KEY);
+  } catch {
+    // Bezpieczne ignorowanie błędów dostępu do storage
+  }
+}
+
+export function loadSourceRegistryWithLocalArtifacts(
+  bundle: Stage1ChplAuditBundle,
+  storage: Storage | null
+): SourceRegistryEntry[] {
+  const base = buildBaseSourceRegistry(bundle);
+  if (!storage) {
+    return base;
+  }
+  const raw = storage.getItem(SOURCE_ARTIFACTS_STORAGE_KEY);
+  if (!raw) {
+    return base;
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!isPlainRecord(parsed) || hasPrototypePollutionKey(parsed) || !Array.isArray(parsed.items)) {
+      return base;
+    }
+    const persistedById = new Map<string, PersistedLocalSourceArtifactEntry>();
+    for (const rawItem of parsed.items) {
+      if (!isPlainRecord(rawItem) || hasPrototypePollutionKey(rawItem)) {
+        continue;
+      }
+      if (typeof rawItem.documentId !== 'string') {
+        continue;
+      }
+      const cleanCurrent = sanitizeStoredArtifactRecord(rawItem.currentArtifact);
+      const cleanHistory = Array.isArray(rawItem.artifactHistory)
+        ? rawItem.artifactHistory
+            .map((a) => sanitizeStoredArtifactRecord(a))
+            .filter((a): a is DocumentArtifactRecord => a !== null)
+        : [];
+      persistedById.set(rawItem.documentId, {
+        ...(rawItem as unknown as PersistedLocalSourceArtifactEntry),
+        currentArtifact: cleanCurrent,
+        artifactHistory: cleanHistory
+      });
+    }
+
+    return base.map((baseDoc) => {
+      const persisted = persistedById.get(baseDoc.documentId);
+      if (!persisted) {
+        return baseDoc;
+      }
+      const restoredHistory =
+        persisted.artifactHistory.length > 0 ? persisted.artifactHistory : baseDoc.artifactHistory;
+      const restoredCurrent = persisted.currentArtifact ?? baseDoc.currentArtifact;
+      return {
+        ...baseDoc,
+        sha256:
+          typeof persisted.sha256 === 'string' && isValidSha256Hex(persisted.sha256)
+            ? persisted.sha256
+            : baseDoc.sha256,
+        sha256Basis: persisted.sha256Basis ?? baseDoc.sha256Basis,
+        sha256ScopeLabel:
+          typeof persisted.sha256ScopeLabel === 'string'
+            ? persisted.sha256ScopeLabel
+            : baseDoc.sha256ScopeLabel,
+        physicalPageCount:
+          typeof persisted.physicalPageCount === 'number'
+            ? persisted.physicalPageCount
+            : baseDoc.physicalPageCount,
+        activeSessionPageCount: null,
+        registryReferencePageCount:
+          baseDoc.registryReferencePageCount ?? baseDoc.physicalPageCount,
+        pageCountComparisonStatus: persisted.pageCountComparisonStatus ?? null,
+        fileSizeBytes:
+          typeof persisted.fileSizeBytes === 'number'
+            ? persisted.fileSizeBytes
+            : baseDoc.fileSizeBytes,
+        sessionFileName:
+          typeof persisted.sessionFileName === 'string' ? persisted.sessionFileName : null,
+        hasPersistedLocalArtifactMetadata: true,
+        currentArtifact: restoredCurrent,
+        artifactHistory: restoredHistory,
+        statusAxes: {
+          originStatus: persisted.statusAxes?.originStatus ?? baseDoc.statusAxes.originStatus,
+          acquisitionStatus:
+            baseDoc.isHistoricalRejectedForCurrentSeason
+              ? 'historical_copy_only'
+              : baseDoc.statusAxes.acquisitionStatus === 'acquired'
+                ? 'acquired'
+                : 'not_acquired',
+          integrityStatus:
+            persisted.statusAxes?.integrityStatus ?? baseDoc.statusAxes.integrityStatus,
+          contentReviewStatus:
+            persisted.statusAxes?.contentReviewStatus ?? baseDoc.statusAxes.contentReviewStatus,
+          fileAvailability: 'metadata_only_reload_required',
+          storageMode: 'metadata_persisted_reload_required'
+        }
+      };
+    });
+  } catch {
+    return base;
+  }
 }

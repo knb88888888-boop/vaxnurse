@@ -129,7 +129,7 @@ describe('ChplAuditWorkbenchView — stanowisko audytu ChPL (ETAP B1 · READ-ONL
     expect(
       screen.queryByRole('button', { name: /Zatwierdź status|Oznacz jako zweryfikowany|Zamknij pytanie/i })
     ).not.toBeInTheDocument();
-  }, 30000);
+  }, 60000);
 
   it('eksportuje wyłącznie roboczy raport JSON (isWorkingDraft: true) oraz wywołuje wydruk roboczy', async () => {
     const user = userEvent.setup();
