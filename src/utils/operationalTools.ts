@@ -506,11 +506,11 @@ export function summarizeColdChain(readings: readonly ColdChainReading[]): ColdC
   };
 }
 
-/** Pole CSV z ochroną przed wstrzyknięciem formuł arkusza (=, +, -, @, tab, CR, LF). */
+/** Pole CSV z ochroną przed wstrzyknięciem formuł arkusza (=, +, -, @, tab, CR, LF, pełnoszerokie i po spacjach). */
 export function escapeCsvField(value: string | number | null): string {
   if (value === null) return '';
   let s = String(value);
-  if (typeof value === 'string' && /^[=+\-@\t\r\n]/.test(s)) s = `'${s}`;
+  if (typeof value === 'string' && /^[ \u00a0]*[=+\-@\t\r\n\uff1d\uff0b\uff0d\uff20]/.test(s)) s = `'${s}`;
   return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
