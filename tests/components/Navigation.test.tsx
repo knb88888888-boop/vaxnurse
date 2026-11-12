@@ -88,12 +88,12 @@ describe('Globalna nawigacja: Header, Sidebar, DashboardView i ModulePlaceholder
       })
     ).not.toBeInTheDocument();
 
-    // Skrót w nagłówku do modułu placeholder Sytuacje szczególne
-    await user.click(screen.getByRole('button', { name: /Sytuacje szczególne \(w przygotowaniu\)/i }));
+    // Skrót w nagłówku do modułu Sytuacje szczególne
+    await user.click(screen.getByRole('button', { name: /Sytuacje szczególne/i }));
     expect(onNavigate).toHaveBeenCalledWith('special-situations');
   });
 
-  it('Sidebar renderuje grupy, zwijanie paska oraz oznaczenia modułów w przygotowaniu', async () => {
+  it('Sidebar renderuje grupy, zwijanie paska oraz oznaczenia modułów', async () => {
     const user = userEvent.setup();
     const onSelectModule = vi.fn();
     const onToggleCollapse = vi.fn();
@@ -112,7 +112,7 @@ describe('Globalna nawigacja: Header, Sidebar, DashboardView i ModulePlaceholder
 
     expect(screen.getByRole('button', { name: 'Pulpit' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: /Baza preparatów/i })).toBeInTheDocument();
-    expect(screen.getAllByText(/W przygotowaniu/i).length).toBe(6);
+    expect(screen.queryAllByText(/W przygotowaniu/i).length).toBe(0);
 
     await user.click(screen.getByRole('button', { name: /Baza preparatów/i }));
     expect(onSelectModule).toHaveBeenCalledWith('vaccines-database');

@@ -13,9 +13,9 @@ import {
   type RecentVisitRecord
 } from './utils/recentModules';
 
-const LazyModulePlaceholder = React.lazy(() =>
-  import('./components/modules/ModulePlaceholder').then(mod => ({
-    default: mod.ModulePlaceholder
+const LazyOperationalModuleView = React.lazy(() =>
+  import('./components/modules/OperationalModuleView').then(mod => ({
+    default: mod.OperationalModuleView
   }))
 );
 
@@ -168,10 +168,11 @@ export const App: React.FC = () => {
                 initialSelectedVaccineId={selectedVaccineIdForDatabase}
               />
             ) : (
-              <LazyModulePlaceholder
+              <LazyOperationalModuleView
                 module={currentModule}
                 onBackToDashboard={() => handleSelectModule('dashboard')}
                 onNavigateToModule={id => handleSelectModule(id)}
+                onSelectVaccineProduct={handleSelectVaccineProduct}
               />
             )}
           </Suspense>

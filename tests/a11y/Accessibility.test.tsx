@@ -161,10 +161,10 @@ describe('Automatyczny audyt dostępności WCAG 2.1/2.2 A/AA (axe-core w Vitest/
     await screen.findByText(/Biblioteka Źródeł Oficjalnych/i, {}, { timeout: 10000 });
     expect((await runWcagAxe(container, 'KnowledgeBaseView')).wcagViolations).toBe(0);
 
-    // 2. Moduł placeholder (Sytuacje szczególne w przygotowaniu)
-    await user.click(screen.getByRole('button', { name: /Sytuacje szczególne \(w przygotowaniu\)/i }));
-    await screen.findByText(/Moduł nieaktywny • W przygotowaniu/i, {}, { timeout: 10000 });
-    const placeholderAudit = await runWcagAxe(container, 'ModulePlaceholder');
+    // 2. Aktywny moduł operacyjny (Sytuacje szczególne)
+    await user.click(screen.getAllByRole('button', { name: /Sytuacje szczególne/i })[0]);
+    await screen.findByText(/Inwentarz zestawu przeciwwstrząsowego/i, {}, { timeout: 10000 });
+    const placeholderAudit = await runWcagAxe(container, 'OperationalModuleView (special-situations)');
     expect(placeholderAudit.wcagViolations).toBe(0);
     expect(placeholderAudit.bestPracticeViolations.map((v) => v.id)).not.toContain('heading-order');
 

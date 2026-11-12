@@ -2,14 +2,7 @@ import type { ModuleId } from '../types/navigation.ts';
 import { APP_MODULES, QUICK_ACCESS_ITEMS } from '../data/navigationData.ts';
 import { KNOWLEDGE_SOURCES } from '../data/knowledgeSources.ts';
 
-export const PLACEHOLDER_MODULE_IDS = new Set<ModuleId>([
-  'adult-vaccinations',
-  'vaccination-calendar',
-  'vaccination-calculator',
-  'procedures-checklists',
-  'cold-chain',
-  'special-situations'
-]);
+export const PLACEHOLDER_MODULE_IDS = new Set<ModuleId>();
 
 export const isModulePlaceholder = (id: ModuleId): boolean =>
   PLACEHOLDER_MODULE_IDS.has(id);

@@ -180,7 +180,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {searchQuery.trim() ? 'Pasujące moduły aplikacji' : 'Główne moduły punktu szczepień'}
             </h2>
             <p className="section-subtitle">
-              Aktywne moduły referencyjne oraz zapowiedzi kolejnych sekcji w przygotowaniu
+              Aktywne moduły kliniczne, logistyczne i referencyjne punktu szczepień
             </p>
           </div>
           <span className="modules-count-badge">

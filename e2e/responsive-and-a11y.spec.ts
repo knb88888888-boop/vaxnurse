@@ -86,12 +86,12 @@ test.describe('E2E — Responsywność 6 viewportów i rzeczywisty audyt WCAG / 
     // Tryb standardowy (comfortable + normal)
     await expectAuditClean('Dashboard (standard)');
 
-    // ModulePlaceholder (standard): Sytuacje szczególne (w przygotowaniu)
+    // OperationalModuleView (standard): Sytuacje szczególne
     await page.getByRole('button', { name: /Sytuacje szczególne/i }).first().click();
     await expect(
-      page.getByRole('heading', { name: /Sytuacje szczególne i bezpieczeństwo/i })
+      page.getByRole('heading', { name: /Inwentarz zestawu przeciwwstrząsowego/i })
     ).toBeVisible();
-    await expectAuditClean('ModulePlaceholder (standard)');
+    await expectAuditClean('OperationalModuleView (standard)');
 
     // ChildVaccinations + Ogólne zasady (Część IV) (standard)
     await page.locator('#app-sidebar-nav').getByRole('button', { name: /Szczepienia dzieci/i }).click();

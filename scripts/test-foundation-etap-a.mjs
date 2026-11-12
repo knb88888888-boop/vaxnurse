@@ -633,13 +633,13 @@ test('S1: Globalna wyszukiwarka nagłówka obejmuje moduły, skróty oraz Bazę 
   assert.ok(psoResults.some(r => r.kind === 'knowledge' && r.targetModule === 'knowledge-base'));
 
   const coldResults = searchVaxNurseNavigation('chłodniczy');
-  assert.ok(coldResults.some(r => r.targetModule === 'cold-chain' && r.isPlaceholder));
+  assert.ok(coldResults.some(r => r.targetModule === 'cold-chain' && !r.isPlaceholder));
 
-  assert.equal(PLACEHOLDER_MODULE_IDS.size, 6);
+  assert.equal(PLACEHOLDER_MODULE_IDS.size, 0);
   assert.equal(isModulePlaceholder('child-vaccinations'), false);
   assert.equal(isModulePlaceholder('vaccines-database'), false);
-  assert.equal(isModulePlaceholder('cold-chain'), true);
-  assert.equal(isModulePlaceholder('special-situations'), true);
+  assert.equal(isModulePlaceholder('cold-chain'), false);
+  assert.equal(isModulePlaceholder('special-situations'), false);
 });
 
 // =========================================================================

@@ -83,13 +83,14 @@ test.describe('E2E — Stanowisko audytu ChPL (READ-ONLY), nawigacja klawiaturą
     await page.keyboard.press('Escape');
     await expect(dropdown).not.toBeVisible();
 
-    // Tab do przycisku "Sytuacje szczególne (w przygotowaniu)" i Enter otwiera placeholder
+    // Tab do przycisku "Sytuacje szczególne" i Enter otwiera aktywny moduł
     const placeholderBtn = page.getByRole('button', {
-      name: /Sytuacje szczególne \(w przygotowaniu\)/i,
+      name: 'Sytuacje szczególne',
+      exact: true,
     });
     await placeholderBtn.focus();
     await page.keyboard.press('Enter');
-    await expect(page.getByText(/Moduł nieaktywny • W przygotowaniu/i)).toBeVisible();
+    await expect(page.getByText(/Inwentarz zestawu przeciwwstrząsowego/i)).toBeVisible();
 
     // Wróć do Bazy preparatów -> otwórz Priorix -> klawiatura na akordeonie ChPL
     await navigateViaSidebarOrHeader(page, /Baza preparatów/i);

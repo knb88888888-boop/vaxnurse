@@ -5,8 +5,7 @@ import {
   X,
   Calendar,
   ShieldAlert,
-  ArrowRight,
-  Clock
+  ArrowRight
 } from 'lucide-react';
 import type { ModuleDefinition, ModuleId } from '../../types/navigation';
 import {
@@ -249,13 +248,12 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             type="button"
-            className="header-quick-btn is-placeholder-link"
-            title="Podgląd zakresu planowanego modułu: Sytuacje szczególne (w przygotowaniu)"
+            className="header-quick-btn"
+            title="Otwórz moduł: Sytuacje szczególne i zestaw przeciwwstrząsowy"
             onClick={() => onNavigateToModule('special-situations')}
           >
             <ShieldAlert size={16} className="quick-btn-icon" aria-hidden="true" />
-            <span className="quick-btn-text">Sytuacje szczególne (w przygotowaniu)</span>
-            <Clock size={12} className="quick-btn-clock" aria-hidden="true" />
+            <span className="quick-btn-text">Sytuacje szczególne</span>
           </button>
         </div>
       </div>
