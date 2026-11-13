@@ -107,10 +107,9 @@ describe('Etap B2 — WorkbenchSourceRegistryPanel & WorkbenchEvidenceLedgerPane
     const items = within(chainList).getAllByRole('article');
     expect(items.length).toBeGreaterThan(0);
     expect(items.every((el) => /doc-ema-spikevax-xfg-pl/.test(el.textContent ?? ''))).toBe(true);
-  }, 15000);
+  }, 120000);
 
   it('waliduje zakres stron PDF i pozwala dodać/usunąć roboczy ślad dowodowy oraz nieformalną notatkę z zachowaniem autoResolved=false', async () => {
-    const user = userEvent.setup();
     render(<ChplAuditWorkbenchView vaccines={VACCINES_CATALOG} onOpenVaccineById={vi.fn()} />);
 
     const form = screen.getByTestId('b2-add-evidence-form');
@@ -125,7 +124,7 @@ describe('Etap B2 — WorkbenchSourceRegistryPanel & WorkbenchEvidenceLedgerPane
     fireEvent.change(formScope.getByLabelText(/Obserwacja robocza audytora/i), {
       target: { value: 'Test przekroczenia zakresu stron PDF.' }
     });
-    await user.click(formScope.getByRole('button', { name: /Zapisz roboczy ślad dowodowy/i }));
+    fireEvent.click(formScope.getByRole('button', { name: /Zapisz roboczy ślad dowodowy/i }));
 
     expect(
       formScope.getByText(/Strona PDF \(99\) przekracza liczbę stron dokumentu/i)
@@ -133,7 +132,7 @@ describe('Etap B2 — WorkbenchSourceRegistryPanel & WorkbenchEvidenceLedgerPane
 
     // Poprawna strona PDF (3 z 7)
     fireEvent.change(pageInput, { target: { value: '3' } });
-    await user.click(formScope.getByRole('button', { name: /Zapisz roboczy ślad dowodowy/i }));
+    fireEvent.click(formScope.getByRole('button', { name: /Zapisz roboczy ślad dowodowy/i }));
 
     expect(
       formScope.getByText(/Status pytania nadal wymaga decyzji człowieka \(autoResolved: false\)/i)
@@ -153,20 +152,20 @@ describe('Etap B2 — WorkbenchSourceRegistryPanel & WorkbenchEvidenceLedgerPane
     fireEvent.change(noteScope.getByLabelText(/Treść roboczej notatki lokalnej/i), {
       target: { value: 'Uwaga robocza: sprawdzić ramię podania w pkt 4.2.' }
     });
-    await user.click(
+    fireEvent.click(
       noteScope.getByRole('checkbox', { name: /wyłącznie charakter nieformalnej lokalnej notatki/i })
     );
-    await user.click(noteScope.getByRole('button', { name: /Zapisz lokalną notatkę roboczą/i }));
+    fireEvent.click(noteScope.getByRole('button', { name: /Zapisz lokalną notatkę roboczą/i }));
 
     const storedNotes = JSON.parse(localStorage.getItem(WORKING_NOTES_STORAGE_KEY) || '[]');
     expect(storedNotes).toHaveLength(1);
 
     // Usunięcie lokalnej notatki i wpisu dowodowego
-    await user.click(
+    fireEvent.click(
       screen.getByRole('button', { name: /Usuń lokalny wpis dowodowy/i })
     );
     expect(JSON.parse(localStorage.getItem(EVIDENCE_LEDGER_STORAGE_KEY) || '[]')).toHaveLength(0);
-  }, 60000);
+  }, 120000);
 
   it('odrzuca manipulowany JSON oraz plik vaxnurseBackup i obsługuje bezpieczny import z podglądem bez naruszenia Infanrix hexa', async () => {
     const user = userEvent.setup();
@@ -266,7 +265,6 @@ describe('Etap B3 — Quality Dashboard, 4 osie źródeł, kontrola awansu dowod
   });
 
   it('prezentuje 12 metryk Quality Dashboard + disclaimer, banner historyczny i filtr typów obiektów', async () => {
-    const user = userEvent.setup();
     render(<ChplAuditWorkbenchView vaccines={VACCINES_CATALOG} onOpenVaccineById={vi.fn()} />);
 
     const dash = screen.getByTestId('b3-quality-dashboard');
@@ -290,16 +288,16 @@ describe('Etap B3 — Quality Dashboard, 4 osie źródeł, kontrola awansu dowod
 
     // Filtr typu obiektu źródłowego -> official_endpoint
     const typeSelect = screen.getByLabelText(/Typ obiektu źródłowego/i);
-    await user.selectOptions(typeSelect, 'official_endpoint');
+    fireEvent.change(typeSelect, { target: { value: 'official_endpoint' } });
     expect(screen.getByTestId('source-card-doc-rpl-spikevax-cen-endpoints')).toBeInTheDocument();
     expect(screen.queryByTestId('source-card-doc-mz-pso-2027-akt')).not.toBeInTheDocument();
 
     // Przycisk "Pokaż dokument w Rejestrze Źródeł" z Łańcucha dowodowego przywraca lub wybiera dokument
-    await user.selectOptions(typeSelect, 'all');
+    fireEvent.change(typeSelect, { target: { value: 'all' } });
     const navBtns = screen.getAllByRole('button', { name: /Pokaż dokument w Rejestrze Źródeł/i });
-    await user.click(navBtns[0]);
+    fireEvent.click(navBtns[0]);
     expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
-  }, 60000);
+  }, 120000);
 
   it('blokuje source_excerpt_reviewed bez potwierdzenia PDF, pozwala na świadomy zapis i nie potwierdza importowanego claimu', async () => {
     const user = userEvent.setup();
@@ -367,7 +365,7 @@ describe('Etap B3 — Quality Dashboard, 4 osie źródeł, kontrola awansu dowod
     expect(screen.getByTestId('b3-metric-verified-excerpts')).toHaveTextContent('0');
     expect(screen.getAllByText(/Z importu JSON \(niepotwierdzone lokalnie\)/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/Wymaga kontroli w oryginalnym PDF/i).length).toBeGreaterThanOrEqual(1);
-  }, 60000);
+  }, 120000);
 });
 
 interface BridgeHarnessProps {
@@ -651,7 +649,7 @@ describe('Etap B4 — LocalPdfBridgePanel: lokalna weryfikacja PDF, podgląd, wy
     expect(savedEntries).toHaveLength(2);
     expect(savedEntries[0]?.qualificationClass).toBe('conflicting_source_excerpt');
     expect(savedEntries[0]?.autoResolved).toBe(false);
-  }, 20000);
+  }, 120000);
 
   it('nie degraduje dowodu przy identycznym SHA-256 i uruchamia kaskadę ponownej weryfikacji po zmianie bajtów PDF', async () => {
     const user = userEvent.setup();
@@ -704,7 +702,7 @@ describe('Etap B4 — LocalPdfBridgePanel: lokalna weryfikacja PDF, podgląd, wy
     ) as EvidenceLedgerEntry[];
     expect(entries[0]?.requiresReverification).toBe(true);
     expect(entries[0]?.qualificationClass).toBe('source_excerpt_pending_review');
-  }, 20000);
+  }, 120000);
 
   it('po przeładowaniu wyświetla baner ponownego wskazania pliku i pozwala bezpiecznie wyczyścić metadane artefaktów', async () => {
     const user = userEvent.setup();

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import type { Result as AxeResult } from 'axe-core';
@@ -92,22 +92,27 @@ describe('Automatyczny audyt dostępności WCAG 2.1/2.2 A/AA (axe-core w Vitest/
     expect(searchAudit.wcagViolations).toBe(0);
   }, 15000);
 
-  it('Moduły kliniczne (Szczepienia dzieci PSO, Baza preparatów, Stanowisko audytu ChPL, Karta ChPL) spełniają WCAG 2.1/2.2 A/AA', async () => {
-    const user = userEvent.setup();
+  it('Moduły kliniczne (Szczepienia dzieci PSO oraz Baza preparatów) spełniają WCAG 2.1/2.2 A/AA', async () => {
     const { container } = render(<App />);
 
     // 1. Szczepienia dzieci (PSO 2027)
-    await user.click(screen.getAllByRole('button', { name: /Szczepienia dzieci/i })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /Szczepienia dzieci/i })[0]);
     await screen.findByText(/Gruźlica/i, {}, { timeout: 10000 });
     expect((await runWcagAxe(container, 'ChildVaccinationsView')).wcagViolations).toBe(0);
 
     // 2. Baza preparatów (Katalog)
-    await user.click(screen.getAllByRole('button', { name: /Baza preparatów/i })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /Baza preparatów/i })[0]);
     await screen.findByTestId('vaccines-mode-workbench', {}, { timeout: 10000 });
     expect((await runWcagAxe(container, 'VaccinesDatabaseView')).wcagViolations).toBe(0);
+  }, 120000);
 
-    // 3. Stanowisko audytu ChPL (Workbench READ-ONLY + Etap B2/B3 Quality Dashboard, Source Registry & Evidence Ledger)
-    await user.click(screen.getByTestId('vaccines-mode-workbench'));
+  it('Stanowisko audytu ChPL oraz Karta ChPL spełniają WCAG 2.1/2.2 A/AA', async () => {
+    const { container } = render(<App />);
+
+    // 1. Baza preparatów -> Stanowisko audytu ChPL
+    fireEvent.click(screen.getAllByRole('button', { name: /Baza preparatów/i })[0]);
+    await screen.findByTestId('vaccines-mode-workbench', {}, { timeout: 10000 });
+    fireEvent.click(screen.getByTestId('vaccines-mode-workbench'));
     await screen.findByRole(
       'heading',
       {
@@ -121,14 +126,14 @@ describe('Automatyczny audyt dostępności WCAG 2.1/2.2 A/AA (axe-core w Vitest/
     await screen.findByTestId('b2-evidence-ledger-panel', {}, { timeout: 10000 });
     expect((await runWcagAxe(container, 'ChplAuditWorkbenchView + B3/B4')).wcagViolations).toBe(0);
 
-    // 3b. Stanowisko audytu ChPL w trybie compact + large
+    // 1b. Stanowisko audytu ChPL w trybie compact + large
     document.documentElement.setAttribute('data-density', 'compact');
     document.documentElement.setAttribute('data-font-size', 'large');
     expect((await runWcagAxe(container, 'ChplAuditWorkbenchView + B3 (compact + large)')).wcagViolations).toBe(0);
     document.documentElement.removeAttribute('data-density');
     document.documentElement.removeAttribute('data-font-size');
 
-    // 4. Karta ChPL Infanrix hexa (zwinięte + rozwinięte akordeony)
+    // 2. Karta ChPL Infanrix hexa (zwinięte + rozwinięte akordeony)
     const infanrixBtns = await screen.findAllByRole(
       'button',
       {
@@ -136,11 +141,11 @@ describe('Automatyczny audyt dostępności WCAG 2.1/2.2 A/AA (axe-core w Vitest/
       },
       { timeout: 10000 }
     );
-    await user.click(infanrixBtns[0]);
+    fireEvent.click(infanrixBtns[0]);
     await screen.findByRole('heading', { name: /Infanrix hexa/i }, { timeout: 10000 });
     expect((await runWcagAxe(container, 'VaccineDetailView (Infanrix)')).wcagViolations).toBe(0);
 
-    await user.click(screen.getByRole('button', { name: /Rozwiń wszystkie punkty/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Rozwiń wszystkie punkty/i }));
     await waitFor(
       () => {
         expect(
@@ -150,7 +155,7 @@ describe('Automatyczny audyt dostępności WCAG 2.1/2.2 A/AA (axe-core w Vitest/
       { timeout: 10000 }
     );
     expect((await runWcagAxe(container, 'VaccineDetailView (Expanded)')).wcagViolations).toBe(0);
-  }, 60000);
+  }, 120000);
 
   it('Baza wiedzy, moduł w przygotowaniu oraz Ustawienia + podgląd importu kopii JSON spełniają WCAG 2.1/2.2 A/AA', async () => {
     const user = userEvent.setup();

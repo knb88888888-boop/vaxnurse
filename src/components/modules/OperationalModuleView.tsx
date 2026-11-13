@@ -18,7 +18,9 @@ import {
   CHILD_VACCINES_CATALOG,
   STAGE_GROUPS_CONFIG,
   PSO_GENERAL_PRINCIPLES_PART_IV,
-  STAFF_QUALIFICATIONS_PSO_PART_VI
+  STAFF_QUALIFICATIONS_PSO_PART_VI,
+  PSO_CATCH_UP_12_POINTS_PART_V,
+  COMBINED_VACCINES_VARIANTS_PART_III_M
 } from '../../data/childVaccinesData';
 import {
   VACCINES_CATALOG,
@@ -28,9 +30,13 @@ import {
 } from '../../data/vaccinesCatalog';
 import { KNOWLEDGE_SOURCES } from '../../data/knowledgeSources';
 import {
+  COLD_CHAIN_PROFILES,
   COLD_CHAIN_REFERENCE_MAX_C,
   COLD_CHAIN_REFERENCE_MIN_C,
+  EMERGENCY_KIT_REGULATION_ANNEX_26,
+  FACILITY_CARE_CATEGORIES,
   KIT_EXPIRY_WARNING_DAYS,
+  PRODUCT_STORAGE_REFERENCE_MATRIX,
   buildColdChainCsv,
   calculateAgeAt,
   calculateNextDoseDate,
@@ -52,10 +58,13 @@ import {
   validateChecklistText,
   validateColdChainDraft,
   validateKitDraft,
+  type ColdChainProfileId,
   type ColdChainReading,
   type ColdChainReadingDraft,
   type ColdChainStatus,
   type EmergencyKitItem,
+  type FacilityCareCategory,
+  type IntervalUnit,
   type KitItemStatus,
   type LocalChecklistItem
 } from '../../utils/operationalTools';
@@ -132,7 +141,10 @@ const ModuleShell: React.FC<{
 // Kalendarz szczepień (PSO 2027) — dane wyłącznie z rekordów PSO aplikacji
 // ---------------------------------------------------------------------------
 
+type PsoCalendarTab = 'age_schedule' | 'catch_up' | 'combined' | 'principles' | 'qualifications';
+
 const CalendarView: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<PsoCalendarTab>('age_schedule');
   const [stage, setStage] = useState<AgeStageGroup>('all');
   const [obligation, setObligation] = useState<'all' | 'obowiazkowe' | 'zalecane'>('all');
 
@@ -153,82 +165,254 @@ const CalendarView: React.FC = () => {
 
   return (
     <>
-      <section className="ops-panel" aria-labelledby="ops-cal-filters">
-        <h2 id="ops-cal-filters" className="ops-panel-title">
-          Filtry kalendarza PSO 2027
-        </h2>
-        <div className="ops-form-grid">
-          <label className="ops-field">
-            <span>Etap wiekowy</span>
-            <select value={stage} onChange={(e) => setStage(e.target.value as AgeStageGroup)}>
-              {STAGE_GROUPS_CONFIG.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="ops-field">
-            <span>Rodzaj szczepienia</span>
-            <select
-              value={obligation}
-              onChange={(e) => setObligation(e.target.value as typeof obligation)}
-            >
-              <option value="all">Wszystkie</option>
-              <option value="obowiazkowe">Obowiązkowe</option>
-              <option value="zalecane">Zalecane</option>
-            </select>
-          </label>
-        </div>
-        <p className="ops-muted" role="status">
-          Wyświetlono {total} pozycji PSO w {grouped.length} etapach wiekowych. Źródło: Dz. Urz. Min. Zdrow.
-          2026 poz. 77 (komunikat GIS z 28.10.2026).
-        </p>
-      </section>
+      <SafetyNote>
+        Kalendarz prezentuje informacje z Programu Szczepień Ochronnych na 2027 r. (Dz. Urz. Min. Zdrow. 2026 poz. 77 /
+        komunikat GIS z 28.10.2026 r.). Nie stanowi indywidualnego planu szczepienia ani kwalifikacji pacjenta.
+      </SafetyNote>
 
-      {grouped.map(({ bracket, items }) => (
-        <section key={bracket.id} className="ops-panel" aria-labelledby={`ops-cal-${bracket.id}`}>
-          <h2 id={`ops-cal-${bracket.id}`} className="ops-panel-title">
-            {bracket.label} <span className="ops-tag">{bracket.shortLabel}</span>
+      <div className="ops-tabs" role="tablist" aria-label="Części Programu Szczepień Ochronnych 2027">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'age_schedule'}
+          className={`ops-tab ${activeTab === 'age_schedule' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('age_schedule')}
+        >
+          Część I i II: Kalendarz wieku (12 grup)
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'catch_up'}
+          className={`ops-tab ${activeTab === 'catch_up' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('catch_up')}
+        >
+          Część V: Szczepienia wyrównawcze (12 zasad)
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'combined'}
+          className={`ops-tab ${activeTab === 'combined' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('combined')}
+        >
+          Część III.M: Warianty 5w1 i 6w1
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'principles'}
+          className={`ops-tab ${activeTab === 'principles' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('principles')}
+        >
+          Część IV: 7 zasad ogólnych
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'qualifications'}
+          className={`ops-tab ${activeTab === 'qualifications' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('qualifications')}
+        >
+          Część VI: Uprawnienia personelu
+        </button>
+      </div>
+
+      {activeTab === 'age_schedule' && (
+        <>
+          <section className="ops-panel" aria-labelledby="ops-cal-filters">
+            <h2 id="ops-cal-filters" className="ops-panel-title">
+              Filtry kalendarza PSO 2027
+            </h2>
+            <div className="ops-form-grid">
+              <label className="ops-field">
+                <span>Etap wiekowy</span>
+                <select value={stage} onChange={(e) => setStage(e.target.value as AgeStageGroup)}>
+                  {STAGE_GROUPS_CONFIG.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="ops-field">
+                <span>Rodzaj szczepienia</span>
+                <select
+                  value={obligation}
+                  onChange={(e) => setObligation(e.target.value as typeof obligation)}
+                >
+                  <option value="all">Wszystkie</option>
+                  <option value="obowiazkowe">Obowiązkowe</option>
+                  <option value="zalecane">Zalecane</option>
+                </select>
+              </label>
+            </div>
+            <p className="ops-muted" role="status">
+              Wyświetlono {total} pozycji PSO w {grouped.length} etapach wiekowych. Źródło: Dz. Urz. Min. Zdrow.
+              2026 poz. 77 (komunikat GIS z 28.10.2026).
+            </p>
+          </section>
+
+          {grouped.map(({ bracket, items }) => (
+            <section key={bracket.id} className="ops-panel" aria-labelledby={`ops-cal-${bracket.id}`}>
+              <h2 id={`ops-cal-${bracket.id}`} className="ops-panel-title">
+                {bracket.label} <span className="ops-tag">{bracket.shortLabel}</span>
+              </h2>
+              <p className="ops-muted">{bracket.timingDescription}</p>
+              <div className="ops-table-scroll">
+                <table className="ops-table">
+                  <caption className="ops-sr-only">Szczepienia PSO 2027 — {bracket.label}</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Szczepienie</th>
+                      <th scope="col">Dawka</th>
+                      <th scope="col">Rodzaj</th>
+                      <th scope="col">Wiek podania</th>
+                      <th scope="col">Min. odstęp (PSO)</th>
+                      <th scope="col">Źródło PSO</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((v: ChildVaccineItem) => (
+                      <tr key={v.id}>
+                        <td>
+                          <strong>{v.shortCode}</strong> — {v.disease}
+                        </td>
+                        <td>{v.doseLabel}</td>
+                        <td>
+                          <span className={`ops-badge ops-badge--${v.obligationType === 'obowiazkowe' ? 'info' : 'neutral'}`}>
+                            {v.obligationType === 'obowiazkowe' ? 'Obowiązkowe' : 'Zalecane'}
+                          </span>
+                        </td>
+                        <td>{v.targetAgeDisplay}</td>
+                        <td>{v.minIntervalFromPrevious ?? '—'}</td>
+                        <td>
+                          {v.sourcePart}, s. {v.sourcePrintedPage}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ))}
+        </>
+      )}
+
+      {activeTab === 'catch_up' && (
+        <section className="ops-panel" aria-labelledby="ops-cal-catchup">
+          <h2 id="ops-cal-catchup" className="ops-panel-title">
+            Część V PSO 2027 — Szczepienia wyrównawcze (s. 44–45 Dz. Urz. 2026 poz. 77)
           </h2>
-          <p className="ops-muted">{bracket.timingDescription}</p>
+          <p className="ops-muted">
+            12 oficjalnych zasad prawnych regulujących postępowanie w przypadku opóźnień i szczepień wyrównawczych.
+          </p>
+          <ol className="ops-ordered">
+            {PSO_CATCH_UP_12_POINTS_PART_V.map((item) => (
+              <li key={item.pointNumber}>
+                <h3 className="ops-card-title">
+                  Punkt {item.pointNumber}: {item.title}
+                </h3>
+                <p>{item.officialRuleText}</p>
+                <p className="ops-small">
+                  Źródło: Część V PSO 2027, s. {item.psoPdfPage} • Zastosowanie: {item.clinicalApplication}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {activeTab === 'combined' && (
+        <section className="ops-panel" aria-labelledby="ops-cal-combined">
+          <h2 id="ops-cal-combined" className="ops-panel-title">
+            Część III.M PSO 2027 — Warianty szczepionek wysoce skojarzonych (5w1 i 6w1)
+          </h2>
+          <p className="ops-muted">
+            Zasady wymiany preparatów monowalentnych na wieloskładnikowe i koordynacja dawek WZW B w 1. dobie życia.
+          </p>
           <div className="ops-table-scroll">
             <table className="ops-table">
-              <caption className="ops-sr-only">Szczepienia PSO 2027 — {bracket.label}</caption>
+              <caption className="ops-sr-only">Warianty szczepionek skojarzonych Części III.M PSO 2027</caption>
               <thead>
                 <tr>
-                  <th scope="col">Szczepienie</th>
-                  <th scope="col">Dawka</th>
-                  <th scope="col">Rodzaj</th>
-                  <th scope="col">Wiek podania</th>
-                  <th scope="col">Min. odstęp (PSO)</th>
+                  <th scope="col">Wariant</th>
+                  <th scope="col">Schemat</th>
+                  <th scope="col">Składniki</th>
+                  <th scope="col">Warunek dawki WZW B</th>
                   <th scope="col">Źródło PSO</th>
                 </tr>
               </thead>
               <tbody>
-                {items.map((v: ChildVaccineItem) => (
-                  <tr key={v.id}>
+                {COMBINED_VACCINES_VARIANTS_PART_III_M.map((cv) => (
+                  <tr key={cv.id}>
                     <td>
-                      <strong>{v.shortCode}</strong> — {v.disease}
+                      <strong>{cv.name}</strong>
                     </td>
-                    <td>{v.doseLabel}</td>
-                    <td>
-                      <span className={`ops-badge ops-badge--${v.obligationType === 'obowiazkowe' ? 'info' : 'neutral'}`}>
-                        {v.obligationType === 'obowiazkowe' ? 'Obowiązkowe' : 'Zalecane'}
-                      </span>
-                    </td>
-                    <td>{v.targetAgeDisplay}</td>
-                    <td>{v.minIntervalFromPrevious ?? '—'}</td>
-                    <td>
-                      {v.sourcePart}, s. {v.sourcePrintedPage}
-                    </td>
+                    <td>{cv.scheduleDetails}</td>
+                    <td>{cv.antigenComposition}</td>
+                    <td>{cv.hbvAdministrationRule}</td>
+                    <td>{cv.psoPartAndSection}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </section>
-      ))}
+      )}
+
+      {activeTab === 'principles' && (
+        <section className="ops-panel" aria-labelledby="ops-cal-principles">
+          <h2 id="ops-cal-principles" className="ops-panel-title">
+            Część IV PSO 2027 — Ogólne zasady przeprowadzania i organizacji szczepień
+          </h2>
+          <ol className="ops-ordered">
+            {PSO_GENERAL_PRINCIPLES_PART_IV.map((p) => (
+              <li key={p.pointNumber}>
+                <h3 className="ops-card-title">{p.title}</h3>
+                <p>{p.officialRuleText}</p>
+                <p className="ops-small">
+                  {p.psoSection} • s. {p.psoPdfPage}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {activeTab === 'qualifications' && (
+        <section className="ops-panel" aria-labelledby="ops-cal-qualifications">
+          <h2 id="ops-cal-qualifications" className="ops-panel-title">
+            Część VI PSO 2027 — Uprawnienia osób wykonujących zawód medyczny
+          </h2>
+          <div className="ops-table-scroll">
+            <table className="ops-table">
+              <caption className="ops-sr-only">Tabela uprawnień personelu z Części VI PSO 2027</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Zawód medyczny</th>
+                  <th scope="col">Kwalifikacja – obowiązkowe</th>
+                  <th scope="col">Podanie – obowiązkowe</th>
+                  <th scope="col">Podanie – zalecane</th>
+                  <th scope="col">Warunki formalne / prawne</th>
+                </tr>
+              </thead>
+              <tbody>
+                {STAFF_QUALIFICATIONS_PSO_PART_VI.map((s) => (
+                  <tr key={s.professionId}>
+                    <th scope="row">{s.professionName}</th>
+                    <td>{s.qualificationMandatory ? 'Tak' : 'Nie'}</td>
+                    <td>{s.administrationMandatory ? 'Tak' : 'Nie'}</td>
+                    <td>{s.administrationRecommended ? 'Tak' : 'Nie'}</td>
+                    <td>{s.legalConditionsDescription}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       <a
         className="ops-link"
         href="https://www.gov.pl/web/gis/program-szczepien-ochronnych-na-2027-rok"
@@ -346,6 +530,7 @@ const AdultView: React.FC<{ onSelectVaccineProduct?: (id: string) => void }> = (
 const CalculatorView: React.FC = () => {
   const [lastDose, setLastDose] = useState('');
   const [interval, setInterval] = useState('');
+  const [unit, setUnit] = useState<IntervalUnit>('days');
   const [planned, setPlanned] = useState('');
   const [refProcId, setRefProcId] = useState('');
   const [birth, setBirth] = useState('');
@@ -358,7 +543,12 @@ const CalculatorView: React.FC = () => {
   );
   const refProc = procsWithInterval.find((v) => v.id === refProcId) ?? null;
   const result = submitted
-    ? calculateNextDoseDate({ lastDoseDate: lastDose, minIntervalDays: interval, plannedDate: planned })
+    ? calculateNextDoseDate({
+        lastDoseDate: lastDose,
+        minIntervalDays: interval,
+        intervalUnit: unit,
+        plannedDate: planned
+      })
     : null;
   const age = birth ? calculateAgeAt(birth, ageRef) : null;
 
@@ -366,7 +556,8 @@ const CalculatorView: React.FC = () => {
     <>
       <SafetyNote>
         Kalkulator wykonuje wyłącznie arytmetykę dat. Minimalny odstęp wprowadza operator na podstawie aktualnej ChPL
-        preparatu lub PSO — narzędzie nie zawiera wbudowanych reguł klinicznych i nie zastępuje kwalifikacji.
+        preparatu lub PSO — narzędzie nie zawiera wbudowanych reguł klinicznych i nie zastępuje kwalifikacji. Żadne
+        dane wejściowe nie są utrwalane w pamięci trwałej (localStorage).
       </SafetyNote>
 
       <section className="ops-panel" aria-labelledby="ops-calc-next">
@@ -385,12 +576,22 @@ const CalculatorView: React.FC = () => {
             <input type="date" value={lastDose} onChange={(e) => setLastDose(e.target.value)} required />
           </label>
           <label className="ops-field">
-            <span>Minimalny odstęp [dni] (z ChPL / PSO)</span>
+            <span>Jednostka odstępu</span>
+            <select value={unit} onChange={(e) => setUnit(e.target.value as IntervalUnit)}>
+              <option value="days">Dni</option>
+              <option value="months">Miesiące (kalendarzowe UTC)</option>
+              <option value="years">Lata (kalendarzowe UTC)</option>
+            </select>
+          </label>
+          <label className="ops-field">
+            <span>
+              Minimalny odstęp [{unit === 'days' ? 'dni' : unit === 'months' ? 'mies.' : 'lat'}] (z ChPL / PSO)
+            </span>
             <input
               type="number"
               inputMode="numeric"
               min={1}
-              max={3650}
+              max={unit === 'days' ? 3650 : unit === 'months' ? 120 : 100}
               value={interval}
               onChange={(e) => setInterval(e.target.value)}
               required
@@ -414,6 +615,19 @@ const CalculatorView: React.FC = () => {
           <div className="ops-actions">
             <button type="submit" className="ops-btn-primary">
               Oblicz termin
+            </button>
+            <button
+              type="button"
+              className="ops-btn-secondary"
+              onClick={() => {
+                setLastDose('');
+                setInterval('');
+                setPlanned('');
+                setRefProcId('');
+                setSubmitted(false);
+              }}
+            >
+              Wyczyść formularz
             </button>
           </div>
         </form>
@@ -650,7 +864,11 @@ const emptyDraft = (): ColdChainReadingDraft => ({
   minC: '',
   maxC: '',
   actionNote: '',
-  recordedBy: ''
+  recordedBy: '',
+  profileId: 'standard_2_8',
+  customMinC: '',
+  customMaxC: '',
+  sensorUncertain: false
 });
 
 const ColdChainView: React.FC = () => {
@@ -691,7 +909,7 @@ const ColdChainView: React.FC = () => {
     <>
       <SafetyNote>
         Zakres <strong>+{COLD_CHAIN_REFERENCE_MIN_C}°C do +{COLD_CHAIN_REFERENCE_MAX_C}°C</strong> jest zakresem
-        referencyjnym. Aplikacja nie łączy się z rejestratorami — odczyty wprowadza się ręcznie z certyfikowanego
+        referencyjnym dla standardowego profilu. Aplikacja nie łączy się z rejestratorami — odczyty wprowadza się ręcznie z certyfikowanego
         termometru. Przy przekroczeniu postępuj zgodnie z procedurą placówki i wytycznymi GIS/GIF oraz ChPL preparatu.
       </SafetyNote>
 
@@ -739,7 +957,12 @@ const ColdChainView: React.FC = () => {
                   : 'UWAGA: Odchylenie! Nie używać preparatu do czasu wyjaśnienia odchylenia i potwierdzenia dalszej możliwości jego wykorzystania przez osobę odpowiedzialną zgodnie z właściwą procedurą.'
               )
             ) {
-              setDraft((d) => ({ ...emptyDraft(), deviceLabel: d.deviceLabel, recordedBy: d.recordedBy }));
+              setDraft((d) => ({
+                ...emptyDraft(),
+                deviceLabel: d.deviceLabel,
+                recordedBy: d.recordedBy,
+                profileId: d.profileId
+              }));
             }
           }}
         >
@@ -747,6 +970,49 @@ const ColdChainView: React.FC = () => {
             <span>Urządzenie (np. Chłodziarka nr 1)</span>
             <input value={draft.deviceLabel} maxLength={80} onChange={update('deviceLabel')} required />
           </label>
+          <label className="ops-field">
+            <span>Profil temperaturowy</span>
+            <select
+              value={draft.profileId}
+              onChange={(e) =>
+                setDraft((d) => ({
+                  ...d,
+                  profileId: e.target.value as ColdChainProfileId
+                }))
+              }
+            >
+              {Object.entries(COLD_CHAIN_PROFILES).map(([key, prof]) => (
+                <option key={key} value={key}>
+                  {prof.label}{' '}
+                  {prof.minC !== null && prof.maxC !== null
+                    ? `(+${prof.minC}°C do +${prof.maxC}°C)`
+                    : '(własny zakres)'}
+                </option>
+              ))}
+            </select>
+          </label>
+          {draft.profileId === 'custom_chpl' && (
+            <>
+              <label className="ops-field">
+                <span>Własny min [°C]</span>
+                <input
+                  inputMode="decimal"
+                  value={draft.customMinC}
+                  onChange={(e) => setDraft((d) => ({ ...d, customMinC: e.target.value }))}
+                  required
+                />
+              </label>
+              <label className="ops-field">
+                <span>Własny max [°C]</span>
+                <input
+                  inputMode="decimal"
+                  value={draft.customMaxC}
+                  onChange={(e) => setDraft((d) => ({ ...d, customMaxC: e.target.value }))}
+                  required
+                />
+              </label>
+            </>
+          )}
           <label className="ops-field">
             <span>Data i godzina odczytu</span>
             <input type="datetime-local" value={draft.measuredAt} onChange={update('measuredAt')} required />
@@ -767,8 +1033,18 @@ const ColdChainView: React.FC = () => {
             <span>Osoba odczytująca (inicjały, opcjonalnie)</span>
             <input value={draft.recordedBy} maxLength={40} onChange={update('recordedBy')} />
           </label>
+          <label className="ops-field ops-span-2 ops-checkbox-field">
+            <input
+              type="checkbox"
+              checked={draft.sensorUncertain}
+              onChange={(e) => setDraft((d) => ({ ...d, sensorUncertain: e.target.checked }))}
+            />
+            <span>
+              Czujnik pomiarowy wykazuje błąd / brak ważnej kalibracji (oznacz odczyt jako niepewny)
+            </span>
+          </label>
           <label className="ops-field ops-span-2">
-            <span>Podjęte działania (wymagane przy przekroczeniu zakresu)</span>
+            <span>Podjęte działania (wymagane przy odchyleniu lub niepewnym czujniku)</span>
             <input value={draft.actionNote} maxLength={500} onChange={update('actionNote')} />
           </label>
           <div className="ops-actions">
@@ -799,6 +1075,7 @@ const ColdChainView: React.FC = () => {
                 <tr>
                   <th scope="col">Data i godzina</th>
                   <th scope="col">Urządzenie</th>
+                  <th scope="col">Profil</th>
                   <th scope="col">Bieżąca</th>
                   <th scope="col">Min / Max</th>
                   <th scope="col">Status</th>
@@ -815,6 +1092,7 @@ const ColdChainView: React.FC = () => {
                     <tr key={r.id}>
                       <td>{r.measuredAt.replace('T', ' ')}</td>
                       <td>{r.deviceLabel}</td>
+                      <td>{r.profileId ? (COLD_CHAIN_PROFILES[r.profileId]?.label ?? r.profileId) : '—'}</td>
                       <td>{r.currentC !== null ? `${r.currentC.toFixed(1)}°C` : 'Brak pomiaru'}</td>
                       <td>
                         {r.minC !== null ? `${r.minC.toFixed(1)}°C` : '—'} /{' '}
@@ -846,6 +1124,48 @@ const ColdChainView: React.FC = () => {
           </div>
         )}
       </section>
+
+      <section className="ops-panel" aria-labelledby="ops-storage-matrix">
+        <h2 id="ops-storage-matrix" className="ops-panel-title">
+          Wymagania przechowywania wybranych preparatów wg ChPL (pkt 6.4)
+        </h2>
+        <p className="ops-muted">
+          Zestawienie warunków przechowywania z oficjalnych Charakterystyk Produktu Leczniczego (ChPL) zarejestrowanych preparatów.
+        </p>
+        <div className="ops-table-scroll">
+          <table className="ops-table" data-testid="ops-storage-matrix-table">
+            <caption className="ops-sr-only">Wymagania przechowywania preparatów według ChPL</caption>
+            <thead>
+              <tr>
+                <th scope="col">Preparat</th>
+                <th scope="col">Profil</th>
+                <th scope="col">Warunki przechowywania (ChPL pkt 6.4)</th>
+                <th scope="col">Źródło urzędowe</th>
+                <th scope="col">Wersja / Data</th>
+              </tr>
+            </thead>
+            <tbody>
+              {PRODUCT_STORAGE_REFERENCE_MATRIX.map((item) => (
+                <tr key={item.vaccineId}>
+                  <th scope="row">{item.productName}</th>
+                  <td>
+                    <span className="ops-badge ops-badge--info">
+                      {COLD_CHAIN_PROFILES[item.profileId]?.label ?? item.profileId}
+                    </span>
+                  </td>
+                  <td>{item.storageConditionText}</td>
+                  <td>
+                    <span className="ops-small">
+                      {item.sourceDocument} (pkt {item.qrdSection})
+                    </span>
+                  </td>
+                  <td>{item.documentVersionOrDate}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </>
   );
 };
@@ -869,6 +1189,7 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
   const storage = getBrowserStorage();
   const [items, setItems] = useState<EmergencyKitItem[]>(() => loadEmergencyKit(storage));
   const [draft, setDraft] = useState({ name: '', quantity: '1', expiryDate: '' });
+  const [selectedCategory, setSelectedCategory] = useState<FacilityCareCategory>('ambulatory_facility');
   const [errors, setErrors] = useState<string[]>([]);
   const [success, setSuccess] = useState<string | null>(null);
   const today = todayIsoDate();
@@ -885,6 +1206,45 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
     setItems(next);
     setErrors([]);
     setSuccess(msg);
+  };
+
+  const categoryLabel =
+    FACILITY_CARE_CATEGORIES.find((c) => c.id === selectedCategory)?.label ?? selectedCategory;
+
+  const handleLoadRequiredPositions = () => {
+    const requiredItems = EMERGENCY_KIT_REGULATION_ANNEX_26.filter(
+      (reg) => reg.requirements[selectedCategory]
+    );
+    const existingNames = new Set(items.map((i) => i.name.trim().toLowerCase()));
+    const nextDate = new Date();
+    nextDate.setFullYear(nextDate.getFullYear() + 1);
+    const defaultExpiry = todayIsoDate(nextDate);
+
+    const toAdd: EmergencyKitItem[] = [];
+    for (const req of requiredItems) {
+      const matchPrefix = req.substanceName.trim().toLowerCase();
+      const alreadyPresent = Array.from(existingNames).some((en) => en.includes(matchPrefix));
+      if (!alreadyPresent) {
+        toAdd.push({
+          id: generateLocalId('kit'),
+          name: `${req.substanceName} (${req.dosageForm})`,
+          quantity: 1,
+          expiryDate: defaultExpiry,
+          lastCheckedAt: new Date().toISOString()
+        });
+      }
+    }
+
+    if (toAdd.length === 0) {
+      setSuccess('Wszystkie wymagane pozycje dla wybranej kategorii znajdują się już w inwentarzu.');
+      setErrors([]);
+      return;
+    }
+
+    persist(
+      [...items, ...toAdd],
+      `Wczytano ${toAdd.length} wymaganych pozycji dla kategorii: ${categoryLabel}.`
+    );
   };
 
   return (
@@ -923,8 +1283,32 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
           Inwentarz zestawu przeciwwstrząsowego ({items.length} poz., {problems} wymaga uwagi)
         </h2>
         <p className="ops-muted">
-          Skład zestawu określa placówka. Narzędzie kontroluje wyłącznie stan ilościowy i daty ważności.
+          Skład zestawu określa placówka w oparciu o obowiązujące przepisy. Narzędzie kontroluje stan ilościowy i daty ważności.
         </p>
+
+        <div className="ops-field" style={{ marginBottom: '16px' }}>
+          <label htmlFor="ops-facility-category-select">
+            <strong>Kategoria podmiotu leczniczego (wg Rozporządzenia MZ, Dz.U. 2026 poz. 429):</strong>
+          </label>
+          <select
+            id="ops-facility-category-select"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value as FacilityCareCategory)}
+          >
+            {FACILITY_CARE_CATEGORIES.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="ops-actions" style={{ marginBottom: '16px' }}>
+          <button type="button" className="ops-btn-secondary" onClick={handleLoadRequiredPositions}>
+            <Plus size={16} aria-hidden="true" /> Wczytaj pozycje wymagane dla wybranej kategorii ({EMERGENCY_KIT_REGULATION_ANNEX_26.filter((r) => r.requirements[selectedCategory]).length} z 26)
+          </button>
+        </div>
+
         <form
           className="ops-form-grid"
           onSubmit={(e) => {
@@ -1035,6 +1419,49 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
             </table>
           </div>
         )}
+      </section>
+
+      <section className="ops-panel" aria-labelledby="ops-sit-annex26">
+        <h2 id="ops-sit-annex26" className="ops-panel-title">
+          Wykaz produktów leczniczych zestawu przeciwwstrząsowego (Rozporządzenie MZ, Dz.U. 2026 poz. 429)
+        </h2>
+        <p className="ops-muted">
+          Załącznik do Rozporządzenia Ministra Zdrowia określa 26 pozycji produktów leczniczych wchodzących w skład
+          zestawów przeciwwstrząsowych. Poniższa tabela wskazuje wymagania dla kategorii:{' '}
+          <strong>{categoryLabel}</strong>.
+        </p>
+        <div className="ops-table-scroll">
+          <table className="ops-table" data-testid="ops-emergency-annex-table">
+            <caption className="ops-sr-only">Wykaz 26 pozycji zestawu przeciwwstrząsowego wg Dz.U. 2026 poz. 429</caption>
+            <thead>
+              <tr>
+                <th scope="col">Lp.</th>
+                <th scope="col">Nazwa produktu / substancji</th>
+                <th scope="col">Postać i dawka</th>
+                <th scope="col">Wymóg dla wybranej kategorii</th>
+                <th scope="col">Uwagi regulacyjne</th>
+              </tr>
+            </thead>
+            <tbody>
+              {EMERGENCY_KIT_REGULATION_ANNEX_26.map((item) => {
+                const isRequired = item.requirements[selectedCategory];
+                return (
+                  <tr key={item.itemNumber}>
+                    <td>{item.itemNumber}</td>
+                    <th scope="row">{item.substanceName}</th>
+                    <td>{item.dosageForm}</td>
+                    <td>
+                      <span className={`ops-badge ops-badge--${isRequired ? 'ok' : 'neutral'}`}>
+                        {isRequired ? 'Obowiązkowy' : 'Niewymagany'}
+                      </span>
+                    </td>
+                    <td>{item.notes ?? '—'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </section>
     </>
   );

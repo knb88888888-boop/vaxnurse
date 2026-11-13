@@ -87,4 +87,81 @@ describe('OperationalModuleView — aktywne moduły operacyjne VaxNurse', () => 
     await user.click(screen.getByRole('button', { name: /Dodaj pozycję/i }));
     expect(screen.getByTestId('ops-kit-table')).toHaveTextContent('Pozycja testowa');
   });
+
+  it('Kalendarz szczepień PSO 2027: nawigacja po zakładkach (Część I-II, V, III.M, IV, VI)', async () => {
+    const user = userEvent.setup();
+    render(
+      <OperationalModuleView
+        module={getMod('vaccination-calendar')}
+        onBackToDashboard={vi.fn()}
+        onNavigateToModule={vi.fn()}
+      />
+    );
+
+    // Przełączenie na Część V (Wyrównawcze)
+    await user.click(screen.getByRole('tab', { name: /Szczepienia wyrównawcze/i }));
+    expect(screen.getByRole('heading', { name: /Część V PSO 2027 — Szczepienia wyrównawcze/i })).toBeInTheDocument();
+    expect(screen.getByText(/Punkt 1:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Punkt 12:/i)).toBeInTheDocument();
+
+    // Przełączenie na Część III.M (Warianty skojarzone)
+    await user.click(screen.getByRole('tab', { name: /Warianty 5w1 i 6w1/i }));
+    expect(screen.getByRole('heading', { name: /Część III.M PSO 2027/i })).toBeInTheDocument();
+
+    // Przełączenie na Część IV (Zasady ogólne)
+    await user.click(screen.getByRole('tab', { name: /7 zasad ogólnych/i }));
+    expect(screen.getByRole('heading', { name: /Część IV PSO 2027/i })).toBeInTheDocument();
+
+    // Przełączenie na Część VI (Kwalifikacje)
+    await user.click(screen.getByRole('tab', { name: /Uprawnienia personelu/i }));
+    expect(screen.getByRole('heading', { name: /Część VI PSO 2027/i })).toBeInTheDocument();
+  });
+
+  it('Łańcuch chłodniczy: matryca 10 preparatów ChPL 6.4 oraz profil indywidualny', async () => {
+    const user = userEvent.setup();
+    render(
+      <OperationalModuleView
+        module={getMod('cold-chain')}
+        onBackToDashboard={vi.fn()}
+        onNavigateToModule={vi.fn()}
+      />
+    );
+
+    // Matryca warunków przechowywania
+    expect(screen.getByTestId('ops-storage-matrix-table')).toBeInTheDocument();
+    expect(screen.getByText(/Infanrix hexa/i)).toBeInTheDocument();
+    expect(screen.getByText(/Spikevax XFG/i)).toBeInTheDocument();
+
+    // Wybór profilu z zakresem indywidualnym
+    await user.selectOptions(
+      screen.getByLabelText(/Profil temperaturowy/i),
+      'custom_chpl'
+    );
+    expect(screen.getByLabelText(/Własny min/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Własny max/i)).toBeInTheDocument();
+  });
+
+  it('Sytuacje szczególne: tabela 26 pozycji Dz.U. 2026 poz. 429 i zasilenie inwentarza dla wybranej kategorii', async () => {
+    const user = userEvent.setup();
+    render(
+      <OperationalModuleView
+        module={getMod('special-situations')}
+        onBackToDashboard={vi.fn()}
+        onNavigateToModule={vi.fn()}
+      />
+    );
+
+    // Tabela 26 pozycji regulacyjnych
+    expect(screen.getByTestId('ops-emergency-annex-table')).toBeInTheDocument();
+    expect(screen.getByText(/Adrenalinum/i)).toBeInTheDocument();
+    expect(screen.getByText(/Dopamini hydrochloridum/i)).toBeInTheDocument();
+
+    // Wczytanie wymaganych pozycji do inwentarza dla domyślnej kategorii ambulatoryjnej
+    const loadBtn = screen.getByRole('button', { name: /Wczytaj pozycje wymagane/i });
+    await user.click(loadBtn);
+
+    // Sprawdzenie, że inwentarz został zasilony lekami (np. Adrenalinum)
+    expect(screen.getByTestId('ops-kit-table')).toBeInTheDocument();
+    expect(screen.getByText(/Adrenalinum \(roztwór do wstrzykiwań/i)).toBeInTheDocument();
+  });
 });

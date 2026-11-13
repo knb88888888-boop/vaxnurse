@@ -3,6 +3,7 @@ import {
   buildColdChainCsv,
   calculateAgeAt,
   calculateNextDoseDate,
+  EMERGENCY_KIT_REGULATION_ANNEX_26,
   escapeCsvField,
   evaluateColdChainStatus,
   evaluateKitItemStatus,
@@ -10,6 +11,7 @@ import {
   loadColdChainReadings,
   loadEmergencyKit,
   loadLocalChecklist,
+  PRODUCT_STORAGE_REFERENCE_MATRIX,
   saveColdChainReadings,
   saveEmergencyKit,
   saveLocalChecklist,
@@ -183,5 +185,106 @@ describe('operationalTools — Łańcuch chłodniczy, checklista i zestaw przeci
     expect(escapeCsvField(' =1+1')).toBe("' =1+1");
     expect(escapeCsvField('\n+1')).toBe(`"'\n+1"`);
     expect(escapeCsvField('Zażółć gęślą; "test"')).toBe(`"Zażółć gęślą; ""test"""`);
+  });
+
+  it('Etap C1.2: Matryca warunków przechowywania ChPL pkt 6.4 (10 produktów) i profile temperaturowe', () => {
+    expect(PRODUCT_STORAGE_REFERENCE_MATRIX).toHaveLength(10);
+    const infanrix = PRODUCT_STORAGE_REFERENCE_MATRIX.find((p) => p.vaccineId === 'vac-infanrix-hexa');
+    expect(infanrix).toBeDefined();
+    expect(infanrix?.profileId).toBe('standard_2_8');
+    expect(infanrix?.qrdSection).toBe('6.4');
+    expect(infanrix?.storageConditionText).toContain('2°C–8°C');
+
+    const spikevax = PRODUCT_STORAGE_REFERENCE_MATRIX.find((p) => p.vaccineId === 'spikevax_xfg');
+    expect(spikevax).toBeDefined();
+    expect(spikevax?.profileId).toBe('frozen_minus25_minus15');
+
+    // Walidacja profilu własnego z granicami custom
+    const customValid = validateColdChainDraft({
+      deviceLabel: 'Chłodziarka Specjalna',
+      measuredAt: '2026-11-12T10:00',
+      currentC: '-20.5',
+      minC: '',
+      maxC: '',
+      profileId: 'custom_chpl',
+      customMinC: '-25',
+      customMaxC: '-15',
+      actionNote: '',
+      recordedBy: ''
+    });
+    expect(customValid.ok).toBe(true);
+    if (customValid.ok) {
+      expect(evaluateColdChainStatus(customValid.reading)).toBe('within_configured_range');
+    }
+
+    const customExcursion = validateColdChainDraft({
+      deviceLabel: 'Chłodziarka Specjalna',
+      measuredAt: '2026-11-12T10:00',
+      currentC: '-10.0',
+      minC: '',
+      maxC: '',
+      profileId: 'custom_chpl',
+      customMinC: '-25',
+      customMaxC: '-15',
+      actionNote: '',
+      recordedBy: ''
+    });
+    // Odrzuca brak notatki o działaniach przy odchyleniu
+    expect(customExcursion.ok).toBe(false);
+
+    // Walidacja niepewnego czujnika
+    const uncertainReading = validateColdChainDraft({
+      deviceLabel: 'Chłodziarka 1',
+      measuredAt: '2026-11-12T10:00',
+      currentC: '5.0',
+      minC: '',
+      maxC: '',
+      sensorUncertain: true,
+      actionNote: 'Zgłoszono serwisowi',
+      recordedBy: ''
+    });
+    expect(uncertainReading.ok).toBe(true);
+    if (uncertainReading.ok) {
+      expect(evaluateColdChainStatus(uncertainReading.reading)).toBe('sensor_or_device_uncertain');
+    }
+  });
+
+  it('Etap C1.2: Pełna macierz 26 pozycji zestawu przeciwwstrząsowego wg Dz.U. 2026 poz. 429', () => {
+    expect(EMERGENCY_KIT_REGULATION_ANNEX_26).toHaveLength(26);
+
+    // Pozycja 1: Adrenalinum jest wymagana we wszystkich 5 kategoriach placówek
+    const adrenaline = EMERGENCY_KIT_REGULATION_ANNEX_26.find((i) => i.itemNumber === 1);
+    expect(adrenaline).toBeDefined();
+    expect(adrenaline?.substanceName).toBe('Adrenalinum');
+    FACILITY_CARE_CATEGORIES.forEach((cat) => {
+      expect(adrenaline?.requirements[cat.id]).toBe(true);
+    });
+
+    // Dopamina (poz. 10) jest wymagana wyłącznie w szpitalach
+    const dopamine = EMERGENCY_KIT_REGULATION_ANNEX_26.find((i) => i.itemNumber === 10);
+    expect(dopamine).toBeDefined();
+    expect(dopamine?.requirements.hospital).toBe(true);
+    expect(dopamine?.requirements.ambulatory_home).toBe(false);
+    expect(dopamine?.requirements.ambulatory_dental).toBe(false);
+    expect(dopamine?.requirements.ambulatory_facility).toBe(false);
+
+    // Morfina (poz. 22) - wyłącznie stacjonarne całodobowe i szpital
+    const morphine = EMERGENCY_KIT_REGULATION_ANNEX_26.find((i) => i.itemNumber === 22);
+    expect(morphine).toBeDefined();
+    expect(morphine?.requirements.hospital).toBe(true);
+    expect(morphine?.requirements.ambulatory_home).toBe(false);
+    expect(morphine?.requirements.ambulatory_dental).toBe(false);
+    expect(morphine?.requirements.ambulatory_facility).toBe(false);
+
+    // Każda z 26 pozycji posiada zdefiniowane wymagania dla wszystkich 5 kategorii
+    EMERGENCY_KIT_REGULATION_ANNEX_26.forEach((item) => {
+      expect(item.itemNumber).toBeGreaterThanOrEqual(1);
+      expect(item.itemNumber).toBeLessThanOrEqual(26);
+      expect(item.substanceName.length).toBeGreaterThan(0);
+      expect(item.dosageForm.length).toBeGreaterThan(0);
+      FACILITY_CARE_CATEGORIES.forEach((cat) => {
+        expect(typeof item.requirements[cat.id]).toBe('boolean');
+      });
+    });
   });
 });

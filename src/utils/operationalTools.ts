@@ -344,11 +344,16 @@ export interface ColdChainReadingDraft {
   currentC: string;
   minC: string;
   maxC: string;
+  profileId?: ColdChainProfileId;
+  customMinC?: string;
+  customMaxC?: string;
+  sensorUncertain?: boolean;
   actionNote: string;
   recordedBy: string;
 }
 
-function parseTemperature(value: string): number | null | 'invalid' {
+function parseTemperature(value?: string | null): number | null | 'invalid' {
+  if (value === undefined || value === null) return null;
   const v = value.trim().replace(',', '.');
   if (!v) return null;
   if (!/^-?\d{1,2}(\.\d{1,2})?$/.test(v)) return 'invalid';
@@ -416,6 +421,21 @@ export function validateColdChainDraft(
     errors.push('Temperatura minimalna nie może być wyższa niż maksymalna.');
   }
 
+  const profileId = draft.profileId ?? 'standard_2_8';
+  let customMinNum: number | null = null;
+  let customMaxNum: number | null = null;
+  if (profileId === 'custom_chpl') {
+    const cMin = draft.customMinC ? parseTemperature(draft.customMinC) : null;
+    const cMax = draft.customMaxC ? parseTemperature(draft.customMaxC) : null;
+    if (cMin === 'invalid') errors.push('Indywidualna dolna granica temperatury ma niepoprawny format.');
+    if (cMax === 'invalid') errors.push('Indywidualna górna granica temperatury ma niepoprawny format.');
+    if (typeof cMin === 'number' && typeof cMax === 'number' && cMin > cMax) {
+      errors.push('Indywidualna dolna granica temperatury nie może być wyższa niż górna.');
+    }
+    customMinNum = typeof cMin === 'number' ? cMin : null;
+    customMaxNum = typeof cMax === 'number' ? cMax : null;
+  }
+
   const reading: ColdChainReading = {
     id: generateLocalId('cc'),
     deviceLabel,
@@ -423,6 +443,10 @@ export function validateColdChainDraft(
     currentC: typeof current === 'number' ? current : 0,
     minC: typeof min === 'number' ? min : null,
     maxC: typeof max === 'number' ? max : null,
+    profileId,
+    customMinC: customMinNum,
+    customMaxC: customMaxNum,
+    sensorUncertain: draft.sensorUncertain === true,
     actionNote,
     recordedBy,
     createdAt: now.toISOString()
@@ -430,7 +454,7 @@ export function validateColdChainDraft(
 
   if (errors.length === 0 && evaluateColdChainStatus(reading) !== 'within_configured_range' && actionNote.length < 5) {
     errors.push(
-      'Odczyt poza zakresem referencyjnym +2°C do +8°C wymaga opisu podjętych działań (min. 5 znaków) zgodnie z procedurą placówki.'
+      'Odczyt poza skonfigurowanym zakresem lub wymagający przeglądu wymaga opisu podjętych działań (min. 5 znaków) zgodnie z procedurą placówki.'
     );
   }
 
@@ -447,6 +471,12 @@ function sanitizeColdChainReading(raw: unknown): ColdChainReading | null {
   const actionNote = normalizeText(raw.actionNote, 500);
   const recordedBy = normalizeText(raw.recordedBy, 40);
   if (!deviceLabel || ![deviceLabel, actionNote, recordedBy].every(isSafeText)) return null;
+
+  const validProfileId: ColdChainProfileId =
+    typeof raw.profileId === 'string' && raw.profileId in COLD_CHAIN_PROFILES
+      ? (raw.profileId as ColdChainProfileId)
+      : 'standard_2_8';
+
   return {
     id: normalizeText(raw.id, 64),
     deviceLabel,
@@ -454,6 +484,10 @@ function sanitizeColdChainReading(raw: unknown): ColdChainReading | null {
     currentC: current,
     minC: num(raw.minC),
     maxC: num(raw.maxC),
+    profileId: validProfileId,
+    customMinC: num(raw.customMinC),
+    customMaxC: num(raw.customMaxC),
+    sensorUncertain: raw.sensorUncertain === true,
     actionNote,
     recordedBy,
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : ''
@@ -518,10 +552,11 @@ export function buildColdChainCsv(readings: readonly ColdChainReading[]): string
   const header = [
     'Data i godzina odczytu',
     'Urządzenie',
+    'Profil temperaturowy',
     'Temp. bieżąca [°C]',
     'Temp. min [°C]',
     'Temp. max [°C]',
-    'Status (zakres ref. +2..+8°C)',
+    'Status',
     'Podjęte działania',
     'Osoba odczytująca'
   ];
@@ -538,6 +573,7 @@ export function buildColdChainCsv(readings: readonly ColdChainReading[]): string
     [
       r.measuredAt.replace('T', ' '),
       r.deviceLabel,
+      COLD_CHAIN_PROFILES[r.profileId ?? 'standard_2_8'].label,
       r.currentC,
       r.minC,
       r.maxC,
@@ -692,3 +728,458 @@ export function getBrowserStorage(): Storage | null {
     return null;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Macierz warunków przechowywania preparatów wg ChPL (pkt 6.4)
+// ---------------------------------------------------------------------------
+
+export interface ProductStorageReference {
+  vaccineId: string;
+  productName: string;
+  profileId: ColdChainProfileId;
+  sourceDocument: string;
+  documentVersionOrDate: string;
+  qrdSection: string;
+  storageConditionText: string;
+  reviewStatus: 'verified_source_excerpt' | 'verified_in_stage1_bundle' | 'pending_verification';
+}
+
+export const PRODUCT_STORAGE_REFERENCE_MATRIX: ReadonlyArray<ProductStorageReference> = [
+  {
+    vaccineId: 'vac-infanrix-hexa',
+    productName: 'Infanrix hexa (DTPa-HBV-IPV+Hib)',
+    profileId: 'standard_2_8',
+    sourceDocument: 'ChPL EMA/H/C/000296 Aneks I',
+    documentVersionOrDate: '06/2024',
+    qrdSection: '6.4',
+    storageConditionText: '2°C–8°C, w lodówce, nie zamrażać, chronić przed światłem (stabilność do 72h w temp. do 25°C)',
+    reviewStatus: 'verified_source_excerpt'
+  },
+  {
+    vaccineId: 'vac-priorix',
+    productName: 'Priorix (odra, świnka, różyczka MMR)',
+    profileId: 'standard_2_8',
+    sourceDocument: 'ChPL RPL ID 12151',
+    documentVersionOrDate: '03/2023',
+    qrdSection: '6.4',
+    storageConditionText: '2°C–8°C, w lodówce, nie zamrażać, chronić przed światłem; po rekonstytucji zużyć niezwłocznie lub do 8h w 2°C–8°C',
+    reviewStatus: 'verified_source_excerpt'
+  },
+  {
+    vaccineId: 'vac-prevenar-13',
+    productName: 'Prevenar 13 (pneumokoki PCV-13)',
+    profileId: 'standard_2_8',
+    sourceDocument: 'ChPL EMA/H/C/001104 Aneks I',
+    documentVersionOrDate: '11/2023',
+    qrdSection: '6.4',
+    storageConditionText: '2°C–8°C, w lodówce, nie zamrażać (stabilna do 4 dni w temp. do 25°C)',
+    reviewStatus: 'verified_source_excerpt'
+  },
+  {
+    vaccineId: 'vac-engerix-b',
+    productName: 'Engerix B (WZW B)',
+    profileId: 'standard_2_8',
+    sourceDocument: 'ChPL RPL ID 0147',
+    documentVersionOrDate: '04/2024',
+    qrdSection: '6.4',
+    storageConditionText: '2°C–8°C, w lodówce, nie zamrażać, chronić przed światłem',
+    reviewStatus: 'verified_source_excerpt'
+  },
+  {
+    vaccineId: 'vac-boostrix',
+    productName: 'Boostrix (dTpa)',
+    profileId: 'standard_2_8',
+    sourceDocument: 'ChPL RPL ID 12152',
+    documentVersionOrDate: '05/2023',
+    qrdSection: '6.4',
+    storageConditionText: '2°C–8°C, w lodówce, nie zamrażać, chronić przed światłem',
+    reviewStatus: 'verified_source_excerpt'
+  },
+  {
+    vaccineId: 'vac-vaxigrip-tetra',
+    productName: 'VaxigripTetra (grypa sezonowa 4-walentna)',
+    profileId: 'standard_2_8',
+    sourceDocument: 'ChPL RPL ID 38411',
+    documentVersionOrDate: '08/2024',
+    qrdSection: '6.4',
+    storageConditionText: '2°C–8°C, w lodówce, nie zamrażać, chronić przed światłem (stabilność czasowa do 72h w temp. do 25°C)',
+    reviewStatus: 'verified_source_excerpt'
+  },
+  {
+    vaccineId: 'bcg_10',
+    productName: 'Szczepionka przeciwgruźlicza BCG 10',
+    profileId: 'standard_2_8',
+    sourceDocument: 'ChPL RPL ID 19535',
+    documentVersionOrDate: '06/2024',
+    qrdSection: '6.4',
+    storageConditionText: '2°C–8°C, w lodówce, chronić przed światłem, nie zamrażać; po rekonstytucji zużyć natychmiast',
+    reviewStatus: 'verified_in_stage1_bundle'
+  },
+  {
+    vaccineId: 'influvac_2026_2027',
+    productName: 'Influvac (sezon 2026/2027)',
+    profileId: 'standard_2_8',
+    sourceDocument: 'ChPL RPL ID 49462',
+    documentVersionOrDate: '06/2024',
+    qrdSection: '6.4',
+    storageConditionText: '2°C–8°C, w lodówce, nie zamrażać, chronić przed światłem',
+    reviewStatus: 'verified_in_stage1_bundle'
+  },
+  {
+    vaccineId: 'vaxigrip_2026_2027',
+    productName: 'Vaxigrip (sezon 2026/2027)',
+    profileId: 'standard_2_8',
+    sourceDocument: 'ChPL RPL ID 50032',
+    documentVersionOrDate: '08/2024',
+    qrdSection: '6.4',
+    storageConditionText: '2°C–8°C, w lodówce, nie zamrażać; dopuszczona stabilność 72 godz. w temp. do 25°C±2°C',
+    reviewStatus: 'verified_in_stage1_bundle'
+  },
+  {
+    vaccineId: 'spikevax_xfg',
+    productName: 'Spikevax XFG (COVID-19 mRNA)',
+    profileId: 'frozen_minus25_minus15',
+    sourceDocument: 'ChPL EMA EPAR Aneks I',
+    documentVersionOrDate: '07/2024',
+    qrdSection: '6.3–6.4',
+    storageConditionText: 'Zamrożony w -50°C do -15°C; po rozmrożeniu przechowywać w 2°C–8°C max 30 dni (lub 14 dni), 8°C–25°C max 24 h',
+    reviewStatus: 'verified_in_stage1_bundle'
+  }
+];
+
+// ---------------------------------------------------------------------------
+// Pełna macierz 26 pozycji zestawu przeciwwstrząsowego (Dz.U. 2026 poz. 429)
+// ---------------------------------------------------------------------------
+
+export interface EmergencyKitRegulationItem {
+  itemNumber: number;
+  substanceName: string;
+  dosageForm: string;
+  requirements: Record<FacilityCareCategory, boolean>;
+  notes?: string;
+}
+
+export const EMERGENCY_KIT_REGULATION_ANNEX_26: ReadonlyArray<EmergencyKitRegulationItem> = [
+  {
+    itemNumber: 1,
+    substanceName: 'Adrenalinum',
+    dosageForm: 'roztwór do wstrzykiwań 1 mg/ml lub ampułko-strzykawka / autowstrzykiwacz',
+    requirements: {
+      ambulatory_home: true,
+      ambulatory_dental: true,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    },
+    notes: 'Lek I rzutu w anafilaksji; podanie domięśniowe'
+  },
+  {
+    itemNumber: 2,
+    substanceName: 'Amiodaroni hydrochloridum',
+    dosageForm: 'roztwór do wstrzykiwań 50 mg/ml',
+    requirements: {
+      ambulatory_home: false,
+      ambulatory_dental: false,
+      ambulatory_facility: false,
+      inpatient_non_hospital: true,
+      hospital: true
+    },
+    notes: 'Wymagany w placówkach stacjonarnych i szpitalach'
+  },
+  {
+    itemNumber: 3,
+    substanceName: 'Atropini sulfas',
+    dosageForm: 'roztwór do wstrzykiwań 0,5 mg/ml lub 1 mg/ml',
+    requirements: {
+      ambulatory_home: true,
+      ambulatory_dental: true,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    }
+  },
+  {
+    itemNumber: 4,
+    substanceName: 'Calcii chloridum lub Calcii gluconas',
+    dosageForm: 'roztwór do wstrzykiwań 10%',
+    requirements: {
+      ambulatory_home: false,
+      ambulatory_dental: false,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    }
+  },
+  {
+    itemNumber: 5,
+    substanceName: 'Captoprilum',
+    dosageForm: 'tabletki lub tabletki podjęzykowe 12,5 mg lub 25 mg',
+    requirements: {
+      ambulatory_home: true,
+      ambulatory_dental: true,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    }
+  },
+  {
+    itemNumber: 6,
+    substanceName: 'Clemastinum',
+    dosageForm: 'roztwór do wstrzykiwań 1 mg/ml',
+    requirements: {
+      ambulatory_home: true,
+      ambulatory_dental: true,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    },
+    notes: 'Lek przeciwhistaminowy II rzutu'
+  },
+  {
+    itemNumber: 7,
+    substanceName: 'Clonazepamum',
+    dosageForm: 'roztwór do wstrzykiwań 1 mg/ml',
+    requirements: {
+      ambulatory_home: false,
+      ambulatory_dental: false,
+      ambulatory_facility: false,
+      inpatient_non_hospital: true,
+      hospital: true
+    }
+  },
+  {
+    itemNumber: 8,
+    substanceName: 'Dexamethasoni phosphas',
+    dosageForm: 'roztwór do wstrzykiwań 4 mg/ml lub 8 mg/ml',
+    requirements: {
+      ambulatory_home: true,
+      ambulatory_dental: true,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    },
+    notes: 'Glikokortykosteroid'
+  },
+  {
+    itemNumber: 9,
+    substanceName: 'Diazepamum',
+    dosageForm: 'roztwór do wstrzykiwań 5 mg/ml lub wlewka doodbytnicza',
+    requirements: {
+      ambulatory_home: true,
+      ambulatory_dental: true,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    }
+  },
+  {
+    itemNumber: 10,
+    substanceName: 'Dopamini hydrochloridum',
+    dosageForm: 'koncentrat do sporządzania roztworu do infuzji 40 mg/ml',
+    requirements: {
+      ambulatory_home: false,
+      ambulatory_dental: false,
+      ambulatory_facility: false,
+      inpatient_non_hospital: false,
+      hospital: true
+    },
+    notes: 'Wyłącznie świadczenia szpitalne'
+  },
+  {
+    itemNumber: 11,
+    substanceName: 'Ephedrini hydrochloridum',
+    dosageForm: 'roztwór do wstrzykiwań 25 mg/ml lub 50 mg/ml',
+    requirements: {
+      ambulatory_home: false,
+      ambulatory_dental: false,
+      ambulatory_facility: false,
+      inpatient_non_hospital: false,
+      hospital: true
+    },
+    notes: 'Wyłącznie świadczenia szpitalne'
+  },
+  {
+    itemNumber: 12,
+    substanceName: 'Furosemidum',
+    dosageForm: 'roztwór do wstrzykiwań 10 mg/ml',
+    requirements: {
+      ambulatory_home: false,
+      ambulatory_dental: false,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    }
+  },
+  {
+    itemNumber: 13,
+    substanceName: 'Glucagonum',
+    dosageForm: 'proszek i rozpuszczalnik do wstrzykiwań 1 mg',
+    requirements: {
+      ambulatory_home: true,
+      ambulatory_dental: true,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    }
+  },
+  {
+    itemNumber: 14,
+    substanceName: 'Glukosum 5%',
+    dosageForm: 'roztwór do infuzji',
+    requirements: {
+      ambulatory_home: false,
+      ambulatory_dental: false,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    }
+  },
+  {
+    itemNumber: 15,
+    substanceName: 'Glukosum 20% lub Glukosum 40%',
+    dosageForm: 'roztwór do wstrzykiwań / infuzji',
+    requirements: {
+      ambulatory_home: true,
+      ambulatory_dental: true,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    }
+  },
+  {
+    itemNumber: 16,
+    substanceName: 'Glyceroli trinitras',
+    dosageForm: 'aerozol podjęzykowy 0,4 mg/dawkę lub tabletki podjęzykowe 0,5 mg',
+    requirements: {
+      ambulatory_home: true,
+      ambulatory_dental: true,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    }
+  },
+  {
+    itemNumber: 17,
+    substanceName: 'Hydrocortisonum lub Methylprednisolonum',
+    dosageForm: 'proszek i rozpuszczalnik do wstrzykiwań (100 mg / 250 mg)',
+    requirements: {
+      ambulatory_home: true,
+      ambulatory_dental: true,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    },
+    notes: 'Hydrokortyzon lub bursztynian metyloprednizolonu'
+  },
+  {
+    itemNumber: 18,
+    substanceName: 'Ketoprofenum (lub inny NLPZ do wstrzykiwań)',
+    dosageForm: 'roztwór do wstrzykiwań 50 mg/ml',
+    requirements: {
+      ambulatory_home: false,
+      ambulatory_dental: false,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    }
+  },
+  {
+    itemNumber: 19,
+    substanceName: 'Lidocaini hydrochloridum',
+    dosageForm: 'roztwór do wstrzykiwań 1% lub 2%',
+    requirements: {
+      ambulatory_home: false,
+      ambulatory_dental: true,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    }
+  },
+  {
+    itemNumber: 20,
+    substanceName: 'Magnesii sulfas',
+    dosageForm: 'roztwór do wstrzykiwań 20%',
+    requirements: {
+      ambulatory_home: false,
+      ambulatory_dental: false,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    }
+  },
+  {
+    itemNumber: 21,
+    substanceName: 'Metoclopramidum',
+    dosageForm: 'roztwór do wstrzykiwań 5 mg/ml',
+    requirements: {
+      ambulatory_home: false,
+      ambulatory_dental: false,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    }
+  },
+  {
+    itemNumber: 22,
+    substanceName: 'Morphini sulfas',
+    dosageForm: 'roztwór do wstrzykiwań 10 mg/ml lub 20 mg/ml',
+    requirements: {
+      ambulatory_home: false,
+      ambulatory_dental: false,
+      ambulatory_facility: false,
+      inpatient_non_hospital: true,
+      hospital: true
+    },
+    notes: 'Środek odurzający; stacjonarne całodobowe i szpital'
+  },
+  {
+    itemNumber: 23,
+    substanceName: 'Naloxoni hydrochloridum',
+    dosageForm: 'roztwór do wstrzykiwań 0,4 mg/ml',
+    requirements: {
+      ambulatory_home: false,
+      ambulatory_dental: false,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    },
+    notes: 'Antagonista receptorów opioidowych'
+  },
+  {
+    itemNumber: 24,
+    substanceName: 'Natrii chloridum 0,9%',
+    dosageForm: 'roztwór do infuzji oraz płukania / rozpuszczalnik',
+    requirements: {
+      ambulatory_home: true,
+      ambulatory_dental: true,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    }
+  },
+  {
+    itemNumber: 25,
+    substanceName: 'Płyn wieloelektrolitowy izotoniczny (PWE)',
+    dosageForm: 'roztwór do infuzji',
+    requirements: {
+      ambulatory_home: false,
+      ambulatory_dental: false,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    }
+  },
+  {
+    itemNumber: 26,
+    substanceName: 'Salbutamolum',
+    dosageForm: 'aerozol wziewny lub roztwór do nebulizacji',
+    requirements: {
+      ambulatory_home: true,
+      ambulatory_dental: true,
+      ambulatory_facility: true,
+      inpatient_non_hospital: true,
+      hospital: true
+    },
+    notes: 'Beta-2 mimetyk wziewny rozszerzający oskrzela'
+  }
+];

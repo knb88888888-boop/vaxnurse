@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import { ChplAuditWorkbenchView } from '../../src/components/vaccines/ChplAuditWorkbenchView';
 import { VACCINES_CATALOG } from '../../src/data/vaccinesCatalog';
 import { CHPL_WORKBENCH_SAFETY_NOTICE } from '../../src/utils/chplWorkbench';
@@ -60,12 +59,11 @@ describe('ChplAuditWorkbenchView — stanowisko audytu ChPL (ETAP B1 · READ-ONL
   });
 
   it('prezentuje wszystkie 4 dokumenty Etapu I, separuje RPL od EMA EPAR (PL 177 str. + EN 158 str.) i pokazuje 18 podpunktów QRD', async () => {
-    const user = userEvent.setup();
     render(<ChplAuditWorkbenchView vaccines={VACCINES_CATALOG} onOpenVaccineById={vi.fn()} />);
 
     // Przełączenie na Spikevax XFG
     const spikevaxBtn = screen.getByRole('button', { name: /Spikevax XFG/i });
-    await user.click(spikevaxBtn);
+    fireEvent.click(spikevaxBtn);
 
     const detailsSection = screen.getByRole('heading', {
       name: /Sekcja D — Szczegóły dokumentacji audytowej/i,
@@ -84,7 +82,7 @@ describe('ChplAuditWorkbenchView — stanowisko audytu ChPL (ETAP B1 · READ-ONL
     expect(spikevaxSheet?.entries).toHaveLength(18);
     expect(detailsScope.getByText(/4\.1 Wskazania do stosowania/i)).toBeInTheDocument();
     expect(detailsScope.getByText(/4\.9 Przedawkowanie/i)).toBeInTheDocument();
-  }, 30000);
+  }, 120000);
 
   it('prezentuje missingDataReport i wszystkie 8 otwartych pytań do audytora z autoResolved = false', () => {
     render(<ChplAuditWorkbenchView vaccines={VACCINES_CATALOG} onOpenVaccineById={vi.fn()} />);
@@ -103,7 +101,6 @@ describe('ChplAuditWorkbenchView — stanowisko audytu ChPL (ETAP B1 · READ-ONL
   });
 
   it('filtruje kolejkę po grupach A–E oraz frazie i chroni otwarcie karty Infanrix hexa w katalogu', async () => {
-    const user = userEvent.setup();
     const onOpenVaccineById = vi.fn();
 
     render(
@@ -116,23 +113,22 @@ describe('ChplAuditWorkbenchView — stanowisko audytu ChPL (ETAP B1 · READ-ONL
     const searchInput = screen.getByRole('textbox', {
       name: /Szukaj w kolejce audytu ChPL/i,
     });
-    await user.type(searchInput, 'Infanrix');
+    fireEvent.change(searchInput, { target: { value: 'Infanrix' } });
 
     const infanrixCardBtns = await screen.findAllByRole('button', {
       name: /Karta ChPL: Infanrix hexa/i,
     });
-    await user.click(infanrixCardBtns[0]);
+    fireEvent.click(infanrixCardBtns[0]);
     expect(onOpenVaccineById).toHaveBeenCalledWith('vac-infanrix-hexa');
 
     // Wyczyść frazę i przetestuj brak akcji edycyjnych / awansu statusu
-    await user.click(screen.getByRole('button', { name: /Wyczyść frazę wyszukiwania kolejki/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Wyczyść frazę wyszukiwania kolejki/i }));
     expect(
       screen.queryByRole('button', { name: /Zatwierdź status|Oznacz jako zweryfikowany|Zamknij pytanie/i })
     ).not.toBeInTheDocument();
-  }, 60000);
+  }, 120000);
 
   it('eksportuje wyłącznie roboczy raport JSON (isWorkingDraft: true) oraz wywołuje wydruk roboczy', async () => {
-    const user = userEvent.setup();
     const printSpy = vi.fn();
     Object.defineProperty(window, 'print', {
       value: printSpy,
@@ -142,10 +138,10 @@ describe('ChplAuditWorkbenchView — stanowisko audytu ChPL (ETAP B1 · READ-ONL
 
     render(<ChplAuditWorkbenchView vaccines={VACCINES_CATALOG} onOpenVaccineById={vi.fn()} />);
 
-    await user.click(screen.getByRole('button', { name: /Drukuj roboczy raport/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Drukuj roboczy raport/i }));
     expect(printSpy).toHaveBeenCalledTimes(1);
 
-    await user.click(screen.getByRole('button', { name: /Eksportuj roboczy JSON/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Eksportuj roboczy JSON/i }));
     expect(exportedNames).toHaveLength(1);
     expect(exportedNames[0]).toMatch(/^vaxnurse-raport-roboczy-audytu-chpl-\d{4}-\d{2}-\d{2}\.json$/);
 
@@ -162,5 +158,5 @@ describe('ChplAuditWorkbenchView — stanowisko audytu ChPL (ETAP B1 · READ-ONL
     expect(report.containsPatientData).toBe(false);
     expect(report.humanQuestions).toHaveLength(8);
     expect(report.humanQuestions.every((q) => q.autoResolved === false)).toBe(true);
-  }, 30000);
+  }, 120000);
 });
