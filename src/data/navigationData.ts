@@ -90,14 +90,14 @@ export const APP_MODULES: ModuleDefinition[] = [
   {
     id: 'vaccination-calculator',
     label: 'Kalkulator szczepień',
-    description: 'Pomocnik wyliczania minimalnych odstępów między dawkami i terminów kolejnych wizyt.',
+    description: 'Pomocnik arytmetyki dat kalendarzowych w jednostkach dni, miesięcy i lat (bez reguł klinicznych).',
     category: 'clinical',
     icon: Calculator,
-    purposeNote: 'Wsparcie w planowaniu terminów zgodnie z charakterystykami produktów leczniczych.',
+    purposeNote: 'Arytmetyka kalendarzowa terminów i wieku wymagająca weryfikacji z aktualną ChPL oraz PSO.',
     keyFeatures: [
-      'Obliczanie odstępów między dawkami tego samego preparatu',
-      'Zasady łączenia szczepionek żywych i inaktywowanych',
-      'Asystent wyrównywania opóźnionych schematów'
+      'Obliczanie daty od podanej ostatniej dawki (dni, miesiące, lata)',
+      'Weryfikacja dat kalendarzowych w jednostkach dni, miesięcy i lat',
+      'Obliczanie wieku pacjenta oraz odstępu względem wybranej daty'
     ]
   },
   {
@@ -131,15 +131,15 @@ export const APP_MODULES: ModuleDefinition[] = [
   {
     id: 'special-situations',
     label: 'Sytuacje szczególne',
-    description: 'Postępowanie w przypadku NOP, wstrząsu anafilaktycznego i omdleń wazowagalnych.',
+    description: 'Kontrola gotowości zestawu przeciwwstrząsowego (Dz.U. 2026 poz. 429) i odnośniki do źródeł oficjalnych.',
     category: 'logistics',
     icon: AlertTriangle,
     badge: 'Bezpieczeństwo',
-    purposeNote: 'Algorytmy natychmiastowej reakcji i procedury zgłaszania zdarzeń niepożądanych.',
+    purposeNote: 'Kontrola wyposażenia i ważności pozycji zestawu oraz dostęp do oficjalnych źródeł (bez algorytmów leczenia).',
     keyFeatures: [
-      'Algorytm postępowania w podejrzeniu anafilaksji',
-      'Zasady podania adrenaliny i wyposażenie zestawu p/wstrząsowego',
-      'Ścieżka formalna zgłoszenia NOP do organów sanitarnych'
+      'Wykaz 26 pozycji zestawu wg Rozporządzenia MZ (Dz.U. 2026 poz. 429)',
+      'Lokalna kontrola ilości i terminów ważności pozycji zestawu',
+      'Bezpośrednie odnośniki do źródeł GIS/GIF, PSO oraz aktów prawnych'
     ]
   },
   {
@@ -198,8 +198,8 @@ export const QUICK_ACCESS_ITEMS: QuickAccessItem[] = [
   },
   {
     id: 'qa-emergency',
-    title: 'Algorytmy awaryjne',
-    subtitle: 'Zestaw p/wstrząsowy i NOP',
+    title: 'Zestaw przeciwwstrząsowy',
+    subtitle: 'Wykaz 26 poz. (Dz.U. 2026 poz. 429)',
     targetModule: 'special-situations',
     icon: ShieldCheck,
     badgeColor: 'amber'

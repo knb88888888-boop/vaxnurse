@@ -196,6 +196,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const maxBackupBytes = 5 * 1024 * 1024;
+    if (file.size > maxBackupBytes) {
+      event.target.value = '';
+      setStagedBackup(null);
+      setStagedSummary(null);
+      setStagedWarnings([]);
+      setFeedbackMessage({
+        type: 'error',
+        title: 'Plik przekracza dozwolony rozmiar',
+        description: 'Maksymalny rozmiar pliku kopii zapasowej JSON wynosi 5 MB.'
+      });
+      return;
+    }
+
     const reader = new FileReader();
 
     reader.onload = (e) => {
@@ -731,7 +745,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="system-specs-grid">
             <div className="spec-card">
               <span className="spec-label">Aplikacja</span>
-              <span className="spec-value">VaxNurse — Etap A</span>
+              <span className="spec-value">VaxNurse — Wersja lokalna</span>
             </div>
             <div className="spec-card">
               <span className="spec-label">Silnik</span>

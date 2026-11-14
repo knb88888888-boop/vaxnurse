@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { OperationalModuleView } from '../../src/components/modules/OperationalModuleView';
 import { APP_MODULES } from '../../src/data/navigationData';
@@ -132,11 +132,11 @@ describe('OperationalModuleView — aktywne moduły operacyjne VaxNurse', () => 
     expect(screen.getByText(/Infanrix hexa/i)).toBeInTheDocument();
     expect(screen.getByText(/Spikevax XFG/i)).toBeInTheDocument();
 
-    // Wybór profilu z zakresem indywidualnym
-    await user.selectOptions(
-      screen.getByLabelText(/Profil temperaturowy/i),
-      'custom_chpl'
-    );
+    // Wybór profilu z zakresem indywidualnym oraz weryfikacja poprawnego formatowania temperatur ujemnych (bez "+-")
+    const profileSelect = screen.getByLabelText(/Profil temperaturowy/i);
+    expect(profileSelect.textContent).not.toContain('+-');
+    expect(profileSelect.textContent).toContain('(-50°C do -15°C)');
+    await user.selectOptions(profileSelect, 'custom_chpl');
     expect(screen.getByLabelText(/Własny min/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Własny max/i)).toBeInTheDocument();
   });
@@ -152,16 +152,20 @@ describe('OperationalModuleView — aktywne moduły operacyjne VaxNurse', () => 
     );
 
     // Tabela 26 pozycji regulacyjnych
-    expect(screen.getByTestId('ops-emergency-annex-table')).toBeInTheDocument();
-    expect(screen.getByText(/Adrenalinum/i)).toBeInTheDocument();
-    expect(screen.getByText(/Dopamini hydrochloridum/i)).toBeInTheDocument();
+    const annexTable = screen.getByTestId('ops-emergency-annex-table');
+    expect(annexTable).toBeInTheDocument();
+    expect(within(annexTable).getByText('Adrenalinum')).toBeInTheDocument();
+    expect(within(annexTable).getByText('Noradrenalinum')).toBeInTheDocument();
+    expect(within(annexTable).getByText('Oxygenium')).toBeInTheDocument();
 
-    // Wczytanie wymaganych pozycji do inwentarza dla domyślnej kategorii ambulatoryjnej
+    // Wczytanie wymaganych pozycji do inwentarza dla domyślnej kategorii ambulatoryjnej (15 pozycji w tym poz. 17 i 25 NaCl 0,9%)
     const loadBtn = screen.getByRole('button', { name: /Wczytaj pozycje wymagane/i });
     await user.click(loadBtn);
 
-    // Sprawdzenie, że inwentarz został zasilony lekami (np. Adrenalinum)
-    expect(screen.getByTestId('ops-kit-table')).toBeInTheDocument();
-    expect(screen.getByText(/Adrenalinum \(roztwór do wstrzykiwań/i)).toBeInTheDocument();
+    // Sprawdzenie, że inwentarz został zasilony lekami i odróżnia poz. 17 oraz poz. 25 NaCl 0,9 %
+    const kitTable = screen.getByTestId('ops-kit-table');
+    expect(kitTable).toHaveTextContent(/Adrenalinum \(1 mg\/ml/i);
+    expect(kitTable).toHaveTextContent(/Natrii chloridum 0,9 % \(rozpuszczalnik/i);
+    expect(kitTable).toHaveTextContent(/Natrii chloridum 0,9 % \(roztwór do infuzji/i);
   });
 });

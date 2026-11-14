@@ -187,17 +187,57 @@ describe('operationalTools — Łańcuch chłodniczy, checklista i zestaw przeci
     expect(escapeCsvField('Zażółć gęślą; "test"')).toBe(`"Zażółć gęślą; ""test"""`);
   });
 
-  it('Etap C1.2: Matryca warunków przechowywania ChPL pkt 6.4 (10 produktów) i profile temperaturowe', () => {
+  it('Etap C1.2: Matryca warunków przechowywania ChPL pkt 6.3–6.4 (10 produktów) i profile temperaturowe', () => {
     expect(PRODUCT_STORAGE_REFERENCE_MATRIX).toHaveLength(10);
     const infanrix = PRODUCT_STORAGE_REFERENCE_MATRIX.find((p) => p.vaccineId === 'vac-infanrix-hexa');
     expect(infanrix).toBeDefined();
     expect(infanrix?.profileId).toBe('standard_2_8');
-    expect(infanrix?.qrdSection).toBe('6.4');
+    expect(infanrix?.qrdSection).toBe('6.3–6.4');
     expect(infanrix?.storageConditionText).toContain('2°C–8°C');
+
+    const vaxigripTetra = PRODUCT_STORAGE_REFERENCE_MATRIX.find((p) => p.vaccineId === 'vac-vaxigrip-tetra');
+    expect(vaxigripTetra?.sourceDocument).toContain('35346');
+    expect(vaxigripTetra?.documentVersionOrDate).toBe('05/2025');
+    expect(vaxigripTetra?.storageConditionText).toContain('brak adnotacji o stabilności poza 2°C–8°C');
+
+    expect(PRODUCT_STORAGE_REFERENCE_MATRIX.find((p) => p.vaccineId === 'vac-priorix')?.sourceDocument).toContain('22425');
+    expect(PRODUCT_STORAGE_REFERENCE_MATRIX.find((p) => p.vaccineId === 'vac-engerix-b')?.sourceDocument).toContain('19604');
+    expect(PRODUCT_STORAGE_REFERENCE_MATRIX.find((p) => p.vaccineId === 'vac-boostrix')?.sourceDocument).toContain('21134');
 
     const spikevax = PRODUCT_STORAGE_REFERENCE_MATRIX.find((p) => p.vaccineId === 'spikevax_xfg');
     expect(spikevax).toBeDefined();
-    expect(spikevax?.profileId).toBe('frozen_minus25_minus15');
+    expect(spikevax?.profileId).toBe('frozen_minus50_minus15');
+
+    // Akceptacja temperatury ultraniskiej (-50°C) w profilu zamrożonym Spikevax
+    const ultraColdValid = validateColdChainDraft({
+      deviceLabel: 'Zamrażarka Ultra',
+      measuredAt: '2026-11-12T10:00',
+      currentC: '-50.0',
+      minC: '-50',
+      maxC: '-20',
+      profileId: 'frozen_minus50_minus15',
+      actionNote: '',
+      recordedBy: ''
+    });
+    expect(ultraColdValid.ok).toBe(true);
+    if (ultraColdValid.ok) {
+      expect(evaluateColdChainStatus(ultraColdValid.reading)).toBe('within_configured_range');
+    }
+
+    // Odrzucenie profilu custom_chpl bez zdefiniowanych granic
+    const customMissingBounds = validateColdChainDraft({
+      deviceLabel: 'Chłodziarka Specjalna',
+      measuredAt: '2026-11-12T10:00',
+      currentC: '5.0',
+      minC: '',
+      maxC: '',
+      profileId: 'custom_chpl',
+      customMinC: '',
+      customMaxC: '',
+      actionNote: 'Weryfikacja',
+      recordedBy: ''
+    });
+    expect(customMissingBounds.ok).toBe(false);
 
     // Walidacja profilu własnego z granicami custom
     const customValid = validateColdChainDraft({
@@ -252,34 +292,53 @@ describe('operationalTools — Łańcuch chłodniczy, checklista i zestaw przeci
   it('Etap C1.2: Pełna macierz 26 pozycji zestawu przeciwwstrząsowego wg Dz.U. 2026 poz. 429', () => {
     expect(EMERGENCY_KIT_REGULATION_ANNEX_26).toHaveLength(26);
 
-    // Pozycja 1: Adrenalinum jest wymagana we wszystkich 5 kategoriach placówek
+    // Pozycja 1: Adrenalinum i poz. 3 Aqua pro injectione wymagane we wszystkich 5 kategoriach
     const adrenaline = EMERGENCY_KIT_REGULATION_ANNEX_26.find((i) => i.itemNumber === 1);
-    expect(adrenaline).toBeDefined();
     expect(adrenaline?.substanceName).toBe('Adrenalinum');
+    const aqua = EMERGENCY_KIT_REGULATION_ANNEX_26.find((i) => i.itemNumber === 3);
+    expect(aqua?.substanceName).toBe('Aqua pro injectione');
     FACILITY_CARE_CATEGORIES.forEach((cat) => {
       expect(adrenaline?.requirements[cat.id]).toBe(true);
+      expect(aqua?.requirements[cat.id]).toBe(true);
     });
 
-    // Dopamina (poz. 10) jest wymagana wyłącznie w szpitalach
-    const dopamine = EMERGENCY_KIT_REGULATION_ANNEX_26.find((i) => i.itemNumber === 10);
-    expect(dopamine).toBeDefined();
-    expect(dopamine?.requirements.hospital).toBe(true);
-    expect(dopamine?.requirements.ambulatory_home).toBe(false);
-    expect(dopamine?.requirements.ambulatory_dental).toBe(false);
-    expect(dopamine?.requirements.ambulatory_facility).toBe(false);
+    // Poz. 7 Furosemidum i poz. 20 Oxygenium: wymagane od stomatologii wzwyż, nie w świadczeniach w domu chorego
+    const furosemid = EMERGENCY_KIT_REGULATION_ANNEX_26.find((i) => i.itemNumber === 7);
+    expect(furosemid?.substanceName).toBe('Furosemidum');
+    expect(furosemid?.requirements.ambulatory_home).toBe(false);
+    expect(furosemid?.requirements.ambulatory_dental).toBe(true);
+    const oxygen = EMERGENCY_KIT_REGULATION_ANNEX_26.find((i) => i.itemNumber === 20);
+    expect(oxygen?.substanceName).toBe('Oxygenium');
+    expect(oxygen?.requirements.ambulatory_home).toBe(false);
+    expect(oxygen?.requirements.ambulatory_dental).toBe(true);
 
-    // Morfina (poz. 22) - wyłącznie stacjonarne całodobowe i szpital
-    const morphine = EMERGENCY_KIT_REGULATION_ANNEX_26.find((i) => i.itemNumber === 22);
-    expect(morphine).toBeDefined();
-    expect(morphine?.requirements.hospital).toBe(true);
-    expect(morphine?.requirements.ambulatory_home).toBe(false);
-    expect(morphine?.requirements.ambulatory_dental).toBe(false);
-    expect(morphine?.requirements.ambulatory_facility).toBe(false);
+    // Poz. 12 Lidocaini hydrochloridum 2 %: wyłącznie stacjonarne i szpital
+    const lidocaine = EMERGENCY_KIT_REGULATION_ANNEX_26.find((i) => i.itemNumber === 12);
+    expect(lidocaine?.substanceName).toBe('Lidocaini hydrochloridum 2 %');
+    expect(lidocaine?.requirements.ambulatory_dental).toBe(false);
+    expect(lidocaine?.requirements.inpatient_non_hospital).toBe(true);
+    expect(lidocaine?.requirements.hospital).toBe(true);
 
-    // Każda z 26 pozycji posiada zdefiniowane wymagania dla wszystkich 5 kategorii
+    // Poz. 15 Morphini sulfas, poz. 16 Naloxoni hydrochloridum, poz. 19 Noradrenalinum: wyłącznie szpital
+    for (const num of [15, 16, 19]) {
+      const hospitalOnly = EMERGENCY_KIT_REGULATION_ANNEX_26.find((i) => i.itemNumber === num);
+      expect(hospitalOnly?.requirements.hospital).toBe(true);
+      expect(hospitalOnly?.requirements.inpatient_non_hospital).toBe(false);
+      expect(hospitalOnly?.requirements.ambulatory_facility).toBe(false);
+    }
+
+    // Rozróżnienie dwóch pozycji Natrii chloridum 0,9 % (poz. 17 rozpuszczalnik, poz. 25 płyn infuzyjny)
+    const nacl17 = EMERGENCY_KIT_REGULATION_ANNEX_26.find((i) => i.itemNumber === 17);
+    const nacl25 = EMERGENCY_KIT_REGULATION_ANNEX_26.find((i) => i.itemNumber === 25);
+    expect(nacl17?.substanceName).toBe('Natrii chloridum 0,9 %');
+    expect(nacl25?.substanceName).toBe('Natrii chloridum 0,9 %');
+    expect(nacl17?.dosageForm).not.toBe(nacl25?.dosageForm);
+
+    // Każda z 26 pozycji posiada zdefiniowane wymagania dla wszystkich 5 kategorii i numer 1..26 bez luk
+    expect(EMERGENCY_KIT_REGULATION_ANNEX_26.map((i) => i.itemNumber)).toEqual(
+      Array.from({ length: 26 }, (_, idx) => idx + 1)
+    );
     EMERGENCY_KIT_REGULATION_ANNEX_26.forEach((item) => {
-      expect(item.itemNumber).toBeGreaterThanOrEqual(1);
-      expect(item.itemNumber).toBeLessThanOrEqual(26);
       expect(item.substanceName.length).toBeGreaterThan(0);
       expect(item.dosageForm.length).toBeGreaterThan(0);
       FACILITY_CARE_CATEGORIES.forEach((cat) => {

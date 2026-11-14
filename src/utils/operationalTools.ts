@@ -272,7 +272,12 @@ export function calculateAgeAt(birthDate: string, referenceDate: string): AgeCal
 // Łańcuch chłodniczy — rejestr odczytów manualnych
 // ---------------------------------------------------------------------------
 
-export type ColdChainProfileId = 'standard_2_8' | 'frozen_minus25_minus15' | 'custom_chpl' | 'unspecified';
+export type ColdChainProfileId =
+  | 'standard_2_8'
+  | 'frozen_minus25_minus15'
+  | 'frozen_minus50_minus15'
+  | 'custom_chpl'
+  | 'unspecified';
 
 export interface ColdChainProfile {
   id: ColdChainProfileId;
@@ -296,6 +301,13 @@ export const COLD_CHAIN_PROFILES: Record<ColdChainProfileId, ColdChainProfile> =
     minC: -25,
     maxC: -15,
     source: 'ChPL konkretnego produktu'
+  },
+  frozen_minus50_minus15: {
+    id: 'frozen_minus50_minus15',
+    label: 'Przechowywanie zamrożone (-50°C do -15°C, np. wybrane szczepionki mRNA wg ChPL)',
+    minC: -50,
+    maxC: -15,
+    source: 'ChPL konkretnego produktu (pkt 6.3–6.4)'
   },
   custom_chpl: {
     id: 'custom_chpl',
@@ -358,7 +370,7 @@ function parseTemperature(value?: string | null): number | null | 'invalid' {
   if (!v) return null;
   if (!/^-?\d{1,2}(\.\d{1,2})?$/.test(v)) return 'invalid';
   const n = Number(v);
-  if (n < -40 || n > 50) return 'invalid';
+  if (n < -90 || n > 50) return 'invalid';
   return n;
 }
 
@@ -381,6 +393,7 @@ export function evaluateColdChainStatus(
   if (profileId === 'unspecified') return 'awaiting_review';
 
   const profile = COLD_CHAIN_PROFILES[profileId];
+  if (!profile) return 'awaiting_review';
   const minBound = profileId === 'custom_chpl' ? (reading.customMinC ?? null) : profile.minC;
   const maxBound = profileId === 'custom_chpl' ? (reading.customMaxC ?? null) : profile.maxC;
   if (minBound === null || maxBound === null) return 'awaiting_review';
@@ -413,7 +426,7 @@ export function validateColdChainDraft(
   const min = parseTemperature(draft.minC);
   const max = parseTemperature(draft.maxC);
   if (current === null || current === 'invalid') {
-    errors.push('Temperatura bieżąca jest wymagana (liczba od -40 do 50 °C, maks. 2 miejsca po przecinku).');
+    errors.push('Temperatura bieżąca jest wymagana (liczba od -90 do 50 °C, maks. 2 miejsca po przecinku).');
   }
   if (min === 'invalid') errors.push('Temperatura minimalna ma niepoprawny format.');
   if (max === 'invalid') errors.push('Temperatura maksymalna ma niepoprawny format.');
@@ -427,6 +440,8 @@ export function validateColdChainDraft(
   if (profileId === 'custom_chpl') {
     const cMin = draft.customMinC ? parseTemperature(draft.customMinC) : null;
     const cMax = draft.customMaxC ? parseTemperature(draft.customMaxC) : null;
+    if (cMin === null) errors.push('Podaj indywidualną dolną granicę temperatury.');
+    if (cMax === null) errors.push('Podaj indywidualną górną granicę temperatury.');
     if (cMin === 'invalid') errors.push('Indywidualna dolna granica temperatury ma niepoprawny format.');
     if (cMax === 'invalid') errors.push('Indywidualna górna granica temperatury ma niepoprawny format.');
     if (typeof cMin === 'number' && typeof cMax === 'number' && cMin > cMax) {
@@ -463,7 +478,7 @@ export function validateColdChainDraft(
 
 function sanitizeColdChainReading(raw: unknown): ColdChainReading | null {
   if (!isPlainObject(raw)) return null;
-  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= -40 && v <= 50 ? v : null);
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= -90 && v <= 50 ? v : null);
   const current = num(raw.currentC);
   if (typeof raw.id !== 'string' || typeof raw.measuredAt !== 'string' || current === null) return null;
   if (!isValidLocalDateTime(raw.measuredAt)) return null;
@@ -573,7 +588,7 @@ export function buildColdChainCsv(readings: readonly ColdChainReading[]): string
     [
       r.measuredAt.replace('T', ' '),
       r.deviceLabel,
-      COLD_CHAIN_PROFILES[r.profileId ?? 'standard_2_8'].label,
+      COLD_CHAIN_PROFILES[r.profileId ?? 'standard_2_8']?.label ?? 'Nieokreślony profil',
       r.currentC,
       r.minC,
       r.maxC,
@@ -675,7 +690,7 @@ export function validateKitDraft(draft: {
   expiryDate: string;
 }): { ok: true; item: EmergencyKitItem } | { ok: false; errors: string[] } {
   const errors: string[] = [];
-  const name = normalizeText(draft.name, 120);
+  const name = normalizeText(draft.name, 200);
   if (name.length < 2) errors.push('Podaj nazwę pozycji zestawu (min. 2 znaki).');
   if (!isSafeText(name)) errors.push('Nazwa pozycji zawiera niedozwolone znaczniki.');
   const qty = /^\d{1,3}$/.test(draft.quantity.trim()) ? Number(draft.quantity.trim()) : NaN;
@@ -693,7 +708,7 @@ export function loadEmergencyKit(storage: Storage | null): EmergencyKitItem[] {
   const seen = new Set<string>();
   for (const raw of readJsonArray(storage, EMERGENCY_KIT_STORAGE_KEY)) {
     if (!isPlainObject(raw) || typeof raw.id !== 'string' || seen.has(raw.id)) continue;
-    const name = normalizeText(raw.name, 120);
+    const name = normalizeText(raw.name, 200);
     const qty = typeof raw.quantity === 'number' && Number.isInteger(raw.quantity) ? raw.quantity : -1;
     const exp = typeof raw.expiryDate === 'string' ? raw.expiryDate : '';
     if (name.length < 2 || !isSafeText(name) || qty < 0 || qty > 999 || !parseIsoDate(exp)) continue;
@@ -749,78 +764,85 @@ export const PRODUCT_STORAGE_REFERENCE_MATRIX: ReadonlyArray<ProductStorageRefer
     vaccineId: 'vac-infanrix-hexa',
     productName: 'Infanrix hexa (DTPa-HBV-IPV+Hib)',
     profileId: 'standard_2_8',
-    sourceDocument: 'ChPL EMA/H/C/000296 Aneks I',
-    documentVersionOrDate: '06/2024',
-    qrdSection: '6.4',
-    storageConditionText: '2°C–8°C, w lodówce, nie zamrażać, chronić przed światłem (stabilność do 72h w temp. do 25°C)',
+    sourceDocument: 'ChPL EMA / GSK PL (H/0296 VR 323859)',
+    documentVersionOrDate: '12.02.2026 (druk GSK PL; pkt 10 EPAR -> EMA)',
+    qrdSection: '6.3–6.4',
+    storageConditionText:
+      '2°C–8°C, w lodówce, nie zamrażać, chronić przed światłem; stabilność do 25°C przez 72 h przy czasowych wahaniach temperatury',
     reviewStatus: 'verified_source_excerpt'
   },
   {
     vaccineId: 'vac-priorix',
     productName: 'Priorix (odra, świnka, różyczka MMR)',
     profileId: 'standard_2_8',
-    sourceDocument: 'ChPL RPL ID 12151',
-    documentVersionOrDate: '03/2023',
-    qrdSection: '6.4',
-    storageConditionText: '2°C–8°C, w lodówce, nie zamrażać, chronić przed światłem; po rekonstytucji zużyć niezwłocznie lub do 8h w 2°C–8°C',
+    sourceDocument: 'ChPL RPL ID 22425 (poz. 04830)',
+    documentVersionOrDate: '04/2026',
+    qrdSection: '6.3–6.4',
+    storageConditionText:
+      '2°C–8°C, w lodówce (przechowywać i przewozić w stanie schłodzonym), nie zamrażać, chronić przed światłem; po rekonstytucji zużyć natychmiast lub w 2°C–8°C w ciągu 8 h',
     reviewStatus: 'verified_source_excerpt'
   },
   {
     vaccineId: 'vac-prevenar-13',
     productName: 'Prevenar 13 (pneumokoki PCV-13)',
     profileId: 'standard_2_8',
-    sourceDocument: 'ChPL EMA/H/C/001104 Aneks I',
-    documentVersionOrDate: '11/2023',
+    sourceDocument: 'ChPL EMA EPAR Aneks I (EU/1/09/590)',
+    documentVersionOrDate: 'EPAR 08.10.2026 (pkt 10 -> EMA)',
     qrdSection: '6.4',
-    storageConditionText: '2°C–8°C, w lodówce, nie zamrażać (stabilna do 4 dni w temp. do 25°C)',
+    storageConditionText:
+      '2°C–8°C, w lodówce, nie zamrażać; stabilność do 25°C przez 4 dni przy przejściowych wahaniach temperatury',
     reviewStatus: 'verified_source_excerpt'
   },
   {
     vaccineId: 'vac-engerix-b',
     productName: 'Engerix B (WZW B)',
     profileId: 'standard_2_8',
-    sourceDocument: 'ChPL RPL ID 0147',
-    documentVersionOrDate: '04/2024',
+    sourceDocument: 'ChPL RPL ID 19604 (20 µg) / 22426 (10 µg)',
+    documentVersionOrDate: '04/2023',
     qrdSection: '6.4',
-    storageConditionText: '2°C–8°C, w lodówce, nie zamrażać, chronić przed światłem',
+    storageConditionText:
+      '2°C–8°C, w lodówce, nie zamrażać, chronić przed światłem; stabilność przy chwilowym przekroczeniu: 3 dni do 37°C lub 7 dni do 25°C',
     reviewStatus: 'verified_source_excerpt'
   },
   {
     vaccineId: 'vac-boostrix',
     productName: 'Boostrix (dTpa)',
     profileId: 'standard_2_8',
-    sourceDocument: 'ChPL RPL ID 12152',
-    documentVersionOrDate: '05/2023',
+    sourceDocument: 'ChPL RPL ID 21134 (poz. 14239)',
+    documentVersionOrDate: '04/2023',
     qrdSection: '6.4',
-    storageConditionText: '2°C–8°C, w lodówce, nie zamrażać, chronić przed światłem',
+    storageConditionText:
+      '2°C–8°C, w lodówce, nie zamrażać, chronić przed światłem; stabilność do 37°C przez 7 dni przy tymczasowej zmianie temperatury',
     reviewStatus: 'verified_source_excerpt'
   },
   {
     vaccineId: 'vac-vaxigrip-tetra',
     productName: 'VaxigripTetra (grypa sezonowa 4-walentna)',
     profileId: 'standard_2_8',
-    sourceDocument: 'ChPL RPL ID 38411',
-    documentVersionOrDate: '08/2024',
+    sourceDocument: 'ChPL RPL ID 35346 (poz. 23540, druk hist. 4-walentny)',
+    documentVersionOrDate: '05/2025',
     qrdSection: '6.4',
-    storageConditionText: '2°C–8°C, w lodówce, nie zamrażać, chronić przed światłem (stabilność czasowa do 72h w temp. do 25°C)',
+    storageConditionText:
+      '2°C–8°C, w lodówce, nie zamrażać, przechowywać w opakowaniu zewnętrznym w celu ochrony przed światłem (brak adnotacji o stabilności poza 2°C–8°C w pkt 6.4 RPL 35346)',
     reviewStatus: 'verified_source_excerpt'
   },
   {
     vaccineId: 'bcg_10',
     productName: 'Szczepionka przeciwgruźlicza BCG 10',
     profileId: 'standard_2_8',
-    sourceDocument: 'ChPL RPL ID 19535',
-    documentVersionOrDate: '06/2024',
-    qrdSection: '6.4',
-    storageConditionText: '2°C–8°C, w lodówce, chronić przed światłem, nie zamrażać; po rekonstytucji zużyć natychmiast',
+    sourceDocument: 'ChPL RPL ID 19535 (poz. R/0210)',
+    documentVersionOrDate: 'pkt 10 brak daty (plik OLI-2023-12-08.pdf)',
+    qrdSection: '6.3–6.4',
+    storageConditionText:
+      '2°C–8°C, w lodówce, przechowywać w opakowaniu zewnętrznym w celu ochrony przed światłem; po rekonstytucji zużyć bezpośrednio (pkt 6.3)',
     reviewStatus: 'verified_in_stage1_bundle'
   },
   {
     vaccineId: 'influvac_2026_2027',
     productName: 'Influvac (sezon 2026/2027)',
     profileId: 'standard_2_8',
-    sourceDocument: 'ChPL RPL ID 49462',
-    documentVersionOrDate: '06/2024',
+    sourceDocument: 'ChPL RPL ID 49462 (poz. 28478)',
+    documentVersionOrDate: '06/2026',
     qrdSection: '6.4',
     storageConditionText: '2°C–8°C, w lodówce, nie zamrażać, chronić przed światłem',
     reviewStatus: 'verified_in_stage1_bundle'
@@ -829,20 +851,22 @@ export const PRODUCT_STORAGE_REFERENCE_MATRIX: ReadonlyArray<ProductStorageRefer
     vaccineId: 'vaxigrip_2026_2027',
     productName: 'Vaxigrip (sezon 2026/2027)',
     profileId: 'standard_2_8',
-    sourceDocument: 'ChPL RPL ID 50032',
-    documentVersionOrDate: '08/2024',
+    sourceDocument: 'ChPL RPL ID 50032 (poz. 28778)',
+    documentVersionOrDate: '08/2026',
     qrdSection: '6.4',
-    storageConditionText: '2°C–8°C, w lodówce, nie zamrażać; dopuszczona stabilność 72 godz. w temp. do 25°C±2°C',
+    storageConditionText:
+      '2°C–8°C, w lodówce, nie zamrażać; dopuszczona stabilność 72 godz. w temp. do 25°C±2°C przy czasowych wahaniach',
     reviewStatus: 'verified_in_stage1_bundle'
   },
   {
     vaccineId: 'spikevax_xfg',
     productName: 'Spikevax XFG (COVID-19 mRNA)',
-    profileId: 'frozen_minus25_minus15',
-    sourceDocument: 'ChPL EMA EPAR Aneks I',
-    documentVersionOrDate: '07/2024',
+    profileId: 'frozen_minus50_minus15',
+    sourceDocument: 'ChPL EMA EPAR Aneks I PL (str. 64–92)',
+    documentVersionOrDate: 'pkt 10 brak daty (EMA EPAR 29.10.2026)',
     qrdSection: '6.3–6.4',
-    storageConditionText: 'Zamrożony w -50°C do -15°C; po rozmrożeniu przechowywać w 2°C–8°C max 30 dni (lub 14 dni), 8°C–25°C max 24 h',
+    storageConditionText:
+      'Zamrożony w -50°C do -15°C (9 mies. + max 30 dni w 2°C–8°C lub 12 mies. + max 14 dni w 2°C–8°C), 8°C–25°C max 24 h, po przekłuciu 19 h',
     reviewStatus: 'verified_in_stage1_bundle'
   }
 ];
@@ -859,327 +883,83 @@ export interface EmergencyKitRegulationItem {
   notes?: string;
 }
 
+const kitReq = (
+  itemNumber: number,
+  substanceName: string,
+  dosageForm: string,
+  [ambulatory_home, ambulatory_dental, ambulatory_facility, inpatient_non_hospital, hospital]: readonly [
+    boolean,
+    boolean,
+    boolean,
+    boolean,
+    boolean
+  ],
+  notes?: string
+): EmergencyKitRegulationItem => ({
+  itemNumber,
+  substanceName,
+  dosageForm,
+  requirements: {
+    ambulatory_home,
+    ambulatory_dental,
+    ambulatory_facility,
+    inpatient_non_hospital,
+    hospital
+  },
+  ...(notes ? { notes } : {})
+});
+
 export const EMERGENCY_KIT_REGULATION_ANNEX_26: ReadonlyArray<EmergencyKitRegulationItem> = [
-  {
-    itemNumber: 1,
-    substanceName: 'Adrenalinum',
-    dosageForm: 'roztwór do wstrzykiwań 1 mg/ml lub ampułko-strzykawka / autowstrzykiwacz',
-    requirements: {
-      ambulatory_home: true,
-      ambulatory_dental: true,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    },
-    notes: 'Lek I rzutu w anafilaksji; podanie domięśniowe'
-  },
-  {
-    itemNumber: 2,
-    substanceName: 'Amiodaroni hydrochloridum',
-    dosageForm: 'roztwór do wstrzykiwań 50 mg/ml',
-    requirements: {
-      ambulatory_home: false,
-      ambulatory_dental: false,
-      ambulatory_facility: false,
-      inpatient_non_hospital: true,
-      hospital: true
-    },
-    notes: 'Wymagany w placówkach stacjonarnych i szpitalach'
-  },
-  {
-    itemNumber: 3,
-    substanceName: 'Atropini sulfas',
-    dosageForm: 'roztwór do wstrzykiwań 0,5 mg/ml lub 1 mg/ml',
-    requirements: {
-      ambulatory_home: true,
-      ambulatory_dental: true,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    }
-  },
-  {
-    itemNumber: 4,
-    substanceName: 'Calcii chloridum lub Calcii gluconas',
-    dosageForm: 'roztwór do wstrzykiwań 10%',
-    requirements: {
-      ambulatory_home: false,
-      ambulatory_dental: false,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    }
-  },
-  {
-    itemNumber: 5,
-    substanceName: 'Captoprilum',
-    dosageForm: 'tabletki lub tabletki podjęzykowe 12,5 mg lub 25 mg',
-    requirements: {
-      ambulatory_home: true,
-      ambulatory_dental: true,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    }
-  },
-  {
-    itemNumber: 6,
-    substanceName: 'Clemastinum',
-    dosageForm: 'roztwór do wstrzykiwań 1 mg/ml',
-    requirements: {
-      ambulatory_home: true,
-      ambulatory_dental: true,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    },
-    notes: 'Lek przeciwhistaminowy II rzutu'
-  },
-  {
-    itemNumber: 7,
-    substanceName: 'Clonazepamum',
-    dosageForm: 'roztwór do wstrzykiwań 1 mg/ml',
-    requirements: {
-      ambulatory_home: false,
-      ambulatory_dental: false,
-      ambulatory_facility: false,
-      inpatient_non_hospital: true,
-      hospital: true
-    }
-  },
-  {
-    itemNumber: 8,
-    substanceName: 'Dexamethasoni phosphas',
-    dosageForm: 'roztwór do wstrzykiwań 4 mg/ml lub 8 mg/ml',
-    requirements: {
-      ambulatory_home: true,
-      ambulatory_dental: true,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    },
-    notes: 'Glikokortykosteroid'
-  },
-  {
-    itemNumber: 9,
-    substanceName: 'Diazepamum',
-    dosageForm: 'roztwór do wstrzykiwań 5 mg/ml lub wlewka doodbytnicza',
-    requirements: {
-      ambulatory_home: true,
-      ambulatory_dental: true,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    }
-  },
-  {
-    itemNumber: 10,
-    substanceName: 'Dopamini hydrochloridum',
-    dosageForm: 'koncentrat do sporządzania roztworu do infuzji 40 mg/ml',
-    requirements: {
-      ambulatory_home: false,
-      ambulatory_dental: false,
-      ambulatory_facility: false,
-      inpatient_non_hospital: false,
-      hospital: true
-    },
-    notes: 'Wyłącznie świadczenia szpitalne'
-  },
-  {
-    itemNumber: 11,
-    substanceName: 'Ephedrini hydrochloridum',
-    dosageForm: 'roztwór do wstrzykiwań 25 mg/ml lub 50 mg/ml',
-    requirements: {
-      ambulatory_home: false,
-      ambulatory_dental: false,
-      ambulatory_facility: false,
-      inpatient_non_hospital: false,
-      hospital: true
-    },
-    notes: 'Wyłącznie świadczenia szpitalne'
-  },
-  {
-    itemNumber: 12,
-    substanceName: 'Furosemidum',
-    dosageForm: 'roztwór do wstrzykiwań 10 mg/ml',
-    requirements: {
-      ambulatory_home: false,
-      ambulatory_dental: false,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    }
-  },
-  {
-    itemNumber: 13,
-    substanceName: 'Glucagonum',
-    dosageForm: 'proszek i rozpuszczalnik do wstrzykiwań 1 mg',
-    requirements: {
-      ambulatory_home: true,
-      ambulatory_dental: true,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    }
-  },
-  {
-    itemNumber: 14,
-    substanceName: 'Glukosum 5%',
-    dosageForm: 'roztwór do infuzji',
-    requirements: {
-      ambulatory_home: false,
-      ambulatory_dental: false,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    }
-  },
-  {
-    itemNumber: 15,
-    substanceName: 'Glukosum 20% lub Glukosum 40%',
-    dosageForm: 'roztwór do wstrzykiwań / infuzji',
-    requirements: {
-      ambulatory_home: true,
-      ambulatory_dental: true,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    }
-  },
-  {
-    itemNumber: 16,
-    substanceName: 'Glyceroli trinitras',
-    dosageForm: 'aerozol podjęzykowy 0,4 mg/dawkę lub tabletki podjęzykowe 0,5 mg',
-    requirements: {
-      ambulatory_home: true,
-      ambulatory_dental: true,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    }
-  },
-  {
-    itemNumber: 17,
-    substanceName: 'Hydrocortisonum lub Methylprednisolonum',
-    dosageForm: 'proszek i rozpuszczalnik do wstrzykiwań (100 mg / 250 mg)',
-    requirements: {
-      ambulatory_home: true,
-      ambulatory_dental: true,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    },
-    notes: 'Hydrokortyzon lub bursztynian metyloprednizolonu'
-  },
-  {
-    itemNumber: 18,
-    substanceName: 'Ketoprofenum (lub inny NLPZ do wstrzykiwań)',
-    dosageForm: 'roztwór do wstrzykiwań 50 mg/ml',
-    requirements: {
-      ambulatory_home: false,
-      ambulatory_dental: false,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    }
-  },
-  {
-    itemNumber: 19,
-    substanceName: 'Lidocaini hydrochloridum',
-    dosageForm: 'roztwór do wstrzykiwań 1% lub 2%',
-    requirements: {
-      ambulatory_home: false,
-      ambulatory_dental: true,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    }
-  },
-  {
-    itemNumber: 20,
-    substanceName: 'Magnesii sulfas',
-    dosageForm: 'roztwór do wstrzykiwań 20%',
-    requirements: {
-      ambulatory_home: false,
-      ambulatory_dental: false,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    }
-  },
-  {
-    itemNumber: 21,
-    substanceName: 'Metoclopramidum',
-    dosageForm: 'roztwór do wstrzykiwań 5 mg/ml',
-    requirements: {
-      ambulatory_home: false,
-      ambulatory_dental: false,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    }
-  },
-  {
-    itemNumber: 22,
-    substanceName: 'Morphini sulfas',
-    dosageForm: 'roztwór do wstrzykiwań 10 mg/ml lub 20 mg/ml',
-    requirements: {
-      ambulatory_home: false,
-      ambulatory_dental: false,
-      ambulatory_facility: false,
-      inpatient_non_hospital: true,
-      hospital: true
-    },
-    notes: 'Środek odurzający; stacjonarne całodobowe i szpital'
-  },
-  {
-    itemNumber: 23,
-    substanceName: 'Naloxoni hydrochloridum',
-    dosageForm: 'roztwór do wstrzykiwań 0,4 mg/ml',
-    requirements: {
-      ambulatory_home: false,
-      ambulatory_dental: false,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    },
-    notes: 'Antagonista receptorów opioidowych'
-  },
-  {
-    itemNumber: 24,
-    substanceName: 'Natrii chloridum 0,9%',
-    dosageForm: 'roztwór do infuzji oraz płukania / rozpuszczalnik',
-    requirements: {
-      ambulatory_home: true,
-      ambulatory_dental: true,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    }
-  },
-  {
-    itemNumber: 25,
-    substanceName: 'Płyn wieloelektrolitowy izotoniczny (PWE)',
-    dosageForm: 'roztwór do infuzji',
-    requirements: {
-      ambulatory_home: false,
-      ambulatory_dental: false,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    }
-  },
-  {
-    itemNumber: 26,
-    substanceName: 'Salbutamolum',
-    dosageForm: 'aerozol wziewny lub roztwór do nebulizacji',
-    requirements: {
-      ambulatory_home: true,
-      ambulatory_dental: true,
-      ambulatory_facility: true,
-      inpatient_non_hospital: true,
-      hospital: true
-    },
-    notes: 'Beta-2 mimetyk wziewny rozszerzający oskrzela'
-  }
+  kitReq(1, 'Adrenalinum', '1 mg/ml lub 300 μg/0,3 ml, lub 150 μg/0,3 ml, lub 1 mg/10 ml – roztwór do wstrzykiwań', [true, true, true, true, true]),
+  kitReq(2, 'Amiodaroni hydrochloridum', '50 mg/ml – roztwór do wstrzykiwań', [false, false, false, false, true]),
+  kitReq(3, 'Aqua pro injectione', 'rozpuszczalnik do sporządzania leków parenteralnych', [true, true, true, true, true]),
+  kitReq(4, 'Atropini sulfas', '1 mg/ml – roztwór do wstrzykiwań', [false, false, true, true, true]),
+  kitReq(5, 'Captoprilum', '12,5 mg lub 25 mg – tabletki', [true, true, true, true, true]),
+  kitReq(6, 'Clonazepamum', '1 mg/ml – roztwór do wstrzykiwań', [false, false, true, true, true]),
+  kitReq(7, 'Furosemidum', '10 mg/ml – roztwór do wstrzykiwań', [false, true, true, true, true]),
+  kitReq(8, 'Glyceroli trinitras', '0,4 mg/dawkę – aerozol podjęzykowy', [true, true, true, true, true]),
+  kitReq(9, 'Glucosum 20 % lub 40 %', 'roztwór do wstrzykiwań', [true, true, true, true, true]),
+  kitReq(
+    10,
+    'Hydrocortisonum hemisuccinatum',
+    'proszek i rozpuszczalnik do sporządzania roztworu do wstrzykiwań lub infuzji lub odpowiedniki terapeutyczne',
+    [true, false, true, true, true]
+  ),
+  kitReq(11, 'Ketoprofenum', '50 mg/ml – roztwór do wstrzykiwań', [false, false, true, true, true]),
+  kitReq(12, 'Lidocaini hydrochloridum 2 %', 'roztwór do wstrzykiwań', [false, false, false, true, true]),
+  kitReq(13, 'Metoprololi tartras', '1 mg/ml – roztwór do wstrzykiwań', [false, false, false, false, true]),
+  kitReq(14, 'Midazolam 2,5 mg', 'roztwór do stosowania w jamie ustnej', [false, false, false, false, true]),
+  kitReq(15, 'Morphini sulfas', '10 mg/ml – roztwór do wstrzykiwań', [false, false, false, false, true]),
+  kitReq(16, 'Naloxoni hydrochloridum', '0,4 mg/ml – roztwór do wstrzykiwań', [false, false, false, false, true]),
+  kitReq(
+    17,
+    'Natrii chloridum 0,9 %',
+    'rozpuszczalnik do sporządzania leków parenteralnych lub roztwór do infuzji',
+    [true, true, true, true, true]
+  ),
+  kitReq(18, 'Natrii hydrogenocarbonas', '84 mg/ml – roztwór do wstrzykiwań', [false, false, false, true, true]),
+  kitReq(19, 'Noradrenalinum', '1 mg/ml – koncentrat do sporządzania roztworu do infuzji', [false, false, false, false, true]),
+  kitReq(20, 'Oxygenium', 'gaz medyczny (tlen medyczny; poz. 20 wykazu)', [false, true, true, true, true]),
+  kitReq(
+    21,
+    'Prednisoloni hemisuccinas',
+    'proszek i rozpuszczalnik do sporządzania roztworu do wstrzykiwań lub infuzji',
+    [false, false, false, false, true]
+  ),
+  kitReq(
+    22,
+    'Salbutamolum',
+    '0,5 mg/ml – roztwór do wstrzykiwań lub 1 mg/ml – roztwór do nebulizacji',
+    [false, false, true, true, true]
+  ),
+  kitReq(23, 'Glucosum 5 % lub 10 %', 'roztwór do infuzji', [true, true, true, true, true], 'Płyny infuzyjne'),
+  kitReq(24, 'Mannitolum', '200 mg/ml – roztwór do infuzji', [false, false, false, true, true], 'Płyny infuzyjne'),
+  kitReq(25, 'Natrii chloridum 0,9 %', 'roztwór do infuzji', [true, true, true, true, true], 'Płyny infuzyjne'),
+  kitReq(
+    26,
+    'Natrii chloridum + Kalii chloridum + Calcii chloridum dihydricum',
+    '(8,6 mg + 0,3 mg + 0,33 mg)/ml – roztwór do infuzji dożylnych',
+    [false, false, false, true, true],
+    'Płyny infuzyjne'
+  )
 ];

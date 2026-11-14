@@ -3,12 +3,17 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .module-view-nav {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
 }
 
 .back-to-dashboard-btn {
@@ -24,6 +29,8 @@
   font-weight: 600;
   box-shadow: var(--shadow-xs);
   transition: all var(--transition-fast);
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .back-to-dashboard-btn:hover {
@@ -41,6 +48,8 @@
   border: 1px solid var(--violet-100);
   padding: 4px 12px;
   border-radius: var(--radius-full);
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 /* Header Card */
@@ -53,12 +62,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .module-view-header-left {
   display: flex;
   align-items: flex-start;
   gap: 20px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.module-view-header-left > div {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .module-view-icon-box {
@@ -117,6 +135,7 @@
   color: var(--navy-900);
   letter-spacing: -0.02em;
   margin-bottom: 6px;
+  overflow-wrap: anywhere;
 }
 
 .module-view-lead {
@@ -124,6 +143,7 @@
   color: var(--text-muted);
   max-width: 780px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 /* Special Informational Banners (PSO GIS Link & Cold Chain Warning) */

@@ -172,45 +172,55 @@ const CalendarView: React.FC = () => {
 
       <div className="ops-tabs" role="tablist" aria-label="Części Programu Szczepień Ochronnych 2027">
         <button
+          id="ops-cal-tab-age_schedule"
           type="button"
           role="tab"
           aria-selected={activeTab === 'age_schedule'}
+          aria-controls="ops-cal-panel-age_schedule"
           className={`ops-tab ${activeTab === 'age_schedule' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('age_schedule')}
         >
           Część I i II: Kalendarz wieku (12 grup)
         </button>
         <button
+          id="ops-cal-tab-catch_up"
           type="button"
           role="tab"
           aria-selected={activeTab === 'catch_up'}
+          aria-controls="ops-cal-panel-catch_up"
           className={`ops-tab ${activeTab === 'catch_up' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('catch_up')}
         >
           Część V: Szczepienia wyrównawcze (12 zasad)
         </button>
         <button
+          id="ops-cal-tab-combined"
           type="button"
           role="tab"
           aria-selected={activeTab === 'combined'}
+          aria-controls="ops-cal-panel-combined"
           className={`ops-tab ${activeTab === 'combined' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('combined')}
         >
           Część III.M: Warianty 5w1 i 6w1
         </button>
         <button
+          id="ops-cal-tab-principles"
           type="button"
           role="tab"
           aria-selected={activeTab === 'principles'}
+          aria-controls="ops-cal-panel-principles"
           className={`ops-tab ${activeTab === 'principles' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('principles')}
         >
           Część IV: 7 zasad ogólnych
         </button>
         <button
+          id="ops-cal-tab-qualifications"
           type="button"
           role="tab"
           aria-selected={activeTab === 'qualifications'}
+          aria-controls="ops-cal-panel-qualifications"
           className={`ops-tab ${activeTab === 'qualifications' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('qualifications')}
         >
@@ -219,7 +229,11 @@ const CalendarView: React.FC = () => {
       </div>
 
       {activeTab === 'age_schedule' && (
-        <>
+        <div
+          id="ops-cal-panel-age_schedule"
+          role="tabpanel"
+          aria-labelledby="ops-cal-tab-age_schedule"
+        >
           <section className="ops-panel" aria-labelledby="ops-cal-filters">
             <h2 id="ops-cal-filters" className="ops-panel-title">
               Filtry kalendarza PSO 2027
@@ -296,11 +310,16 @@ const CalendarView: React.FC = () => {
               </div>
             </section>
           ))}
-        </>
+        </div>
       )}
 
       {activeTab === 'catch_up' && (
-        <section className="ops-panel" aria-labelledby="ops-cal-catchup">
+        <section
+          id="ops-cal-panel-catch_up"
+          role="tabpanel"
+          aria-labelledby="ops-cal-tab-catch_up"
+          className="ops-panel"
+        >
           <h2 id="ops-cal-catchup" className="ops-panel-title">
             Część V PSO 2027 — Szczepienia wyrównawcze (s. 44–45 Dz. Urz. 2026 poz. 77)
           </h2>
@@ -324,7 +343,12 @@ const CalendarView: React.FC = () => {
       )}
 
       {activeTab === 'combined' && (
-        <section className="ops-panel" aria-labelledby="ops-cal-combined">
+        <section
+          id="ops-cal-panel-combined"
+          role="tabpanel"
+          aria-labelledby="ops-cal-tab-combined"
+          className="ops-panel"
+        >
           <h2 id="ops-cal-combined" className="ops-panel-title">
             Część III.M PSO 2027 — Warianty szczepionek wysoce skojarzonych (5w1 i 6w1)
           </h2>
@@ -362,7 +386,12 @@ const CalendarView: React.FC = () => {
       )}
 
       {activeTab === 'principles' && (
-        <section className="ops-panel" aria-labelledby="ops-cal-principles">
+        <section
+          id="ops-cal-panel-principles"
+          role="tabpanel"
+          aria-labelledby="ops-cal-tab-principles"
+          className="ops-panel"
+        >
           <h2 id="ops-cal-principles" className="ops-panel-title">
             Część IV PSO 2027 — Ogólne zasady przeprowadzania i organizacji szczepień
           </h2>
@@ -381,7 +410,12 @@ const CalendarView: React.FC = () => {
       )}
 
       {activeTab === 'qualifications' && (
-        <section className="ops-panel" aria-labelledby="ops-cal-qualifications">
+        <section
+          id="ops-cal-panel-qualifications"
+          role="tabpanel"
+          aria-labelledby="ops-cal-tab-qualifications"
+          className="ops-panel"
+        >
           <h2 id="ops-cal-qualifications" className="ops-panel-title">
             Część VI PSO 2027 — Uprawnienia osób wykonujących zawód medyczny
           </h2>
@@ -634,7 +668,7 @@ const CalculatorView: React.FC = () => {
         {refProc && (
           <p className="ops-muted" data-testid="ops-calc-pso-reference">
             Odstęp w PSO ({refProc.sourcePart}, s. {refProc.sourcePrintedPage}):{' '}
-            <strong>{refProc.minIntervalFromPrevious}</strong>. Przelicz wartość na dni samodzielnie i potwierdź w ChPL.
+            <strong>{refProc.minIntervalFromPrevious}</strong>. Wprowadź wartość z odpowiednią jednostką (dni, miesiące lub lata) i potwierdź w aktualnej ChPL.
           </p>
         )}
         {result && <Feedback errors={result.errors} />}
@@ -902,7 +936,7 @@ const ColdChainView: React.FC = () => {
     a.href = url;
     a.download = `vaxnurse-rejestr-temperatur-${todayIsoDate()}.csv`;
     a.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   return (
@@ -981,14 +1015,20 @@ const ColdChainView: React.FC = () => {
                 }))
               }
             >
-              {Object.entries(COLD_CHAIN_PROFILES).map(([key, prof]) => (
-                <option key={key} value={key}>
-                  {prof.label}{' '}
-                  {prof.minC !== null && prof.maxC !== null
-                    ? `(+${prof.minC}°C do +${prof.maxC}°C)`
-                    : '(własny zakres)'}
-                </option>
-              ))}
+              {Object.entries(COLD_CHAIN_PROFILES).map(([key, prof]) => {
+                const formatC = (n: number) => `${n > 0 ? `+${n}` : `${n}`}°C`;
+                const suffix =
+                  prof.minC !== null && prof.maxC !== null
+                    ? `(${formatC(prof.minC)} do ${formatC(prof.maxC)})`
+                    : key === 'unspecified'
+                      ? '(brak granic)'
+                      : '(własny zakres)';
+                return (
+                  <option key={key} value={key}>
+                    {prof.label} {suffix}
+                  </option>
+                );
+              })}
             </select>
           </label>
           {draft.profileId === 'custom_chpl' && (
@@ -1194,7 +1234,9 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
   const [success, setSuccess] = useState<string | null>(null);
   const today = todayIsoDate();
   const problems = items.filter((i) => evaluateKitItemStatus(i, today) !== 'available').length;
-  const sources = KNOWLEDGE_SOURCES.filter((s) => s.category === 'gis-gif' || s.category === 'pso');
+  const sources = KNOWLEDGE_SOURCES.filter(
+    (s) => s.category === 'gis-gif' || s.category === 'pso' || s.category === 'law'
+  );
 
   const persist = (next: EmergencyKitItem[], msg: string) => {
     const res = saveEmergencyKit(storage, next);
@@ -1222,12 +1264,13 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
 
     const toAdd: EmergencyKitItem[] = [];
     for (const req of requiredItems) {
-      const matchPrefix = req.substanceName.trim().toLowerCase();
-      const alreadyPresent = Array.from(existingNames).some((en) => en.includes(matchPrefix));
-      if (!alreadyPresent) {
+      const fullLabel = `${req.substanceName} (${req.dosageForm})`;
+      const normalizedKey = fullLabel.trim().toLowerCase();
+      if (!existingNames.has(normalizedKey)) {
+        existingNames.add(normalizedKey);
         toAdd.push({
           id: generateLocalId('kit'),
-          name: `${req.substanceName} (${req.dosageForm})`,
+          name: fullLabel,
           quantity: 1,
           expiryDate: defaultExpiry,
           lastCheckedAt: new Date().toISOString()
@@ -1327,7 +1370,7 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
             <span>Nazwa pozycji</span>
             <input
               value={draft.name}
-              maxLength={120}
+              maxLength={200}
               onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
               required
             />

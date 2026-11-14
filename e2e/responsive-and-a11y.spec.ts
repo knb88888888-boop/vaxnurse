@@ -66,6 +66,7 @@ test.describe('E2E — Responsywność 6 viewportów i rzeczywisty audyt WCAG / 
   test('Rzeczywisty audyt axe-core (Chromium computed CSS + color-contrast) w trybie standardowym oraz Zwięzła + Powiększony tekst', async ({
     page,
   }) => {
+    test.slow();
     const monitor = attachRuntimeMonitor(page);
     const axeErrors: string[] = [];
     await page.setViewportSize({ width: 1366, height: 768 });
@@ -173,6 +174,19 @@ test.describe('E2E — Responsywność 6 viewportów i rzeczywisty audyt WCAG / 
 
     await page.getByRole('button', { name: /Powrót do Bazy preparatów/i }).first().click();
     await expect(page.getByTestId('vaccines-mode-workbench')).toBeVisible();
+
+    for (const [labelRegex, auditName] of [
+      [/Kalendarz szczepień/i, 'Kalendarz szczepień PSO 2027 (standard)'],
+      [/Kalkulator szczepień/i, 'Kalkulator szczepień (standard)'],
+      [/Szczepienia dorosłych/i, 'Szczepienia dorosłych (standard)'],
+      [/Procedury i checklisty/i, 'Procedury i checklisty (standard)'],
+      [/Łańcuch chłodniczy/i, 'Łańcuch chłodniczy (standard)'],
+      [/Sytuacje szczególne/i, 'Sytuacje szczególne (standard)'],
+    ] as const) {
+      await navigateViaSidebarOrHeader(page, labelRegex);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await runAxeAudit(page, auditName, axeErrors);
+    }
 
     // Włączenie trybu Zwięzła + Wyraźny / powiększony w Ustawieniach i re-audyt
     await navigateViaSidebarOrHeader(page, /Ustawienia/i);
@@ -304,6 +318,48 @@ test.describe('E2E — Responsywność 6 viewportów i rzeczywisty audyt WCAG / 
         navigate: async () => {
           await page.getByRole('button', { name: 'Otwórz menu nawigacji' }).click();
           await page.locator('#app-sidebar-nav').getByRole('button', { name: /Ustawienia/i }).click();
+        },
+      },
+      {
+        name: 'Kalendarz 200% @ 360px',
+        navigate: async () => {
+          await page.getByRole('button', { name: 'Otwórz menu nawigacji' }).click();
+          await page.locator('#app-sidebar-nav').getByRole('button', { name: /Kalendarz szczepień/i }).click();
+        },
+      },
+      {
+        name: 'Kalkulator 200% @ 360px',
+        navigate: async () => {
+          await page.getByRole('button', { name: 'Otwórz menu nawigacji' }).click();
+          await page.locator('#app-sidebar-nav').getByRole('button', { name: /Kalkulator szczepień/i }).click();
+        },
+      },
+      {
+        name: 'Szczepienia dorosłych 200% @ 360px',
+        navigate: async () => {
+          await page.getByRole('button', { name: 'Otwórz menu nawigacji' }).click();
+          await page.locator('#app-sidebar-nav').getByRole('button', { name: /Szczepienia dorosłych/i }).click();
+        },
+      },
+      {
+        name: 'Procedury 200% @ 360px',
+        navigate: async () => {
+          await page.getByRole('button', { name: 'Otwórz menu nawigacji' }).click();
+          await page.locator('#app-sidebar-nav').getByRole('button', { name: /Procedury i checklisty/i }).click();
+        },
+      },
+      {
+        name: 'Łańcuch chłodniczy 200% @ 360px',
+        navigate: async () => {
+          await page.getByRole('button', { name: 'Otwórz menu nawigacji' }).click();
+          await page.locator('#app-sidebar-nav').getByRole('button', { name: /Łańcuch chłodniczy/i }).click();
+        },
+      },
+      {
+        name: 'Sytuacje szczególne 200% @ 360px',
+        navigate: async () => {
+          await page.getByRole('button', { name: 'Otwórz menu nawigacji' }).click();
+          await page.locator('#app-sidebar-nav').getByRole('button', { name: /Sytuacje szczególne/i }).click();
         },
       },
     ];

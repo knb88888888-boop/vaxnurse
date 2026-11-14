@@ -105,5 +105,23 @@ export const KNOWLEDGE_SOURCES: KnowledgeSource[] = [
     verificationStatus: 'Urzędowy portal informacyjny (URPL)',
     clinicalNote: 'Rejestr RPL jest głównym miejscem weryfikacji aktualnej charakterystyki produktu. Nie traktuj wykazu ChPL refundowanych URPL jako kompletnej bazy wszystkich szczepionek.',
     targetYear: null
+  },
+  {
+    id: 'src-zestaw-przeciwwstrzasowy-429',
+    title: 'Rozporządzenie Ministra Zdrowia z dnia 24 marca 2026 r. zmieniające rozporządzenie w sprawie wykazu produktów leczniczych wchodzących w skład zestawów przeciwwstrząsowych',
+    publisher: 'Minister Zdrowia',
+    category: 'law',
+    publicationDate: '24.03.2026',
+    officialJournalDate: '30.03.2026',
+    legalActNumber: 'Dz.U. 2026 poz. 429',
+    version: null,
+    versionDate: '14.04.2026',
+    officialUrl: 'https://dziennikustaw.gov.pl/D2026000042901.pdf',
+    infoUrl: 'https://eli.gov.pl/eli/DU/2026/429/ogl',
+    lastVerifiedDate: '14.11.2026',
+    description: 'Nowelizacja wykazu 26 pozycji produktów leczniczych i płynów infuzyjnych wchodzących w skład zestawu przeciwwstrząsowego ratującego życie dla 5 kategorii świadczeń.',
+    verificationStatus: 'Dziennik Ustaw RP (akt ogłoszony)',
+    clinicalNote: 'Dane katalogowe obejmują listę wymaganych substancji czynnych i postaci farmaceutycznych bez algorytmów leczenia ani dawek leków.',
+    targetYear: null
   }
 ];

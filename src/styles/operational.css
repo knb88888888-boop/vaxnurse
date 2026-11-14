@@ -35,6 +35,7 @@
   margin: 0;
   font-size: 1.05rem;
   color: #0f172a;
+  overflow-wrap: anywhere;
 }
 
 .ops-tag {
@@ -73,6 +74,8 @@
 
 .ops-note p {
   margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .ops-note--danger {
@@ -86,6 +89,7 @@
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
   gap: 12px;
   align-items: end;
+  min-width: 0;
 }
 
 .ops-inline-form {
@@ -116,6 +120,8 @@
 .ops-field input,
 .ops-field select {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
   padding: 8px 10px;
   border: 1px solid #64748b;
@@ -141,6 +147,9 @@
   font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: left;
 }
 
 .ops-btn-primary {
@@ -291,6 +300,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 10px;
+  min-width: 0;
 }
 
 .ops-card {
@@ -301,12 +311,15 @@
   flex-direction: column;
   gap: 6px;
   background: #f8fafc;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .ops-card-title {
   margin: 0;
   font-size: 0.94rem;
   color: #0f172a;
+  overflow-wrap: anywhere;
 }
 
 .ops-ordered {

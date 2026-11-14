@@ -184,7 +184,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </p>
           </div>
           <span className="modules-count-badge">
-            {filteredModules.length} {filteredModules.length === 1 ? 'moduł' : 'modułów'}
+            {filteredModules.length}{' '}
+            {filteredModules.length === 1
+              ? 'moduł'
+              : filteredModules.length >= 2 && filteredModules.length <= 4
+                ? 'moduły'
+                : 'modułów'}
           </span>
         </div>
 
