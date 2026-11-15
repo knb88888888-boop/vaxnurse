@@ -1,0 +1,64 @@
+name: VaxNurse CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-and-build:
+    name: Quality Gate, Audits & Production Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repozytorium
+        uses: actions/checkout@v4
+
+      - name: Konfiguracja Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Instalacja zależności (npm ci)
+        run: npm ci
+
+      - name: Kontrola typów TypeScript
+        run: |
+          npx tsc -b --force --pretty false
+          npx tsc -p tsconfig.test.json --noEmit
+
+      - name: Statyczna analiza kodu (Oxlint)
+        run: npm run lint
+
+      - name: Build produkcyjny (tworzenie dist/)
+        run: npm run build
+
+      - name: Cztery skrypty audytowe (Etap A, Dzieci, Backup, Weryfikacja)
+        run: |
+          npx tsx scripts/test-foundation-etap-a.mjs
+          npx tsx scripts/test-child-vaccinations.mjs
+          npx tsx scripts/test-backup-system.mjs
+          npx tsx scripts/test-verification-workflow.mjs
+
+      - name: Testy jednostkowe, komponentowe i a11y (Vitest)
+        run: npx vitest run
+
+      - name: Instalacja Chromium dla Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Testy E2E i audyt WCAG 2.2 AA w Chromium (Playwright)
+        run: npx playwright test --reporter=list
+
+      - name: Weryfikacja końcowa buildu produkcyjnego
+        run: npm run build
