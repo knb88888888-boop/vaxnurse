@@ -1,124 +1,130 @@
-# VaxNurse — Asystent Referencyjny Punktu Szczepień
+# VaxNurse — Asystent Punktu Szczepień
 
-**VaxNurse** to prywatna, responsywna aplikacja webowa działająca wyłącznie po stronie przeglądarki (**Local-First**), projektowana jako narzędzie wsparcia organizacyjnego i referencyjnego pracy pielęgniarki w punkcie szczepień (komputer, laptop, tablet, smartfon).
+**VaxNurse** to bezpłatna, responsywna aplikacja webowa o charakterze informacyjno-edukacyjnym i pomocniczym, zaprojektowana z myślą o wspieraniu pielęgniarek i pielęgniarzy oraz personelu punktów szczepień w codziennej organizacji pracy (komputer, laptop, tablet, smartfon).
 
-> **Ważna informacja kliniczna i formalna:**  
-> VaxNurse ma charakter wyłącznie informacyjno-referencyjny. **Nie jest** systemem dokumentacji medycznej pacjentów (EDM), nie zastępuje systemu `gabinet.gov.pl`, e-Karty Szczepień, decyzji lekarza kwalifikującego, obowiązującej Charakterystyki Produktu Leczniczego (ChPL) ani przepisów prawa. Aplikacja **nie kwalifikuje** pacjentów do szczepień i **nie wylicza** automatycznie dawek klinicznych.
-
----
-
-## Rzeczywisty stack technologiczny
-
-- **UI / Warstwa prezentacji:** React 19 (`^19.3.1`), React DOM (`^19.3.1`), Lucide React (`^1.71.0`)
-- **Język i typowanie:** TypeScript (`~7.0.2`, tryb ścisły `"strict": true`)
-- **Bundler / Serwer dev:** Vite 8 (`^8.3.6`) z `@vitejs/plugin-react` (`^6.1.2`)
-- **Style:** natywny CSS (zmienne CSS + arkusze modułowe, lokalny stos fontów systemowych bez zewnętrznych zapytań sieciowych)
-- **Przechowywanie stanu lokalnego:** `localStorage` przeglądarki (katalog statusów weryfikacji ChPL, preferencje ergonomiczne widoku, historia odwiedzonych modułów)
-- **Linter:** `oxlint` (`^1.90.0`)
-- **Środowisko uruchomieniowe skryptów / testów:** Node.js (zweryfikowano na v22.14.0 z `--experimental-strip-types`)
-
-Projekt działa bez backendu, bez bazy serwerowej, bez zewnętrznej telemetrii i bez klasycznego routera URL.
+> **Zawsze bezpłatnie. Bez reklam.**  
+> Aplikacja nie wymaga kont ani logowania, nie zawiera reklam, paywalli ani skryptów śledzących, a jej logika wykonuje się lokalnie po stronie przeglądarki.
 
 ---
 
-## Wymagania środowiska
+## Wersja produkcyjna online
 
-- Node.js `>= 22.14.0` (dla bezpośredniego uruchamiania testów TypeScript w Node z `--experimental-strip-types`)
-- `npm` zgodny z instalacją Node.js
+> Sekcja w trakcie konfiguracji wdrożenia produkcyjnego na platformie Vercel (`main` → automatyczny deploy). Adres URL zostanie uzupełniony po zakończeniu publikacji produkcyjnej.
 
 ---
 
-## Instalacja, uruchomienie, lint, build i testy
+## Cel projektu i dla kogo powstał
+
+VaxNurse powstał, aby uporządkować w jednym, spokojnym wizualnie i czytelnym miejscu informacje pomocnicze dotyczące szczepień ochronnych, procedur gabinetowych, zasad łańcucha chłodniczego oraz odniesień do oficjalnych dokumentów (PSO i ChPL).
+
+### Odbiorcy projektu
+
+- pielęgniarki i pielęgniarze realizujący szczepienia ochronne,
+- personel POZ i punktów szczepień,
+- osoby wracające do pracy lub porządkujące wiedzę szczepienną,
+- studenci pielęgniarstwa i osoby przygotowujące się do pracy w obszarze szczepień,
+- osoby chcące lepiej zrozumieć organizację i zasady szczepień ochronnych.
+
+---
+
+## Najważniejsze funkcjonalności i moduły
+
+1. **Pulpit operacyjny i globalna wyszukiwarka** — szybki dostęp do modułów, ostatnio odwiedzanych sekcji oraz wyszukiwania po katalogu funkcji i Bibliotece Wiedzy.
+2. **Szczepienia dzieci (PSO 2027)** — ustrukturyzowana prezentacja wszystkich siedmiu części Programu Szczepień Ochronnych na 2027 rok (Dziennik Urzędowy MZ z 30.10.2026 r., poz. 77), w tym rozbicie na procedury i jawne oznaczenie statusów weryfikacji z dokumentacją ChPL (m.in. 12 pozycji wymagających wyjaśnienia źródłowego oraz 31 oczekujących na pełną weryfikację ChPL; w tabeli VII.C zachowane jest jawne oznaczenie konfliktu dla meningokoków).
+3. **Baza preparatów i Stanowisko audytu ChPL** — katalog produktów leczniczych w strukturze druku ChPL (punkty 1–10 EMA QRD), mechanizm wykrywania rozbieżności źródłowych (np. `vac-infanrix-hexa` z zarejestrowaną rozbieżnością fenyloalaniny `0,0289 µg` vs `0,0298 µg` i blokadą automatycznego zatwierdzenia), skorygowany kod ATC dla `VaxigripTetra` (`J07BB02`), lokalny podgląd PDF (`pdfjs-dist`) z weryfikacją SHA-256 oraz rejestr dowodów.
+4. **Kalendarz szczepień i Szczepienia dorosłych** — uporządkowany przegląd etapów wiekowych oraz szczepień zalecanych dla dorosłych i wybranych grup ryzyka.
+5. **Kalkulator odstępów szczepień** — narzędzie pomocnicze do wyliczania dat i odstępów między dawkami zgodnie z wybranym wariantem referencyjnym.
+6. **Procedury i checklisty / Sytuacje szczególne** — lokalnie zapisywane checklisty organizacyjne stanowiska oraz inwentarz zestawu przeciwwstrząsowego.
+7. **Łańcuch chłodniczy** — lokalny dziennik odczytów temperatury oraz profile przechowywania preparatów.
+8. **Baza wiedzy** — uporządkowane odnośniki do oficjalnych portali i dokumentów źródłowych.
+9. **Ustawienia i Kopia zapasowa JSON** — dostosowanie gęstości widoku i wielkości tekstu oraz bezpieczny eksport/import lokalnego stanu katalogu (`localStorage`) z automatyczną kopią zabezpieczającą i ochroną przed sfałszowaniem statusów weryfikacji.
+10. **O projekcie i autorach** — prezentacja misji, wartości, architektury modułów oraz zasad działania lokalnego.
+
+---
+
+## Autorzy i inspiracja
+
+- **P.M. — inicjator i twórca projektu VaxNurse**  
+  Osoba odpowiedzialna za pomysł, rozwój koncepcji, organizację informacji i tworzenie narzędzia wspierającego codzienną pracę osób wykonujących zawód pielęgniarki i pielęgniarza.
+- **M.M. — pielęgniarka, ważna inspiracja projektu**  
+  Jej doświadczenie zawodowe i perspektywa pracy pielęgniarskiej stanowią ważny punkt odniesienia dla idei projektu (rola inspirująca i kierunkowa — bez pełnienia funkcji formalnej współautorki merytorycznej ani osoby zatwierdzającej treści kliniczne).
+
+---
+
+## Dostępność: zawsze bezpłatnie i bez reklam
+
+VaxNurse jest udostępniany całkowicie bezpłatnie. Aplikacja nie zawiera reklam, płatnych planów, barier subskrypcyjnych ani zewnętrznych trackerów analitycznych. Dane robocze użytkownika (preferencje widoku, lokalne checklisty, wpisy łańcucha chłodniczego, robocze notatki audytu ChPL) zapisywane są wyłącznie w pamięci `localStorage` jego własnej przeglądarki (bez szyfrowania i bez wysyłania na serwer aplikacyjny). Połączenia z zewnętrznymi stronami urzędowymi (GIS, URPL, RARS, EMA, Dziennik Urzędowy MZ) są otwierane wyłącznie po świadomym kliknięciu odnośnika przez użytkownika.
+
+---
+
+## Technologie
+
+- **Interfejs:** React 19 (`19.3.x`), Lucide React (`^1.71.0`), natywny CSS (zmienne CSS, systemowy stos fontów, wsparcie trybu zwięzłego i powiększonego tekstu)
+- **Język:** TypeScript (`~7.0.2`, tryb ścisły `"strict": true`)
+- **Bundler / Serwer dev:** Vite 8 (`^8.3.6`) + `@vitejs/plugin-react`
+- **Obsługa lokalnych plików PDF:** `pdfjs-dist` (`6.5.438`)
+- **Kontrola jakości i testy:** `oxlint`, Vitest, Testing Library, Playwright, `axe-core` (audyt WCAG 2.2 AA)
+
+---
+
+## Uruchomienie lokalne i budowanie
+
+Wymagania: **Node.js >= 22.14.0** oraz `npm`.
 
 ```bash
 # 1. Instalacja zależności
-npm install
+npm ci
 
 # 2. Uruchomienie serwera deweloperskiego
 npm run dev
 
-# 3. Kontrola typów TypeScript (strict)
+# 3. Kontrola typów TypeScript (aplikacja i testy)
 npx tsc -b --force --pretty false
+npx tsc -p tsconfig.test.json --noEmit
 
-# 4. Statyczna analiza kodu (oxlint)
+# 4. Statyczna analiza kodu
 npm run lint
 
-# 5. Build produkcyjny + podgląd lokalny
+# 5. Budowanie wersji produkcyjnej do katalogu dist/
 npm run build
+
+# 6. Lokalny podgląd buildu produkcyjnego
 npm run preview
 ```
 
-### Testy automatyczne (skrypty Node)
+### Testy automatyczne
 
 ```bash
-node --experimental-strip-types scripts/test-child-vaccinations.mjs
-node --experimental-strip-types scripts/test-verification-workflow.mjs
-node --experimental-strip-types scripts/test-backup-system.mjs
-node --experimental-strip-types scripts/test-foundation-etap-a.mjs
+# Testy jednostkowe, komponentowe i a11y (jsdom)
+npm run test:run
+
+# Testy E2E i dostępności w Chromium (Playwright)
+npm run test:e2e
+
+# Skrypty weryfikacji integralności danych i backupu
+npx tsx scripts/test-foundation-etap-a.mjs
+npx tsx scripts/test-child-vaccinations.mjs
+npx tsx scripts/test-backup-system.mjs
+npx tsx scripts/test-verification-workflow.mjs
 ```
 
 ---
 
-## Struktura katalogów
+## Ważne informacje
 
-```text
-c:\VaxNurse
-├── index.html                        # Punkt wejścia HTML (bez zewnętrznych żądań Google Fonts)
-├── package.json                      # Skrypty npm i zależności
-├── tsconfig.json / tsconfig.app.json / tsconfig.node.json
-├── vite.config.ts
-├── scripts/                          # Skrypty weryfikacyjne Node
-│   ├── test-backup-system.mjs
-│   ├── test-child-vaccinations.mjs
-│   ├── test-verification-workflow.mjs
-│   └── test-foundation-etap-a.mjs
-└── src/
-    ├── App.tsx                       # Główna powłoka aplikacji, nawigacja, React.lazy + ErrorBoundary
-    ├── main.tsx                      # Inicjalizacja preferencji przed montowaniem React
-    ├── index.css                     # Kolejność importów CSS
-    ├── types/                        # Typy TypeScript (szczepienia, katalog ChPL, backup, nawigacja)
-    ├── data/                         # Statyczne źródła referencyjne (katalog PSO, katalog ChPL, arkusze Stage 1)
-    ├── utils/                        # Logika czysta: scalanie localStorage, backup, workflow ChPL,
-    │                                 # preferencje, wyszukiwarka globalna, historia modułów
-    ├── styles/                       # Arkusze CSS (w tym etapA.css dla gęstości, rozmiaru i WCAG)
-    └── components/
-        ├── common/                   # ModuleLoadingFallback, ModuleErrorBoundary
-        ├── layout/                   # Layout, Header (wyszukiwarka globalna), Sidebar
-        ├── dashboard/                # Pulpit, QuickAccess, RecentModules, ModuleCard
-        ├── childVaccinations/        # Moduł PSO 2027 (szczepienia dzieci)
-        ├── vaccines/                 # Baza preparatów i Karty ChPL (punkty 1–10)
-        ├── knowledge/                # Baza wiedzy i oficjalnych aktów
-        ├── settings/                 # Kopie bezpieczeństwa JSON + preferencje widoku
-        └── modules/                  # Sześć aktywnych modułów operacyjnych VaxNurse (kalendarz, dorośli, kalkulator, checklisty, łańcuch chłodniczy, sytuacje szczególne)
-```
+- **Charakter pomocniczy i edukacyjny:** VaxNurse jest narzędziem informacyjno-edukacyjnym oraz organizacyjnym. Nie stanowi certyfikowanego wyrobu medycznego ani w pełni zweryfikowanej bazy klinicznej.
+- **Brak funkcji EDM:** Aplikacja **nie jest** systemem elektronicznej dokumentacji medycznej (EDM) i nie zastępuje systemów takich jak `gabinet.gov.pl` czy e-Karta Szczepień.
+- **Brak kwalifikacji medycznej:** Aplikacja **nie zastępuje** badania i kwalifikacji lekarskiej do szczepienia, indywidualnych decyzji personelu medycznego ani aktualnych wytycznych klinicznych.
+- **Pierwszeństwo dokumentów urzędowych:** Zastosowane opisy nie zastępują obowiązujących Charakterystyk Produktów Leczniczych (ChPL), Programu Szczepień Ochronnych (PSO) ani komunikatów urzędowych.
+- **Brak danych osobowych pacjentów:** VaxNurse nie posiada formularzy pacjentów, nie zbiera numerów PESEL i **nie jest przeznaczony** do przechowywania danych osobowych pacjentów ani dokumentacji medycznej konkretnych osób.
+- **Status audytu danych:** Katalog preparatów i procedur posiada jawnie oznaczony status roboczy (`verified_full = 0`) oraz zawiera rekordy i procedury oczekujące na dalszą weryfikację źródłową lub rozstrzygnięcie rozbieżności przez upoważniony personel.
 
 ---
 
-## Opis głównych modułów danych
+## Oficjalne źródła referencyjne
 
-### Katalog PSO (`src/data/childVaccinesData.ts`)
-- Zawiera wykaz pozycji referencyjnych szczepień dzieci i młodzieży według PSO 2027 wraz z metadanymi i mapowaniem na procedury oraz preparaty z katalogu bazowego.
-- Służy wyłącznie jako zestawienie referencyjne wspierające orientację personelu; nie zastępuje komunikatu GIS ani kwalifikacji lekarskiej.
-
-### Baza preparatów i Karty ChPL (`src/data/vaccinesCatalog.ts`, `src/data/chplStage1AuditSheets.ts`)
-- Odwzorowuje strukturę druku Charakterystyki Produktu Leczniczego (punkty 1–10 EMA QRD).
-- Zawiera mechanizm kontroli rozbieżności źródłowych (np. `vac-infanrix-hexa` z zarejestrowaną rozbieżnością `disc-phenylalanine-content-01` dotyczącą ilości fenyloalaniny 0,0289 µg vs 0,0298 µg), który blokuje końcowe zatwierdzenie do czasu rejestracji i kontroli dokumentu urzędowego.
-- Aktualizacje katalogu bazowego są łączone z pamięcią `localStorage` za pomocą deterministycznego, bezstratnego mechanizmu scalania (`src/utils/catalogMerge.ts`), który zachowuje lokalną historię zmian, notatki oraz wykrywa konflikty wersji.
-
----
-
-## Zasady kopii bezpieczeństwa (eksport i import JSON)
-
-- Kopie generowane są lokalnie w formacie JSON (`src/utils/backup.ts`) z jawnym oznaczeniem `containsPatientData: false`.
-- Przed przywróceniem kopii w `Ustawieniach` prezentowany jest podgląd analityczny (m.in. liczba rekordów nowych i aktualizowanych, konflikty, deklaracje zatwierdzeń ChPL, niekompletne rekordy), a przed nadpisaniem pamięci lokalnej automatycznie pobierana jest kopia zabezpieczająca bieżącego stanu.
-- **Integralność przy imporcie:** niepodpisane pliki JSON z zewnętrzną deklaracją `verified_chpl` / `verified_full` nie są automatycznie przyjmowane jako zweryfikowane — deklaracja z importu trafia do pola `importedVerificationClaim`, a preparat otrzymuje status ponownej kontroli lokalnej (`requires_reverification` lub `requires_source_clarification` przy nierozwiązanych rozbieżnościach).
-
----
-
-## Status etapu rozwoju i ograniczenia systemowe
-
-- **Moduły referencyjne i konfiguracyjne (aktywne):** `Pulpit`, `Szczepienia dzieci (PSO)`, `Baza preparatów i ChPL`, `Baza wiedzy`, `Ustawienia i Kopia zapasowa`.
-- **Moduły operacyjne (aktywne):** `Kalendarz szczepień`, `Szczepienia dorosłych`, `Kalkulator i przypomnienia` (arytmetyka dat bez algorytmu decyzji klinicznych), `Procedury i checklisty`, `Łańcuch chłodniczy`, `Sytuacje szczególne` (w tym zestaw przeciwwstrząsowy zgodnie z rozporządzeniem MZ). Wszystkie wpisy operacyjne mają charakter pomocniczy / roboczy i nie stanowią Elektronicznej Dokumentacji Medycznej ani indywidualnego zalecenia klinicznego.
-- **Brak uwierzytelniania:** aplikacja nie posiada kont użytkowników, logowania ani weryfikacji ról; wszystkie oświadczenia wykonawcy wpisywane przy ręcznej kontroli ChPL mają charakter lokalnych oświadczeń w przeglądarce.
-- **Brak danych pacjentów:** VaxNurse nie gromadzi, nie przetwarza i nie eksportuje danych osobowych pacjentów, numerów PESEL ani wpisów dokumentacji medycznej.
-- **Brak formalnego kryptograficznego dziennika audytowego:** lokalna historia zmian (`statusHistory`) oraz zapis ostatnio używanych modułów są przechowywane w zwykłej pamięci `localStorage` i mogą zostać zmodyfikowane lub usunięte przez użytkownika w przeglądarce — nie pełnią roli kryptograficznie podpisanego ani prawnie wiążącego rejestru audytowego.
+- **Program Szczepień Ochronnych na 2027 r. (GIS):** [gov.pl/web/gis/program-szczepien-ochronnych-na-2027-rok](https://www.gov.pl/web/gis/program-szczepien-ochronnych-na-2027-rok)
+- **Dziennik Urzędowy Ministra Zdrowia z 30.10.2026 r., poz. 77 (PDF):** [gov.pl/attachment/f5e1ac73-5b24-41dc-b281-1160c8db8f6d](https://www.gov.pl/attachment/f5e1ac73-5b24-41dc-b281-1160c8db8f6d)
+- **Rejestr Produktów Leczniczych (URPL):** [rejestry.ezdrowie.gov.pl/rpl/search/public](https://rejestry.ezdrowie.gov.pl/rpl/search/public)
+- **Europejska Agencja Leków (EMA):** [ema.europa.eu](https://www.ema.europa.eu/)
+- **Rządowa Agencja Rezerw Strategicznych (RARS):** [rars.gov.pl](https://www.rars.gov.pl/)
