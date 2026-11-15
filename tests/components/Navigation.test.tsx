@@ -1,11 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Header } from '../../src/components/layout/Header';
 import { Sidebar } from '../../src/components/layout/Sidebar';
 import { DashboardView } from '../../src/components/dashboard/DashboardView';
 import { ModulePlaceholder } from '../../src/components/modules/ModulePlaceholder';
 import { APP_MODULES, QUICK_ACCESS_ITEMS } from '../../src/data/navigationData';
+import { searchVaxNurseNavigation } from '../../src/utils/globalSearch';
 import type { ModuleDefinition, ModuleId } from '../../src/types/navigation';
 
 const getModule = (id: ModuleId): ModuleDefinition => {
@@ -204,5 +205,84 @@ describe('Globalna nawigacja: Header, Sidebar, DashboardView i ModulePlaceholder
       }
       unmount();
     }
+  });
+
+  it('ranking searchVaxNurseNavigation premiuje dopasowania tytułu i zachowuje wynik z Bazy wiedzy, a Header obsługuje strzałki/Home/End i Sidebar tryb dialogu mobilnego', async () => {
+    const user = userEvent.setup();
+    const ranked = searchVaxNurseNavigation('Kalendarz szczepień');
+    expect(ranked[0]?.title).toMatch(/Kalendarz szczepień/i);
+
+    const psoRanked = searchVaxNurseNavigation('PSO');
+    expect(psoRanked.some((r) => r.kind === 'knowledge')).toBe(true);
+
+    // Klawiatura w Headerze (ArrowDown -> ArrowUp -> End -> Home -> Escape)
+    const onSearchChange = vi.fn();
+    const onSelectResult = vi.fn();
+    const onCloseMobile = vi.fn();
+    const { unmount } = render(
+      <Header
+        currentModule={getModule('dashboard')}
+        searchQuery="PSO"
+        onSearchChange={onSearchChange}
+        onOpenMobileMenu={vi.fn()}
+        isOpenMobileMenu={false}
+        onNavigateToModule={vi.fn()}
+        onSelectSearchResult={onSelectResult}
+      />
+    );
+
+    const searchInput = screen.getByRole('textbox', { name: /Szukaj modułów i sekcji VaxNurse/i });
+    await user.click(searchInput);
+    const region = screen.getByRole('region', {
+      name: /Wyniki wyszukiwania modułów i sekcji VaxNurse/i
+    });
+    const resultButtons = within(region).getAllByRole('button');
+    expect(resultButtons.length).toBeGreaterThan(1);
+
+    await user.keyboard('{ArrowDown}');
+    await waitFor(() => expect(document.activeElement).toBe(resultButtons[0]));
+    await user.keyboard('{End}');
+    expect(document.activeElement).toBe(resultButtons[resultButtons.length - 1]);
+    await user.keyboard('{Home}');
+    expect(document.activeElement).toBe(resultButtons[0]);
+    await user.keyboard('{ArrowUp}');
+    expect(document.activeElement).toBe(searchInput);
+    await user.keyboard('{Escape}');
+    expect(
+      screen.queryByRole('region', { name: /Wyniki wyszukiwania modułów i sekcji VaxNurse/i })
+    ).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(onSearchChange).toHaveBeenCalledWith('');
+    unmount();
+
+    // Tryb mobilny Sidebar jako dostępny dialog (role="dialog", aria-modal="true", Escape zamyka)
+    const { rerender: rerenderSidebar } = render(
+      <Sidebar
+        modules={APP_MODULES}
+        activeModule="dashboard"
+        onSelectModule={vi.fn()}
+        isCollapsed={false}
+        onToggleCollapse={vi.fn()}
+        isOpenMobile={true}
+        onCloseMobile={onCloseMobile}
+      />
+    );
+    const dialog = screen.getByRole('dialog', { name: /Menu nawigacji VaxNurse/i });
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    await user.keyboard('{Escape}');
+    expect(onCloseMobile).toHaveBeenCalledTimes(1);
+
+    rerenderSidebar(
+      <Sidebar
+        modules={APP_MODULES}
+        activeModule="dashboard"
+        onSelectModule={vi.fn()}
+        isCollapsed={false}
+        onToggleCollapse={vi.fn()}
+        isOpenMobile={false}
+        onCloseMobile={onCloseMobile}
+      />
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

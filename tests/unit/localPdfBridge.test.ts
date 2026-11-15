@@ -273,4 +273,14 @@ describe('Etap B4 — localPdfBridge: walidacja lokalnego pliku PDF, SHA-256 i p
     expect(opMismatch.comparisonStatus).toBe('hash_mismatch');
     expect(opMismatch.integrityStatus).toBe('hash_mismatch');
   });
+
+  it('zachowuje rozszerzenie .pdf przy skracaniu długich nazw plików (>160 znaków) i oczyszcza metadane z control chars', () => {
+    const longName = `${'x'.repeat(210)}.pdf`;
+    const sanitized = sanitizePdfDisplayFileName(longName);
+    expect(sanitized.length).toBeLessThanOrEqual(160);
+    expect(sanitized.toLowerCase().endsWith('.pdf')).toBe(true);
+
+    const noCtrl = sanitizeUntrustedPdfMetadataField('ChPL\u0000\u0007 BCG-10');
+    expect(noCtrl).toBe('ChPL BCG-10');
+  });
 });

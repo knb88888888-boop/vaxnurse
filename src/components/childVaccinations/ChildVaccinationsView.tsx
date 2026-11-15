@@ -49,6 +49,24 @@ interface ChildVaccinationsViewProps {
 
 type ViewTab = 'procedures' | 'qualifications' | 'principles' | 'catchup' | 'combined';
 
+const VIEW_TABS_ORDER: ViewTab[] = [
+  'procedures',
+  'qualifications',
+  'principles',
+  'catchup',
+  'combined',
+];
+
+const formatProcedureRecordsCount = (count: number): string => {
+  if (count === 1) return '1 rekord procedury';
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return `${count} rekordy procedur`;
+  }
+  return `${count} rekordów procedur`;
+};
+
 export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
   module,
   onBackToDashboard,
@@ -180,6 +198,35 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
     selectedStageGroup !== 'all' ||
     selectedPathogen !== 'all';
 
+  const visibleBracketIds = useMemo(
+    () => new Set(groupedByBracket.map(group => group.bracket.id)),
+    [groupedByBracket]
+  );
+
+  const handleSectionTabKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    currentTab: ViewTab
+  ) => {
+    const idx = VIEW_TABS_ORDER.indexOf(currentTab);
+    if (idx === -1) return;
+    let nextTab: ViewTab | null = null;
+    if (event.key === 'ArrowRight') {
+      nextTab = VIEW_TABS_ORDER[(idx + 1) % VIEW_TABS_ORDER.length];
+    } else if (event.key === 'ArrowLeft') {
+      nextTab = VIEW_TABS_ORDER[(idx - 1 + VIEW_TABS_ORDER.length) % VIEW_TABS_ORDER.length];
+    } else if (event.key === 'Home') {
+      nextTab = VIEW_TABS_ORDER[0];
+    } else if (event.key === 'End') {
+      nextTab = VIEW_TABS_ORDER[VIEW_TABS_ORDER.length - 1];
+    }
+    if (!nextTab) return;
+    event.preventDefault();
+    setActiveTab(nextTab);
+    requestAnimationFrame(() => {
+      document.getElementById(`pso-tab-${nextTab}`)?.focus();
+    });
+  };
+
   const handleResetFilters = () => {
     setSearchQuery('');
     setSelectedObligation('all');
@@ -266,11 +313,21 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
       </div>
 
       {/* Primary Section Switcher Tabs */}
-      <div className="pso-sections-tab-bar">
+      <div
+        className="pso-sections-tab-bar"
+        role="tablist"
+        aria-label="Sekcje Programu Szczepień Ochronnych"
+      >
         <button
+          id="pso-tab-procedures"
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'procedures'}
+          aria-controls={activeTab === 'procedures' ? 'pso-tabpanel-procedures' : undefined}
+          tabIndex={activeTab === 'procedures' ? 0 : -1}
           className={`pso-section-nav-btn ${activeTab === 'procedures' ? 'active' : ''}`}
           onClick={() => setActiveTab('procedures')}
+          onKeyDown={e => handleSectionTabKeyDown(e, 'procedures')}
         >
           <Baby size={16} />
           <span>Procedury i etapy wiekowe</span>
@@ -278,36 +335,60 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
         </button>
 
         <button
+          id="pso-tab-qualifications"
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'qualifications'}
+          aria-controls={activeTab === 'qualifications' ? 'pso-tabpanel-qualifications' : undefined}
+          tabIndex={activeTab === 'qualifications' ? 0 : -1}
           className={`pso-section-nav-btn ${activeTab === 'qualifications' ? 'active' : ''}`}
           onClick={() => setActiveTab('qualifications')}
+          onKeyDown={e => handleSectionTabKeyDown(e, 'qualifications')}
         >
           <Users size={16} />
           <span>Uprawnienia personelu (Część VI)</span>
         </button>
 
         <button
+          id="pso-tab-principles"
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'principles'}
+          aria-controls={activeTab === 'principles' ? 'pso-tabpanel-principles' : undefined}
+          tabIndex={activeTab === 'principles' ? 0 : -1}
           className={`pso-section-nav-btn ${activeTab === 'principles' ? 'active' : ''}`}
           onClick={() => setActiveTab('principles')}
+          onKeyDown={e => handleSectionTabKeyDown(e, 'principles')}
         >
           <BookOpen size={16} />
           <span>Ogólne zasady i wyjątki (Część IV)</span>
         </button>
 
         <button
+          id="pso-tab-catchup"
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'catchup'}
+          aria-controls={activeTab === 'catchup' ? 'pso-tabpanel-catchup' : undefined}
+          tabIndex={activeTab === 'catchup' ? 0 : -1}
           className={`pso-section-nav-btn ${activeTab === 'catchup' ? 'active' : ''}`}
           onClick={() => setActiveTab('catchup')}
+          onKeyDown={e => handleSectionTabKeyDown(e, 'catchup')}
         >
           <Layers size={16} />
           <span>Szczepienia wyrównawcze (Część V)</span>
         </button>
 
         <button
+          id="pso-tab-combined"
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'combined'}
+          aria-controls={activeTab === 'combined' ? 'pso-tabpanel-combined' : undefined}
+          tabIndex={activeTab === 'combined' ? 0 : -1}
           className={`pso-section-nav-btn ${activeTab === 'combined' ? 'active' : ''}`}
           onClick={() => setActiveTab('combined')}
+          onKeyDown={e => handleSectionTabKeyDown(e, 'combined')}
         >
           <AlertCircle size={16} />
           <span>Warianty 5w1 i 6w1 (Część I.A / III.M)</span>
@@ -318,17 +399,22 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
           TAB 1: PROCEDURY I ETAPY WIEKOWE
           ========================================================================= */}
       {activeTab === 'procedures' && (
-        <>
+        <div
+          role="tabpanel"
+          id="pso-tabpanel-procedures"
+          aria-labelledby="pso-tab-procedures"
+        >
           {/* Interactive Filter Bar */}
           <div className="child-vaccines-controls">
             {/* Search input */}
             <div className="search-control-container">
               <div className="search-input-wrapper">
-                <Search size={18} className="search-icon" />
+                <Search size={18} className="search-icon" aria-hidden="true" />
                 <input
                   type="text"
                   className="child-search-input"
                   placeholder="Szukaj jednostki chorobowej, skrótu (np. DTP, PCV, MMR, Hib), dawki, drogi podania lub preparatu..."
+                  aria-label="Szukaj w procedurach PSO 2027"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
@@ -338,6 +424,7 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                     className="clear-search-btn"
                     onClick={() => setSearchQuery('')}
                     title="Wyczyść wyszukiwanie"
+                    aria-label="Wyczyść wyszukiwanie"
                   >
                     <X size={16} />
                   </button>
@@ -351,6 +438,7 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                 <button
                   type="button"
                   className={`obligation-tab ${selectedObligation === 'all' ? 'active' : ''}`}
+                  aria-pressed={selectedObligation === 'all'}
                   onClick={() => setSelectedObligation('all')}
                 >
                   <span>Wszystkie rekordy bazy</span>
@@ -360,6 +448,7 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                 <button
                   type="button"
                   className={`obligation-tab tab-mandatory ${selectedObligation === 'obowiazkowe' ? 'active' : ''}`}
+                  aria-pressed={selectedObligation === 'obowiazkowe'}
                   onClick={() => setSelectedObligation('obowiazkowe')}
                 >
                   <ShieldCheck size={15} />
@@ -370,6 +459,7 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                 <button
                   type="button"
                   className={`obligation-tab tab-recommended ${selectedObligation === 'zalecane' ? 'active' : ''}`}
+                  aria-pressed={selectedObligation === 'zalecane'}
                   onClick={() => setSelectedObligation('zalecane')}
                 >
                   <Sparkles size={15} />
@@ -422,6 +512,7 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                     key={grp.id}
                     type="button"
                     className={`stage-chip ${selectedStageGroup === grp.id ? 'active' : ''}`}
+                    aria-pressed={selectedStageGroup === grp.id}
                     onClick={() => setSelectedStageGroup(grp.id)}
                   >
                     {grp.label}
@@ -437,6 +528,7 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                 <button
                   type="button"
                   className={`pathogen-btn ${selectedPathogen === 'all' ? 'active' : ''}`}
+                  aria-pressed={selectedPathogen === 'all'}
                   onClick={() => setSelectedPathogen('all')}
                 >
                   Wszystkie
@@ -444,6 +536,7 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                 <button
                   type="button"
                   className={`pathogen-btn ${selectedPathogen === 'bakterie' ? 'active' : ''}`}
+                  aria-pressed={selectedPathogen === 'bakterie'}
                   onClick={() => setSelectedPathogen('bakterie')}
                 >
                   Bakterie
@@ -451,6 +544,7 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                 <button
                   type="button"
                   className={`pathogen-btn ${selectedPathogen === 'wirusy' ? 'active' : ''}`}
+                  aria-pressed={selectedPathogen === 'wirusy'}
                   onClick={() => setSelectedPathogen('wirusy')}
                 >
                   Wirusy
@@ -459,17 +553,17 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
 
               <div className="current-results-counter">
                 Liczba rekordów w bazie VaxNurse: <strong>{filteredItems.length}</strong> procedur ({currentMandatoryCount} obowiązkowych, {currentRecommendedCount} zalecanych)
-                <span className="counter-note-inline"> *(liczba rekordów procedur w bazie, a nie liczba chorób w PSO)*</span>
+                <span className="counter-note-inline"> <em>(liczba rekordów procedur w bazie, a nie liczba chorób w PSO)</em></span>
               </div>
             </div>
           </div>
 
           {/* Fast Age Bracket Quick Jump Bar */}
-          {selectedStageGroup === 'all' && !searchQuery && (
+          {selectedStageGroup === 'all' && !searchQuery && groupedByBracket.length > 0 && (
             <div className="age-jump-bar">
               <span className="jump-title">Szybki skok do etapu wiekowego:</span>
               <div className="jump-chips-container">
-                {CHILD_AGE_BRACKETS.map(b => (
+                {CHILD_AGE_BRACKETS.filter(b => visibleBracketIds.has(b.id)).map(b => (
                   <button
                     key={b.id}
                     type="button"
@@ -520,7 +614,7 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
 
                     <div className="bracket-header-right">
                       <span className="bracket-count-badge">
-                        {items.length} {items.length === 1 ? 'rekord procedury' : items.length < 5 ? 'rekordy procedur' : 'rekordów procedur'}
+                        {formatProcedureRecordsCount(items.length)}
                       </span>
                     </div>
                   </div>
@@ -540,21 +634,26 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
               ))
             )}
           </div>
-        </>
+        </div>
       )}
 
       {/* =========================================================================
           TAB 2: UPRAWNIENIA PERSONELU (CZĘŚĆ VI PSO 2027)
           ========================================================================= */}
       {activeTab === 'qualifications' && (
-        <div className="qualifications-view-container">
+        <div
+          role="tabpanel"
+          id="pso-tabpanel-qualifications"
+          aria-labelledby="pso-tab-qualifications"
+          className="qualifications-view-container"
+        >
           <div className="section-intro-card">
             <div className="intro-title-row">
               <Users size={22} className="intro-icon" />
               <h3>Kwalifikacje osób przeprowadzających badania kwalifikacyjne i szczepienia ochronne</h3>
             </div>
             <p className="intro-text">
-              Tabela sporządzona na podstawie <strong>Części VI Programu Szczepień Ochronnych na 2027 rok</strong> (Dz. Urz. Min. Zdrow. 2026 poz. 77, strony 28–30) oraz art. 17 ust. 4, 6 i 6a ustawy z dnia 5 grudnia 2008 r. o zapobieganiu oraz zwalczaniu zakażeń i chorób zakaźnych u ludzi.
+              Tabela sporządzona na podstawie <strong>Części VI Programu Szczepień Ochronnych na 2027 rok</strong> (Dz. Urz. Min. Zdrow. 2026 poz. 77, str. 45–46) oraz art. 17 ust. 4, 6 i 6a ustawy z dnia 5 grudnia 2008 r. o zapobieganiu oraz zwalczaniu zakażeń i chorób zakaźnych u ludzi.
             </p>
             <div className="legal-notice-banner">
               <strong>Zasada prawna:</strong> Żadna grupa zawodowa nie może samodzielnie rozszerzać swoich uprawnień poza zakres określony w ustawie i rozporządzeniu Ministra Zdrowia.
@@ -676,7 +775,12 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
           TAB 3: OGÓLNE ZASADY PSO (CZĘŚĆ IV PSO 2027 - 7 PUNKTÓW)
           ========================================================================= */}
       {activeTab === 'principles' && (
-        <div className="principles-full-view">
+        <div
+          role="tabpanel"
+          id="pso-tabpanel-principles"
+          aria-labelledby="pso-tab-principles"
+          className="principles-full-view"
+        >
           <div className="section-intro-card">
             <div className="intro-title-row">
               <BookOpen size={22} className="intro-icon" />
@@ -730,7 +834,12 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
           TAB 4: SZCZEPIENIA WYRÓWNAWCZE (CZĘŚĆ V PSO 2027)
           ========================================================================= */}
       {activeTab === 'catchup' && (
-        <div className="catchup-view-container">
+        <div
+          role="tabpanel"
+          id="pso-tabpanel-catchup"
+          aria-labelledby="pso-tab-catchup"
+          className="catchup-view-container"
+        >
           <div className="section-intro-card">
             <div className="intro-title-row">
               <Layers size={22} className="intro-icon" />
@@ -811,7 +920,12 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
           TAB 5: WARIANTY 5w1 I 6w1 (CZĘŚĆ I.A I III.M PSO 2027)
           ========================================================================= */}
       {activeTab === 'combined' && (
-        <div className="combined-variants-view-container">
+        <div
+          role="tabpanel"
+          id="pso-tabpanel-combined"
+          aria-labelledby="pso-tab-combined"
+          className="combined-variants-view-container"
+        >
           <div className="section-intro-card">
             <div className="intro-title-row">
               <AlertCircle size={22} className="intro-icon" />

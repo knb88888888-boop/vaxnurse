@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ShieldCheck,
   Sparkles,
@@ -17,6 +17,8 @@ import {
 import type { ChildVaccineItem, FundingScopeBreakdown } from '../../types/childVaccines';
 import type { VaccineProduct } from '../../types/vaccines';
 import { VERIFICATION_STATUS_META } from '../../data/vaccinesCatalog';
+import { STAGE1_CHPL_AUDIT_BUNDLE } from '../../data/chplStage1AuditSheets';
+import { isValidHttpUrl } from '../../utils/catalogMerge';
 import {
   deriveCatalogCardCompletenessStatus,
   deriveProcedureProductAdequacyStatus,
@@ -32,7 +34,23 @@ interface ChildVaccineCardProps {
   defaultExpanded?: boolean;
 }
 
-export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
+const HUMAN_DECISIONS_BY_PROCEDURE = (() => {
+  const map = new Map<string, typeof STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist>();
+  for (const decision of STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist) {
+    if (decision.autoResolved) continue;
+    for (const procId of decision.relatedProcedureIds) {
+      const existing = map.get(procId);
+      if (existing) {
+        existing.push(decision);
+      } else {
+        map.set(procId, [decision]);
+      }
+    }
+  }
+  return map;
+})();
+
+const ChildVaccineCardInner: React.FC<ChildVaccineCardProps> = ({
   item,
   catalogVaccines,
   onSelectVaccineProduct,
@@ -41,16 +59,45 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   const isObligatory = item.obligationType === 'obowiazkowe';
-  const linkedProducts = catalogVaccines.filter(v => item.linkedVaccineIds.includes(v.id));
-  const linkages = item.productLinkages ?? [];
-  const conditionalLinkages = linkages.filter(l => l.relationType === 'conditional_alternative');
-  const variantOrDirectLinkages = linkages.filter(l => l.relationType !== 'conditional_alternative');
-  const pediatricScopes = getPediatricSelectableFundingScopes(item);
-  const adultReferenceScopes = getAdultAndSpecialReferenceScopes(item);
-  const unconfirmedSeasonalScopes = getUnconfirmedSeasonalScopes(item);
-  const catalogCardCompleteness = deriveCatalogCardCompletenessStatus(item, catalogVaccines);
-  const procedureProductAdequacy = deriveProcedureProductAdequacyStatus(item, catalogVaccines);
-  const reviewedSectionsCount = item.chplAudit?.sectionReviews?.length ?? 0;
+  const linkedProducts = useMemo(
+    () => catalogVaccines.filter(v => item.linkedVaccineIds.includes(v.id)),
+    [catalogVaccines, item.linkedVaccineIds]
+  );
+  const linkages = useMemo(() => item.productLinkages ?? [], [item.productLinkages]);
+  const conditionalLinkages = useMemo(
+    () => linkages.filter(l => l.relationType === 'conditional_alternative'),
+    [linkages]
+  );
+  const variantOrDirectLinkages = useMemo(
+    () => linkages.filter(l => l.relationType !== 'conditional_alternative'),
+    [linkages]
+  );
+  const pediatricScopes = useMemo(() => getPediatricSelectableFundingScopes(item), [item]);
+  const adultReferenceScopes = useMemo(
+    () => (item.populationScope === 'cross_age' ? getAdultAndSpecialReferenceScopes(item) : []),
+    [item]
+  );
+  const unconfirmedSeasonalScopes = useMemo(() => getUnconfirmedSeasonalScopes(item), [item]);
+  const openHumanDecisions = useMemo(
+    () => HUMAN_DECISIONS_BY_PROCEDURE.get(item.id) ?? [],
+    [item.id]
+  );
+  const catalogCardCompleteness = useMemo(
+    () => deriveCatalogCardCompletenessStatus(item, catalogVaccines),
+    [item, catalogVaccines]
+  );
+  const procedureProductAdequacy = useMemo(
+    () => deriveProcedureProductAdequacyStatus(item, catalogVaccines),
+    [item, catalogVaccines]
+  );
+  const reviewedSectionsCount = useMemo(
+    () => item.chplAudit?.sectionReviews?.filter(sec => sec.status !== 'not_present_in_document').length ?? 0,
+    [item.chplAudit?.sectionReviews]
+  );
+  const notPresentSectionsCount = useMemo(
+    () => item.chplAudit?.sectionReviews?.filter(sec => sec.status === 'not_present_in_document').length ?? 0,
+    [item.chplAudit?.sectionReviews]
+  );
 
   const renderFundingScopeCard = (scope: FundingScopeBreakdown) => (
     <div key={scope.scopeId} className="funding-scope-item">
@@ -94,7 +141,7 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
       <div><strong>Okres obowiązywania:</strong> {scope.validityPeriod}</div>
       <div>
         <strong>Źródło:</strong>{' '}
-        {scope.sourceUrl ? (
+        {isValidHttpUrl(scope.sourceUrl) ? (
           <a href={scope.sourceUrl} target="_blank" rel="noopener noreferrer">{scope.sourceRef}</a>
         ) : (
           scope.sourceRef
@@ -187,7 +234,14 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
               <span>ChPL: w pełni zweryfikowana</span>
             </span>
           ) : item.chplContentVerificationStatus === 'analyzed_with_discrepancy' ? (
-            <span className="verification-chpl-discrepancy-chip" title="Dokument ChPL pobrany i przeanalizowany, ale istnieje otwarta rozbieżność źródłowa (fenyloalanina)">
+            <span
+              className="verification-chpl-discrepancy-chip"
+              title={
+                item.chplAudit?.notes
+                  ? `Dokument ChPL pobrany i przeanalizowany — otwarta rozbieżność źródłowa: ${item.chplAudit.notes}`
+                  : 'Dokument ChPL pobrany i przeanalizowany, ale istnieje otwarta rozbieżność źródłowa'
+              }
+            >
               <span className="dot-pulse-red"></span>
               <span>ChPL: niezgodność źródłowa</span>
             </span>
@@ -293,8 +347,8 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                       <span className="prod-variant-tag">Wariant A.2 (6w1)</span>
                     )}
                     {isBlocked ? (
-                      <span className="prod-status-blocked" title="Nierozwiązana rozbieżność źródłowa ChPL">
-                        Wyjaśnienie ChPL
+                      <span className="prod-status-blocked" title="Otwarta niezgodność źródłowa ChPL wymagająca wyjaśnienia">
+                        {VERIFICATION_STATUS_META.requires_source_clarification.label}
                       </span>
                     ) : (
                       <span className={`prod-status-tag ${meta.badgeClass}`}>
@@ -330,6 +384,10 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
             {conditionalLinkages.map(link => {
               const prod = catalogVaccines.find(v => v.id === link.vaccineId);
               if (!prod) return null;
+              const meta = VERIFICATION_STATUS_META[prod.verificationStatus];
+              const isBlocked = prod.sourceDiscrepancies?.some(
+                d => d.status === 'requires_clarification'
+              );
               return (
                 <button
                   key={prod.id}
@@ -340,7 +398,15 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                 >
                   <span className="prod-name">{prod.tradeName}</span>
                   <span className="prod-conditional-tag">Alternatywa warunkowa 6w1 (III.E.3)</span>
-                  <span className="prod-status-blocked">Wyjaśnienie ChPL</span>
+                  {isBlocked ? (
+                    <span className="prod-status-blocked" title="Otwarta niezgodność źródłowa ChPL wymagająca wyjaśnienia">
+                      {VERIFICATION_STATUS_META.requires_source_clarification.label}
+                    </span>
+                  ) : (
+                    <span className={`prod-status-tag ${meta.badgeClass}`}>
+                      {meta.label}
+                    </span>
+                  )}
                   <ArrowRight size={13} className="chip-arrow" />
                 </button>
               );
@@ -395,7 +461,7 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
           )}
 
           {/* ChPL Reference Point & Official Source Details */}
-          {(item.chplReference || item.chplOfficialSourceUrl || item.alternativeProductLabel || item.linkageAuditNote) && (
+          {(item.chplReference || item.chplOfficialSourceUrl || item.alternativeProductLabel || item.linkageAuditNote || openHumanDecisions.length > 0) && (
             <div className="expanded-section chpl-reference-section">
               <div className="section-title-with-icon">
                 <BookOpen size={16} className="section-icon emerald" />
@@ -418,10 +484,10 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                 </div>
               )}
 
-              {item.chplOfficialSourceUrl && (
+              {isValidHttpUrl(item.chplOfficialSourceUrl) && (
                 <div className="chpl-source-link-row">
                   <a
-                    href={item.chplOfficialSourceUrl}
+                    href={item.chplOfficialSourceUrl!}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="chpl-direct-doc-btn"
@@ -429,14 +495,14 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                     <span>Otwórz oficjalną ChPL produktu ({item.chplAuthorizationNumber || 'RPL / ChPL'})</span>
                     <ExternalLink size={13} />
                   </a>
-                  {item.chplAudit?.secondaryOfficialSourceUrl && (
+                  {isValidHttpUrl(item.chplAudit?.secondaryOfficialSourceUrl) && (
                     <a
-                      href={item.chplAudit.secondaryOfficialSourceUrl}
+                      href={item.chplAudit!.secondaryOfficialSourceUrl!}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="chpl-direct-doc-btn"
                     >
-                      <span>Drugi oficjalny dokument ChPL ({item.chplAudit.documentOrigin === 'EMA_EPAR_CEN_PL_EN' ? 'EPAR EMA EN' : 'RPL / ChPL'})</span>
+                      <span>Drugi oficjalny dokument ChPL ({item.chplAudit!.documentOrigin === 'EMA_EPAR_CEN_PL_EN' ? 'EPAR EMA EN' : 'RPL / ChPL'})</span>
                       <ExternalLink size={13} />
                     </a>
                   )}
@@ -449,7 +515,7 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                   <div><strong>Data / wersja dokumentu:</strong> {item.chplAudit.documentVersionOrDate}</div>
                   <div>
                     <strong>Zakres sekcji:</strong> {item.chplAudit.verifiedSectionsScope.join(', ') || 'brak'}{' '}
-                    | <strong>Kontrola sekcji 1–10 ChPL:</strong> {reviewedSectionsCount}/10 sprawdzonych sekcji{' '}
+                    | <strong>Kontrola sekcji 1–10 ChPL:</strong> {reviewedSectionsCount}/10 sprawdzonych sekcji{notPresentSectionsCount > 0 ? ` (${notPresentSectionsCount} brak w dokumencie)` : ''}{' '}
                     | <strong>Data audytu:</strong> {item.chplAudit.auditDate} ({item.chplAudit.auditor})
                   </div>
                   {item.chplAudit.sectionReviews && item.chplAudit.sectionReviews.length > 0 && (
@@ -475,6 +541,21 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                 </div>
               )}
 
+              {openHumanDecisions.length > 0 && (
+                <div className="human-decisions-audit-box">
+                  <div><strong>Otwarte pytania do decyzji kompetentnego audytora klinicznego ({openHumanDecisions.length}):</strong></div>
+                  {openHumanDecisions.map(dec => (
+                    <div key={dec.id} className="human-decision-audit-item">
+                      <div>
+                        <strong>[{dec.id}]</strong> ChPL pkt {dec.chplSectionOrSubpoint} ({dec.pageRef})
+                      </div>
+                      <div>{dec.clinicalQuestion}</div>
+                      <div className="human-decision-ambiguity">{dec.ambiguitySummary}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {item.alternativeProductLabel && (
                 <div className="alternative-product-notice">
                   <strong>Informacja o produkcie alternatywnym ({item.alternativeProductStatus}):</strong> {item.alternativeProductLabel}
@@ -486,15 +567,17 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                       <div className="alt-market-warning">
                         <strong>Rozróżnienie ChPL vs dostępność:</strong> {item.alternativeProductDetails.marketAvailabilityNote}
                       </div>
-                      <a
-                        href={item.alternativeProductDetails.officialChplUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="chpl-direct-doc-btn"
-                      >
-                        <span>Otwórz ChPL produktu alternatywnego w RPL (ID {item.alternativeProductDetails.rplId})</span>
-                        <ExternalLink size={13} />
-                      </a>
+                      {isValidHttpUrl(item.alternativeProductDetails.officialChplUrl) && (
+                        <a
+                          href={item.alternativeProductDetails.officialChplUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="chpl-direct-doc-btn"
+                        >
+                          <span>Otwórz ChPL produktu alternatywnego w RPL (ID {item.alternativeProductDetails.rplId})</span>
+                          <ExternalLink size={13} />
+                        </a>
+                      )}
                     </div>
                   )}
                 </div>
@@ -556,9 +639,9 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                     </div>
                   )}
 
-                  {item.populationScope === 'cross_age' && adultReferenceScopes.length > 0 && (
+                  {adultReferenceScopes.length > 0 && (
                     <div className="funding-scopes-container funding-scopes-adult-boundary">
-                      <div><strong>Zakresy dla osób ≥18. roku życia (brak prawa do DZ) i komunikaty regionalne ({adultReferenceScopes.length}):</strong></div>
+                      <div><strong>Zakresy dla osób ≥18. roku życia (brak prawa do DZ), ciąży/połogu i komunikaty regionalne ({adultReferenceScopes.length}):</strong></div>
                       <div className="adult-boundary-note">
                         Granica 18. urodzin: po ukończeniu 18. r.ż. wygasa bezpłatny wykaz D1 („18-”, kod DZ); obowiązują odrębne zasady odpłatności lub programy czasowe wskazane poniżej.
                       </div>
@@ -574,13 +657,17 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                           <div><strong>GTIN {g.gtin}</strong> – {g.productPresentation} ({g.targetAgeGroup}, dawka {g.dose})</div>
                           <div>
                             <strong>Wytyczne MZ:</strong>{' '}
-                            <a href={g.sourceDocumentUrl} target="_blank" rel="noopener noreferrer">{g.sourceDocumentTitle}</a>{' '}
+                            {isValidHttpUrl(g.sourceDocumentUrl) ? (
+                              <a href={g.sourceDocumentUrl} target="_blank" rel="noopener noreferrer">{g.sourceDocumentTitle}</a>
+                            ) : (
+                              g.sourceDocumentTitle
+                            )}{' '}
                             ({g.sourceSectionOrPage})
                           </div>
-                          {g.rarsSourceUrl && (
+                          {isValidHttpUrl(g.rarsSourceUrl) && (
                             <div>
                               <strong>RARS:</strong>{' '}
-                              <a href={g.rarsSourceUrl} target="_blank" rel="noopener noreferrer">{g.rarsSourceTitle || 'Strona RARS'}</a>{' '}
+                              <a href={g.rarsSourceUrl!} target="_blank" rel="noopener noreferrer">{g.rarsSourceTitle || 'Strona RARS'}</a>{' '}
                               {g.rarsPresentationText ? `— „${g.rarsPresentationText}”` : ''}
                             </div>
                           )}
@@ -705,7 +792,11 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
                         : 'status-muted'
                   }`}
                 >
-                  {item.productLinkageStatus === 'linked_catalog' && `Powiązanie z Wariantem A.2 / 6w1 (${item.linkedVaccineIds.join(', ')})`}
+                  {item.productLinkageStatus === 'linked_catalog' && (
+                    linkages.some(l => l.relationType === 'variant_a2_6in1')
+                      ? `Powiązanie z Wariantem A.2 / 6w1 (${item.linkedVaccineIds.join(', ')})`
+                      : `Powiązanie bezpośrednie z kartą w katalogu (${item.linkedVaccineIds.join(', ')})`
+                  )}
                   {item.productLinkageStatus === 'conditional_alternative' && 'Brak karty podstawowej 3w1 (oczekuje); warunkowa alternatywa 6w1 (cz. III.E.3)'}
                   {item.productLinkageStatus === 'pending_catalog_entry' && 'Oczekuje na utworzenie karty handlowej'}
                   {item.productLinkageStatus === 'not_applicable' && 'Nie dotyczy'}
@@ -751,15 +842,21 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
             </div>
 
             <div className="source-links-row">
-              <a
-                href={`${item.psoOfficialUrl}#page=${item.sourcePdfPage || item.psoPdfPage}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="pso-official-anchor-btn"
-              >
-                <span>Otwórz oficjalny PDF Dziennika Urzędowego MZ (akt.pdf, str. {item.sourcePdfPage || item.psoPdfPage})</span>
-                <ExternalLink size={14} />
-              </a>
+              {isValidHttpUrl(item.psoOfficialUrl) ? (
+                <a
+                  href={`${item.psoOfficialUrl}#page=${item.sourcePdfPage || item.psoPdfPage}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="pso-official-anchor-btn"
+                >
+                  <span>Otwórz oficjalny PDF Dziennika Urzędowego MZ (akt.pdf, str. {item.sourcePdfPage || item.psoPdfPage})</span>
+                  <ExternalLink size={14} />
+                </a>
+              ) : (
+                <span className="pso-official-anchor-btn">
+                  <span>Oficjalny PDF Dziennika Urzędowego MZ (akt.pdf, str. {item.sourcePdfPage || item.psoPdfPage})</span>
+                </span>
+              )}
 
               <span className="source-audit-date">
                 Status: {item.verificationStatus === 'verified_pso' ? 'Zweryfikowano z PSO' : 'Oczekuje na weryfikację'} ({item.lastVerifiedDate})
@@ -771,3 +868,5 @@ export const ChildVaccineCard: React.FC<ChildVaccineCardProps> = ({
     </div>
   );
 };
+
+export const ChildVaccineCard = React.memo(ChildVaccineCardInner);

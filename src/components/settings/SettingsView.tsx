@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Settings,
   ArrowLeft,
@@ -82,6 +82,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [stagedWarnings, setStagedWarnings] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const persistAndApplyPreferences = (
     nextDensity: UiDensity,
@@ -210,9 +218,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       return;
     }
 
+    const fileInputEl = event.target;
     const reader = new FileReader();
 
     reader.onload = (e) => {
+      fileInputEl.value = '';
+      if (!isMountedRef.current) return;
       const content = e.target?.result;
       if (typeof content !== 'string') {
         setFeedbackMessage({
@@ -249,6 +260,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     };
 
     reader.onerror = () => {
+      fileInputEl.value = '';
+      if (!isMountedRef.current) return;
       setFeedbackMessage({
         type: 'error',
         title: 'Błąd odczytu pliku',
@@ -638,8 +651,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </p>
 
           <div className="setting-control-group">
-            <label className="setting-label">Gęstość układu elementów:</label>
-            <div className="setting-options-row" role="group" aria-label="Gęstość układu elementów">
+            <span id="setting-density-label" className="setting-label">Gęstość układu elementów:</span>
+            <div className="setting-options-row" role="group" aria-labelledby="setting-density-label">
               <button
                 type="button"
                 className={`setting-chip ${density === 'comfortable' ? 'active' : ''}`}
@@ -660,8 +673,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
 
           <div className="setting-control-group">
-            <label className="setting-label">Rozmiar tekstu:</label>
-            <div className="setting-options-row" role="group" aria-label="Rozmiar tekstu">
+            <span id="setting-font-size-label" className="setting-label">Rozmiar tekstu:</span>
+            <div className="setting-options-row" role="group" aria-labelledby="setting-font-size-label">
               <button
                 type="button"
                 className={`setting-chip ${fontSize === 'normal' ? 'active' : ''}`}

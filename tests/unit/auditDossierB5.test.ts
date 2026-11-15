@@ -441,4 +441,46 @@ describe('Etap B5 — Portable Audit Dossier: eksport wielozakresowy, SHA-256 JS
     const infanrix = VACCINES_CATALOG.find((v) => v.id === 'vac-infanrix-hexa')!;
     expect(infanrix.verificationStatus).toBe('requires_source_clarification');
   });
+
+  it('wyklucza wyciągi bazowe origin=bundle_extract przy scalaniu importu dossier oraz rejestruje odrzucone rekordy intake', () => {
+    const ws = setupSampleWorkspace();
+    const queue = buildQuestionReviewQueueB5({
+      checklist: STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
+      sources: ws.sources,
+      allEntries: ws.entries,
+      sessions: ws.sessions
+    });
+    const exported = buildAuditDossierExportPayload({
+      options: { scope: 'full_metadata_and_history', includeNotes: true, includeBaselineExtracts: true },
+      sources: ws.sources,
+      persistedIntake: ws.intake,
+      sessions: ws.sessions,
+      allEntries: ws.entries,
+      workingNotes: ws.notes,
+      queue
+    });
+
+    const baselineCount = exported.entries.filter((e) => e.origin === 'bundle_extract').length;
+    expect(baselineCount).toBeGreaterThan(0);
+
+    const payloadWithBadIntake = {
+      ...exported,
+      intakeStates: [
+        ...exported.intakeStates,
+        { documentId: 'doc-nieznany-spoza-rejestru', localNotes: 'test' }
+      ]
+    };
+
+    const preview = parseAndPreviewAuditDossierImport(JSON.stringify(payloadWithBadIntake), {
+      sources: ws.sources,
+      checklist: STAGE1_CHPL_AUDIT_BUNDLE.humanDecisionChecklist,
+      existingSessions: [],
+      existingWorkingEntries: [],
+      existingWorkingNotes: [],
+      existingIntake: {}
+    });
+
+    expect(preview.rejectedItems.some((r) => r.id === 'doc-nieznany-spoza-rejestru')).toBe(true);
+    expect(preview.validEntries.every((e) => e.origin !== 'bundle_extract')).toBe(true);
+  });
 });

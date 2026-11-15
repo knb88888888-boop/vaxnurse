@@ -169,10 +169,18 @@ export async function openLocalPdfSessionDocument(bytes: Uint8Array): Promise<Op
       return cached;
     }
     const page = await pdfDocument.getPage(pageNumber);
-    const textContent = await page.getTextContent();
-    const text = extractTextFromItems(textContent.items as Array<{ str?: unknown }>);
-    pageTextCache.set(pageNumber, text);
-    return text;
+    try {
+      const textContent = await page.getTextContent();
+      const text = extractTextFromItems(textContent.items as Array<{ str?: unknown }>);
+      pageTextCache.set(pageNumber, text);
+      return text;
+    } finally {
+      try {
+        (page as { cleanup?: () => void }).cleanup?.();
+      } catch {
+        // Ignoruj błędy sprzątania strony PDF.js
+      }
+    }
   };
 
   try {
@@ -270,36 +278,44 @@ export async function openLocalPdfSessionDocument(bytes: Uint8Array): Promise<Op
 
       const done = (async () => {
         const page = await pdfDocument.getPage(pageNumber);
-        if (cancelled || destroyed) {
-          throw new Error('RENDER_CANCELLED');
-        }
-        const dpr =
-          typeof window !== 'undefined' ? Math.min(Math.max(window.devicePixelRatio || 1, 1), 2) : 1;
-        const viewport = page.getViewport({ scale });
-        const context = canvas.getContext('2d');
-        if (!context) {
-          throw new Error('Brak kontekstu 2D Canvas w przeglądarce dla podglądu PDF.');
-        }
+        try {
+          if (cancelled || destroyed) {
+            throw new Error('RENDER_CANCELLED');
+          }
+          const dpr =
+            typeof window !== 'undefined' ? Math.min(Math.max(window.devicePixelRatio || 1, 1), 2) : 1;
+          const viewport = page.getViewport({ scale });
+          const context = canvas.getContext('2d');
+          if (!context) {
+            throw new Error('Brak kontekstu 2D Canvas w przeglądarce dla podglądu PDF.');
+          }
 
-        const pixelWidth = Math.max(1, Math.floor(viewport.width * dpr));
-        const pixelHeight = Math.max(1, Math.floor(viewport.height * dpr));
-        canvas.width = pixelWidth;
-        canvas.height = pixelHeight;
+          const pixelWidth = Math.max(1, Math.floor(viewport.width * dpr));
+          const pixelHeight = Math.max(1, Math.floor(viewport.height * dpr));
+          canvas.width = pixelWidth;
+          canvas.height = pixelHeight;
 
-        const transform = dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : undefined;
-        activeTask = page.render({
-          canvas,
-          canvasContext: context,
-          viewport,
-          transform,
-          annotationMode: 0 // wyłącza aktywne adnotacje/formularze/linki na canvas
-        });
-        resolveTask(activeTask);
-        await activeTask.promise;
-        return {
-          widthPx: Math.floor(viewport.width),
-          heightPx: Math.floor(viewport.height)
-        };
+          const transform = dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : undefined;
+          activeTask = page.render({
+            canvas,
+            canvasContext: context,
+            viewport,
+            transform,
+            annotationMode: 0 // wyłącza aktywne adnotacje/formularze/linki na canvas
+          });
+          resolveTask(activeTask);
+          await activeTask.promise;
+          return {
+            widthPx: Math.floor(viewport.width),
+            heightPx: Math.floor(viewport.height)
+          };
+        } finally {
+          try {
+            (page as { cleanup?: () => void }).cleanup?.();
+          } catch {
+            // Ignoruj błędy sprzątania strony PDF.js
+          }
+        }
       })();
 
       return {
@@ -309,6 +325,11 @@ export async function openLocalPdfSessionDocument(bytes: Uint8Array): Promise<Op
           cancelled = true;
           if (activeTask) {
             activeTask.cancel();
+          } else {
+            resolveTask({
+              promise: Promise.resolve(),
+              cancel: () => {}
+            } as unknown as RenderTask);
           }
         }
       };

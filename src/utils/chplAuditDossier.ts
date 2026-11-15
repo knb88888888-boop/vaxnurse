@@ -2450,27 +2450,38 @@ export function parseAndPreviewAuditDossierImport(
   // Walidacja rekordów intake i deklaracji proweniencji
   const validIntakeRecords: PersistedSourceIntakeRecord[] = [];
   if (Array.isArray(parsed.intakeStates)) {
-    for (const rawIntake of parsed.intakeStates) {
+    for (let i = 0; i < parsed.intakeStates.length; i += 1) {
+      const rawIntake = parsed.intakeStates[i];
       const clean = sanitizePersistedSourceIntakeRecord(rawIntake, docIdsSet);
-      if (clean) {
-        const localIntake = options.existingIntake[clean.documentId];
-        if (
-          clean.provenanceDeclaration &&
-          localIntake?.provenanceDeclaration &&
-          clean.provenanceDeclaration.declaredOriginLevel !==
-            localIntake.provenanceDeclaration.declaredOriginLevel
-        ) {
-          conflicts.push({
-            kind: 'provenance_declaration_conflict',
-            id: clean.documentId,
-            details: `Rozbieżna deklaracja proweniencji operatora dla ${clean.documentId}.`
-          });
-        }
-        if (clean.provenanceDeclaration) {
-          externalVerificationClaimsCount += 1;
-        }
-        validIntakeRecords.push(clean);
+      if (!clean) {
+        const intakeId =
+          isPlainRecord(rawIntake) && typeof rawIntake.documentId === 'string'
+            ? rawIntake.documentId
+            : `intake[${i}]`;
+        rejectedItems.push({
+          kind: 'entry',
+          id: intakeId,
+          reason: 'Nieprawidłowy lub niezgodny z polityką bezpieczeństwa rekord source intake.'
+        });
+        continue;
       }
+      const localIntake = options.existingIntake[clean.documentId];
+      if (
+        clean.provenanceDeclaration &&
+        localIntake?.provenanceDeclaration &&
+        clean.provenanceDeclaration.declaredOriginLevel !==
+          localIntake.provenanceDeclaration.declaredOriginLevel
+      ) {
+        conflicts.push({
+          kind: 'provenance_declaration_conflict',
+          id: clean.documentId,
+          details: `Rozbieżna deklaracja proweniencji operatora dla ${clean.documentId}.`
+        });
+      }
+      if (clean.provenanceDeclaration) {
+        externalVerificationClaimsCount += 1;
+      }
+      validIntakeRecords.push(clean);
     }
   }
 
@@ -2528,6 +2539,13 @@ export function parseAndPreviewAuditDossierImport(
   const existingEntryMap = new Map(options.existingWorkingEntries.map((e) => [e.evidenceId, e]));
 
   for (let i = 0; i < rawEntries.length; i += 1) {
+    if (
+      isPlainRecord(rawEntries[i]) &&
+      (rawEntries[i] as Record<string, unknown>).origin === 'bundle_extract'
+    ) {
+      // Wyciągi bazowe Etapu I pochodzą z pakietu źródłowego i nie są duplikowane do roboczych wpisów
+      continue;
+    }
     const res = validateImportedEvidenceEntryObject(
       rawEntries[i],
       i,

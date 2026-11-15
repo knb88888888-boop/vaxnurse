@@ -1,4 +1,5 @@
-import React, { useCallback, useId, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { isValidHttpUrl } from '../../utils/catalogMerge';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -237,6 +238,33 @@ export const AuditWorkspaceB5Panel: React.FC<AuditWorkspaceB5PanelProps> = React
       [intakeItems, selectedIntakeDocId]
     );
 
+    // Synchronizacja formularza deklaracji proweniencji z aktualnie wybranym dokumentem
+    useEffect(() => {
+      if (!activeIntakeItem?.source) {
+        return;
+      }
+      const existingDecl =
+        persistedIntake[activeIntakeItem.source.documentId]?.provenanceDeclaration ??
+        activeIntakeItem.provenanceDeclaration;
+      if (existingDecl) {
+        setProvLevel(
+          existingDecl.declaredOriginLevel === 'official_origin_independently_confirmed'
+            ? 'official_origin_operator_declared'
+            : existingDecl.declaredOriginLevel
+        );
+        setProvSourceName(existingDecl.declaredSourceName);
+        setProvSourceUrl(existingDecl.declaredSourceUrl);
+        setProvDocIdent(existingDecl.declaredDocumentIdentifier);
+        setProvNote(existingDecl.operatorNote);
+      } else {
+        setProvLevel('official_origin_operator_declared');
+        setProvSourceName(activeIntakeItem.source.authority || 'RPL / URPLWMiPB');
+        setProvSourceUrl(activeIntakeItem.source.officialSourceUrl || 'https://rejestry.ezdrowie.gov.pl/rpl');
+        setProvDocIdent(activeIntakeItem.source.rplIdOrRegistryNumber || '');
+        setProvNote('');
+      }
+    }, [activeIntakeItem, persistedIntake]);
+
     const stage1AcquisitionQueue = useMemo(() => {
       const map = new Map(
         intakeItems
@@ -309,6 +337,14 @@ export const AuditWorkspaceB5Panel: React.FC<AuditWorkspaceB5PanelProps> = React
         if (!item.source) {
           return;
         }
+        const trimmedUrl = provSourceUrl.trim();
+        const candidateUrl = trimmedUrl || item.source.officialSourceUrl;
+        if (candidateUrl && !isValidHttpUrl(candidateUrl)) {
+          setIntakeFeedback(
+            'Błąd walidacji: adres URL źródła deklaracji musi zaczynać się od https:// lub http://.'
+          );
+          return;
+        }
         const decl: OperatorProvenanceDeclaration = {
           documentId: item.source.documentId,
           declaredOriginLevel:
@@ -316,7 +352,7 @@ export const AuditWorkspaceB5Panel: React.FC<AuditWorkspaceB5PanelProps> = React
               ? 'official_origin_operator_declared'
               : provLevel,
           declaredSourceName: provSourceName.trim() || item.source.authority,
-          declaredSourceUrl: provSourceUrl.trim() || item.source.officialSourceUrl,
+          declaredSourceUrl: candidateUrl,
           declaredDocumentIdentifier:
             provDocIdent.trim() || item.source.rplIdOrRegistryNumber || '',
           declaredAt: new Date().toISOString(),
@@ -490,15 +526,29 @@ export const AuditWorkspaceB5Panel: React.FC<AuditWorkspaceB5PanelProps> = React
 
     const handleDossierFileUpload = useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
+        const inputEl = e.target;
+        const file = inputEl.files?.[0];
         if (!file) {
+          return;
+        }
+        const MAX_DOSSIER_BYTES = 5 * 1024 * 1024;
+        if (file.size > MAX_DOSSIER_BYTES) {
+          inputEl.value = '';
+          setDossierImportPreview(null);
+          setDossierShaCheckStatus(null);
+          setDossierFeedback('Odrzucono plik dossier: maksymalny dozwolony rozmiar JSON wynosi 5 MB.');
           return;
         }
         const reader = new FileReader();
         reader.onload = () => {
+          inputEl.value = '';
           const text = typeof reader.result === 'string' ? reader.result : '';
           setDossierRawJsonInput(text);
           void handlePreviewDossierText(text);
+        };
+        reader.onerror = () => {
+          inputEl.value = '';
+          setDossierFeedback('Wystąpił błąd podczas odczytu pliku JSON dossier z dysku.');
         };
         reader.readAsText(file, 'utf-8');
       },

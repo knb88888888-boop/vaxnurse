@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -47,11 +47,12 @@ import {
   getUnresolvedDiscrepancies,
   isProductApprovalBlocked
 } from '../../utils/vaccineVerification';
+import { isValidHttpUrl } from '../../utils/catalogMerge';
 
 interface VaccineDetailViewProps {
   vaccine: VaccineProduct;
   onBackToList: () => void;
-  onUpdateVaccine?: (updatedVaccine: VaccineProduct) => void;
+  onUpdateVaccine?: (updatedVaccine: VaccineProduct) => boolean | void;
   storageError?: string | null;
   onDismissStorageError?: () => void;
 }
@@ -64,6 +65,21 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
   onDismissStorageError
 }) => {
   const [currentVaccine, setCurrentVaccine] = useState<VaccineProduct>(initialVaccine);
+
+  useEffect(() => {
+    setCurrentVaccine(initialVaccine);
+  }, [initialVaccine]);
+
+  const persistVaccineUpdate = (updated: VaccineProduct): boolean => {
+    if (onUpdateVaccine) {
+      const saved = onUpdateVaccine(updated);
+      if (saved === false) {
+        return false;
+      }
+    }
+    setCurrentVaccine(updated);
+    return true;
+  };
   const statusMeta = VERIFICATION_STATUS_META[currentVaccine.verificationStatus];
   const baselineVaccine = VACCINES_CATALOG.find(v => v.id === currentVaccine.id);
 
@@ -181,13 +197,12 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
       return;
     }
 
+    if (!persistVaccineUpdate(result.vaccine)) {
+      return;
+    }
     setFormErrors({});
     setShowValidationBanner(false);
     setDocSourceLocation(documentUrlOrLocation.trim());
-    setCurrentVaccine(result.vaccine);
-    if (onUpdateVaccine) {
-      onUpdateVaccine(result.vaccine);
-    }
   };
 
   // ETAP 2: Ręczna kontrola dokumentu źródłowego przez uprawniony personel
@@ -212,13 +227,12 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
       return;
     }
 
+    if (!persistVaccineUpdate(result.vaccine)) {
+      return;
+    }
     setDocCheckErrors({});
     setShowDocCheckValidationBanner(false);
     setDocSourceLocation(effectiveLocation);
-    setCurrentVaccine(result.vaccine);
-    if (onUpdateVaccine) {
-      onUpdateVaccine(result.vaccine);
-    }
   };
 
   // Cofnięcie sprawdzenia dokumentu (powrót do Etapu 1: status clarification_submitted, status preparatu: requires_source_clarification)
@@ -229,6 +243,10 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
       checkerNameAndRole
     );
 
+    if (!persistVaccineUpdate(updated)) {
+      setShowRevokeDocCheckConfirm(false);
+      return;
+    }
     setDocOpenedConfirmed(false);
     setDocCheckDate('');
     setCheckerNameAndRole('');
@@ -241,16 +259,16 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
     setFinalVerificationNotes('');
     setFinalApprovalErrors({});
     setShowFinalApprovalValidationBanner(false);
-    setCurrentVaccine(updated);
-    if (onUpdateVaccine) {
-      onUpdateVaccine(updated);
-    }
   };
 
   // Cofnięcie wyjaśnienia (powrót do stanu początkowego po świadomym potwierdzeniu; bez usuwania historii zmian)
   const handleConfirmResetClarification = () => {
     const updated = resetVaccineClarificationToInitial(currentVaccine, baselineVaccine);
 
+    if (!persistVaccineUpdate(updated)) {
+      setShowResetClarifConfirm(false);
+      return;
+    }
     setDocumentId('');
     setIssuer('');
     setDocumentDate('');
@@ -273,10 +291,6 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
     setFinalVerificationNotes('');
     setFinalApprovalErrors({});
     setShowFinalApprovalValidationBanner(false);
-    setCurrentVaccine(updated);
-    if (onUpdateVaccine) {
-      onUpdateVaccine(updated);
-    }
   };
 
   // State to manage collapsible section groups
@@ -349,13 +363,12 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
       return;
     }
 
+    if (!persistVaccineUpdate(result.vaccine)) {
+      return;
+    }
     setApprovalBlockedNotice(null);
     setFinalApprovalErrors({});
     setShowFinalApprovalValidationBanner(false);
-    setCurrentVaccine(result.vaccine);
-    if (onUpdateVaccine) {
-      onUpdateVaccine(result.vaccine);
-    }
   };
 
   const handleRevokeFinalApproval = () => {
@@ -365,14 +378,13 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
       finalVerifierName.trim() || checkerNameAndRole.trim() || undefined
     );
 
+    if (!persistVaccineUpdate(updated)) {
+      return;
+    }
     setApprovalBlockedNotice(null);
     setFinalApprovalErrors({});
     setShowFinalApprovalValidationBanner(false);
     setFullChplVerifiedConfirmed(false);
-    setCurrentVaccine(updated);
-    if (onUpdateVaccine) {
-      onUpdateVaccine(updated);
-    }
   };
 
   // Helper render for single section or subsection
@@ -452,15 +464,17 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
                   <span className="p-disc-rule-note">
                     <ShieldAlert size={13} /> Zachowano obie wartości zgodnie z tekstem ChPL bez automatycznego ujednolicania.
                   </span>
-                  <a
-                    href={sectionDiscrepancies[0].documentUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-disc-source-link"
-                  >
-                    <span>Sprawdź w oficjalnej ChPL GSK (12.02.2026)</span>
-                    <ExternalLink size={11} />
-                  </a>
+                  {isValidHttpUrl(sectionDiscrepancies[0].documentUrl) && (
+                    <a
+                      href={sectionDiscrepancies[0].documentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-disc-source-link"
+                    >
+                      <span>Sprawdź w oficjalnej dokumentacji ChPL</span>
+                      <ExternalLink size={11} />
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
@@ -476,7 +490,7 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
                 ))}
               </div>
 
-              {sec.sourceDocumentUrl && (
+              {sec.sourceDocumentUrl && isValidHttpUrl(sec.sourceDocumentUrl) && (
                 <div className="point-source-link-row">
                   <a
                     href={sec.sourceDocumentUrl}
@@ -514,7 +528,11 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
                 )}
                 <div className="unverified-link-row">
                   <a
-                    href={currentVaccine.currentChplUrl || 'https://rejestrymedyczne.ezdrowie.gov.pl/rpl/search/public'}
+                    href={
+                      isValidHttpUrl(currentVaccine.currentChplUrl)
+                        ? currentVaccine.currentChplUrl!
+                        : 'https://rejestrymedyczne.ezdrowie.gov.pl/rpl/search/public'
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn-verify-in-rpl"
@@ -589,7 +607,7 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
           </div>
 
           <div className="v-detail-quick-actions">
-            {currentVaccine.rplRecordUrl ? (
+            {currentVaccine.rplRecordUrl && isValidHttpUrl(currentVaccine.rplRecordUrl) ? (
               <a
                 href={currentVaccine.rplRecordUrl}
                 target="_blank"
@@ -613,7 +631,7 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
               </a>
             )}
 
-            {currentVaccine.currentChplUrl && (
+            {currentVaccine.currentChplUrl && isValidHttpUrl(currentVaccine.currentChplUrl) && (
               <a
                 href={currentVaccine.currentChplUrl}
                 target="_blank"
@@ -1493,10 +1511,17 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
                       Zgłoszono dane wyjaśnienia urzędowego w Etapie 1 (sygnatura: <code>{documentId || primaryDiscrepancy?.resolution?.documentId || 'b.d.'}</code>), lecz dokument ten nie został jeszcze ręcznie skontrolowany przez personel punktu szczepień (status niezgodności: <code>clarification_submitted</code> / <em>Zgłoszono wyjaśnienie</em>).{' '}
                       Wymagane jest formalne potwierdzenie sprawdzenia dokumentu w Etapie 2. Dopóki kontrola nie zostanie potwierdzona, status preparatu pozostaje <em>requires_source_clarification</em> (<em>Wymaga wyjaśnienia źródłowego</em>), a zatwierdzenie jest zablokowane.
                     </span>
+                  ) : hasUnresolvedDiscrepancies ? (
+                    <span>
+                      Wykryto nierozwiązaną niezgodność wewnętrzną tekstu ChPL (status niezgodności: <code>{unresolvedDiscrepancies[0]?.status || primaryDiscrepancy?.status || 'requires_clarification'}</code>
+                      {primaryDiscrepancy
+                        ? `: ${primaryDiscrepancy.fieldName} w Pkt ${primaryDiscrepancy.firstSection} vs Pkt ${primaryDiscrepancy.secondSection} wynosi ${primaryDiscrepancy.firstValue} vs ${primaryDiscrepancy.secondValue}`
+                        : ''}
+                      ). Brak zarejestrowanego dokumentu urzędowego w Etapie 1. Dopóki oficjalna dokumentacja nie zostanie wyjaśniona dokumentem urzędowym i ręcznie sprawdzona, system uniemożliwia nadanie statusu <em>Zweryfikowany na podstawie dokumentacji (verified_chpl)</em>.
+                    </span>
                   ) : (
                     <span>
-                      Wykryto nierozwiązaną niezgodność wewnętrzną tekstu ChPL (status niezgodności: <code>{primaryDiscrepancy?.status || 'requires_clarification'}</code>: zawartość fenyloalaniny w Pkt 2 vs Pkt 4.4 wynosi 0,0289 µg vs 0,0298 µg).{' '}
-                      Brak zarejestrowanego dokumentu urzędowego w Etapie 1. Dopóki oficjalna dokumentacja nie zostanie wyjaśniona dokumentem urzędowym i ręcznie sprawdzona, system uniemożliwia nadanie statusu <em>Zweryfikowany na podstawie dokumentacji (verified_chpl)</em>.
+                      Niezgodność ChPL oznaczono jako wyjaśnioną w Etapie 1+2 (<code>{primaryDiscrepancy?.resolution?.documentId || 'potwierdzono lokalnie'}</code>), jednak obecny status karty preparatu (<code>{currentVaccine.verificationStatus}</code> / <em>{statusMeta.label}</em>) nadal wymaga ponownej lokalnej kontroli przed ostatecznym zatwierdzeniem.
                     </span>
                   )}
                 </div>
@@ -1506,7 +1531,7 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
                     className="btn-approval-blocked"
                     disabled
                     aria-disabled="true"
-                    title="Zatwierdzenie zablokowane: preparat posiada nierozwiązane lub nieskontrolowane niezgodności ChPL"
+                    title="Zatwierdzenie zablokowane: preparat posiada nierozwiązane, nieskontrolowane lub wymagające ponownej weryfikacji elementy ChPL"
                   >
                     <ShieldAlert size={17} />
                     <span>Zatwierdzenie zablokowane</span>
@@ -1514,7 +1539,9 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
                   <span className="v-block-hint">
                     {isDiscrepancySubmitted
                       ? 'Do zdjęcia blokady wymagane jest ręczne potwierdzenie sprawdzenia dokumentu w Etapie 2 poniżej.'
-                      : 'Do zdjęcia blokady wymagana jest rejestracja wyjaśnienia (Etap 1) oraz ręczna kontrola dokumentu (Etap 2).'}
+                      : hasUnresolvedDiscrepancies
+                        ? 'Do zdjęcia blokady wymagana jest rejestracja wyjaśnienia (Etap 1) oraz ręczna kontrola dokumentu (Etap 2).'
+                        : 'Status wymaga lokalnej re-weryfikacji przed uruchomieniem Etapu 3.'}
                   </span>
                 </div>
               </div>

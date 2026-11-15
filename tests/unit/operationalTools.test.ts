@@ -3,21 +3,32 @@ import {
   buildColdChainCsv,
   calculateAgeAt,
   calculateNextDoseDate,
+  COLD_CHAIN_STORAGE_KEY,
   EMERGENCY_KIT_REGULATION_ANNEX_26,
+  EMERGENCY_KIT_STORAGE_KEY,
   escapeCsvField,
   evaluateColdChainStatus,
   evaluateKitItemStatus,
   FACILITY_CARE_CATEGORIES,
+  inspectOperationalStorageHealth,
+  isSafeText,
   loadColdChainReadings,
   loadEmergencyKit,
   loadLocalChecklist,
+  LOCAL_CHECKLIST_STORAGE_KEY,
+  MAX_CHECKLIST_ITEMS,
+  MAX_COLD_CHAIN_RECORDS,
+  MAX_KIT_ITEMS,
   PRODUCT_STORAGE_REFERENCE_MATRIX,
   saveColdChainReadings,
   saveEmergencyKit,
   saveLocalChecklist,
   validateChecklistText,
   validateColdChainDraft,
-  validateKitDraft
+  validateKitDraft,
+  type ColdChainReading,
+  type EmergencyKitItem,
+  type LocalChecklistItem
 } from '../../src/utils/operationalTools';
 
 describe('operationalTools — Kalkulator terminów i wieku', () => {
@@ -345,5 +356,190 @@ describe('operationalTools — Łańcuch chłodniczy, checklista i zestaw przeci
         expect(typeof item.requirements[cat.id]).toBe('boolean');
       });
     });
+  });
+
+  it('regresje audytu: walidacja kalkulatora (referenceToday, zera wiodące, plannedDate < lastDoseDate, limit 10 lat), bezpieczeństwo tekstu, prototyp profilu, CSV i przepełnienie zapisu', () => {
+    // 1. Błędne referenceToday, zera wiodące, zbyt duży interwał > 10 lat oraz plannedDate < lastDoseDate
+    expect(
+      calculateNextDoseDate({
+        lastDoseDate: '2026-10-01',
+        minIntervalDays: '28',
+        referenceToday: '2026-02-31'
+      }).ok
+    ).toBe(false);
+    expect(
+      calculateNextDoseDate({
+        lastDoseDate: '2026-10-01',
+        minIntervalDays: '0028',
+        referenceToday: '2026-10-15'
+      }).ok
+    ).toBe(false);
+    expect(
+      calculateNextDoseDate({
+        lastDoseDate: '2026-10-01',
+        minIntervalDays: '11',
+        intervalUnit: 'years',
+        referenceToday: '2026-10-15'
+      }).ok
+    ).toBe(false);
+    expect(
+      calculateNextDoseDate({
+        lastDoseDate: '2026-10-01',
+        minIntervalDays: '10',
+        intervalUnit: 'years',
+        referenceToday: '2026-10-15'
+      }).ok
+    ).toBe(true);
+    const beforeLast = calculateNextDoseDate({
+      lastDoseDate: '2026-10-10',
+      minIntervalDays: '28',
+      plannedDate: '2026-10-05',
+      referenceToday: '2026-10-15'
+    });
+    expect(beforeLast.ok).toBe(false);
+    expect(beforeLast.errors.join(' ')).toMatch(/wcześniejsza niż data ostatniej dawki/i);
+
+    // 2. Bezpieczeństwo tekstu: dozwolone "online=true" / "onboard_2027", blokowane svg/vbscript/data:text/html i spacje w schemacie
+    expect(isSafeText('Status: online=true; onboard_checklist_2027')).toBe(true);
+    expect(validateChecklistText('Monitoruj status online=true przed szczepieniem')).toBeNull();
+    expect(isSafeText('<svg onload=alert(1)>')).toBe(false);
+    expect(isSafeText('vbscript:msgbox(1)')).toBe(false);
+    expect(isSafeText('data:text/html,<script>alert(1)</script>')).toBe(false);
+    expect(isSafeText('j a v a s c r i p t : alert(1)')).toBe(false);
+
+    // 3. Ochrona przed kolizją z Object.prototype ("toString") oraz zachowanie alertu wychylenia mimo sensorUncertain
+    const protoReading: ColdChainReading = {
+      id: 'cc-proto',
+      measuredAt: '2026-11-10T08:00',
+      deviceLabel: 'Chłodziarka 1',
+      profileId: 'toString' as never,
+      currentC: 4,
+      minC: 4,
+      maxC: 4,
+      sensorUncertain: false,
+      actionNote: '',
+      recordedBy: 'Pielęgniarka',
+      createdAt: '2026-11-10T08:00:00Z'
+    };
+    expect(evaluateColdChainStatus(protoReading)).toBe('awaiting_review');
+
+    const excursionEvenUncertain: ColdChainReading = {
+      id: 'cc-exc-uncertain',
+      measuredAt: '2026-11-10T08:30',
+      deviceLabel: 'Chłodziarka 1',
+      profileId: 'standard_2_8',
+      currentC: 11.4,
+      minC: 2,
+      maxC: 11.4,
+      sensorUncertain: true,
+      actionNote: '',
+      recordedBy: 'Pielęgniarka',
+      createdAt: '2026-11-10T08:30:00Z'
+    };
+    expect(evaluateColdChainStatus(excursionEvenUncertain)).toBe('above_configured_range');
+
+    const invalidBoundsRes = validateColdChainDraft({
+      measuredAt: '2026-11-10T09:00',
+      deviceLabel: 'Chłodziarka 1',
+      profileId: 'standard_2_8',
+      currentC: '12',
+      minC: '2',
+      maxC: '8',
+      sensorUncertain: false,
+      actionNote: 'Sprawdzono',
+      recordedBy: 'Pielęgniarka'
+    });
+    expect(invalidBoundsRes.ok).toBe(false);
+    if (!invalidBoundsRes.ok) {
+      expect(invalidBoundsRes.errors.some((e) => /wyższa niż maksymalna/i.test(e))).toBe(true);
+    }
+
+    // 4. Ochrona CSV dla spacji Unicode, BOM, osadzonych wyzwalaczy i znaków specjalnych
+    expect(escapeCsvField('\u3000=1+1')).toBe("'\u3000=1+1");
+    expect(escapeCsvField('\uFEFF+1')).toBe(`"'\uFEFF+1"`);
+    expect(escapeCsvField('ok\n=CMD()')).toBe(`"ok\n'=CMD()"`);
+    expect(escapeCsvField('a\tb')).toBe('"a\tb"');
+
+    // 5. Status not_assessed przy pustej dacie ważności oraz odrzucenie zapisu ponad limit MAX_* i diagnostyka uszkodzonego JSON
+    const unassessedKitItem: EmergencyKitItem = {
+      id: 'kit-unassessed',
+      name: 'Adrenalinum',
+      quantity: 2,
+      expiryDate: '',
+      lastCheckedAt: null
+    };
+    expect(evaluateKitItemStatus(unassessedKitItem, '2026-11-10')).toBe('not_assessed');
+    expect(
+      validateKitDraft({
+        name: 'Adrenalinum',
+        quantity: '2',
+        expiryDate: '2027-06-30'
+      }).ok
+    ).toBe(true);
+
+    localStorage.clear();
+    localStorage.setItem(LOCAL_CHECKLIST_STORAGE_KEY, '{broken');
+    localStorage.setItem(COLD_CHAIN_STORAGE_KEY, '{broken');
+    expect(inspectOperationalStorageHealth(localStorage, LOCAL_CHECKLIST_STORAGE_KEY)).toBe(true);
+    expect(inspectOperationalStorageHealth(localStorage, COLD_CHAIN_STORAGE_KEY)).toBe(true);
+    expect(loadLocalChecklist(localStorage)).toEqual([]);
+    expect(loadColdChainReadings(localStorage)).toEqual([]);
+
+    // Deduplikacja po normalizacji ID (wiodące/końcowe spacje)
+    localStorage.setItem(
+      LOCAL_CHECKLIST_STORAGE_KEY,
+      JSON.stringify({
+        schemaVersion: '1.0.0',
+        items: [
+          { id: ' chk-1 ', text: 'Pierwszy punkt checklisty', done: true },
+          { id: 'chk-1', text: 'Duplikat checklisty', done: false }
+        ]
+      })
+    );
+    const loadedChecklist = loadLocalChecklist(localStorage);
+    expect(loadedChecklist).toHaveLength(1);
+    expect(loadedChecklist[0].id).toBe('chk-1');
+
+    localStorage.setItem(
+      EMERGENCY_KIT_STORAGE_KEY,
+      JSON.stringify({
+        schemaVersion: '1.0.0',
+        items: [
+          { id: ' k-1 ', name: 'Aqua pro inj.', quantity: 1, expiryDate: '', lastCheckedAt: null },
+          { id: 'k-1', name: 'Duplikat', quantity: 2, expiryDate: '', lastCheckedAt: null }
+        ]
+      })
+    );
+    const loadedKit = loadEmergencyKit(localStorage);
+    expect(loadedKit).toHaveLength(1);
+    expect(loadedKit[0].id).toBe('k-1');
+
+    // Przepełnienie ponad limit -> brak cichego ucinania
+    const tooManyReadings: ColdChainReading[] = Array.from(
+      { length: MAX_COLD_CHAIN_RECORDS + 1 },
+      (_, idx) => ({
+        ...protoReading,
+        id: `cc-${idx}`,
+        profileId: 'standard_2_8'
+      })
+    );
+    expect(saveColdChainReadings(localStorage, tooManyReadings).success).toBe(false);
+    expect(loadColdChainReadings(localStorage)).toEqual([]);
+
+    const tooManyChecklist: LocalChecklistItem[] = Array.from(
+      { length: MAX_CHECKLIST_ITEMS + 1 },
+      (_, idx) => ({
+        id: `c-${idx}`,
+        text: `Punkt kontrolny nr ${idx}`,
+        done: false
+      })
+    );
+    expect(saveLocalChecklist(localStorage, tooManyChecklist).success).toBe(false);
+
+    const tooManyKit: EmergencyKitItem[] = Array.from({ length: MAX_KIT_ITEMS + 1 }, (_, idx) => ({
+      ...unassessedKitItem,
+      id: `kit-${idx}`
+    }));
+    expect(saveEmergencyKit(localStorage, tooManyKit).success).toBe(false);
   });
 });

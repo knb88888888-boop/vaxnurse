@@ -353,7 +353,7 @@ export const WorkbenchSourceRegistryPanel: React.FC<WorkbenchSourceRegistryPanel
                     {src.pdfScopeRange}
                     {src.fileSizeBytes !== null ? ` · ${src.fileSizeBytes.toLocaleString('pl-PL')} B` : ''}
                     {src.pageCountComparisonStatus === 'mismatch' &&
-                    src.activeSessionPageCount !== undefined &&
+                    src.activeSessionPageCount != null &&
                     src.registryReferencePageCount != null && (
                       <span className="wb-b4-inline-warn">
                         {' '}· Rozbieżność stron PDF ({src.activeSessionPageCount}) vs rejestr ({src.registryReferencePageCount})

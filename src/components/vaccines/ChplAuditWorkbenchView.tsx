@@ -420,10 +420,9 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
       const currentEntries = workingEntriesRef.current;
       const matchingActiveSession = auditSessionsRef.current.find(
         (s) =>
-          (activeAuditSessionIdRef.current
-            ? s.sessionId === activeAuditSessionIdRef.current
-            : s.documentId === draft.documentId && s.sessionStatus === 'in_progress') &&
-          s.documentId === draft.documentId
+          s.sessionStatus === 'in_progress' &&
+          s.documentId === draft.documentId &&
+          (!activeAuditSessionIdRef.current || s.sessionId === activeAuditSessionIdRef.current)
       );
       const effectiveDraft: WorkingEvidenceDraftInput = {
         ...draft,
@@ -569,12 +568,15 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
   const handleApplyB5DossierImport = useCallback(
     (preview: AuditDossierImportPreview) => {
       const storage = typeof localStorage !== 'undefined' ? localStorage : null;
+      const prevEntries = workingEntriesRef.current;
+      const prevNotes = workingNotesRef.current;
+      const prevSessions = auditSessionsRef.current;
       try {
         const merged = applyPreviewedAuditDossierImport(preview, {
           sources: sourceRegistryRef.current,
-          sessions: auditSessionsRef.current,
-          workingEntries: workingEntriesRef.current,
-          workingNotes: workingNotesRef.current,
+          sessions: prevSessions,
+          workingEntries: prevEntries,
+          workingNotes: prevNotes,
           intakeRecords: sourceIntakeRef.current
         });
         const entriesNotesRes = handleSaveEntriesAndNotesAtomically(
@@ -589,6 +591,7 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
         }
         const sessRes = saveAuditSessionsToStorage(storage, merged.mergedSessions);
         if (!sessRes.success) {
+          handleSaveEntriesAndNotesAtomically(prevEntries, prevNotes);
           return {
             success: false,
             error: sessRes.error ?? 'Błąd zapisu sesji z importu dossier.'
@@ -596,6 +599,8 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
         }
         const intakeRes = saveSourceIntakeRecordsToStorage(storage, merged.mergedIntakeRecords);
         if (!intakeRes.success) {
+          handleSaveEntriesAndNotesAtomically(prevEntries, prevNotes);
+          saveAuditSessionsToStorage(storage, prevSessions);
           return {
             success: false,
             error: intakeRes.error ?? 'Błąd zapisu intake z importu dossier.'
@@ -734,14 +739,16 @@ export const ChplAuditWorkbenchView: React.FC<ChplAuditWorkbenchViewProps> = ({
 
   const handleCopyText = async (value: string, label: string) => {
     try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      if (typeof navigator !== 'undefined' && typeof navigator.clipboard?.writeText === 'function') {
         await navigator.clipboard.writeText(value);
+        setCopiedToken(value);
+        setActionFeedback(`Skopiowano do schowka: ${label}`);
+        window.setTimeout(() => {
+          setCopiedToken(prev => (prev === value ? null : prev));
+        }, 2500);
+        return;
       }
-      setCopiedToken(value);
-      setActionFeedback(`Skopiowano do schowka: ${label}`);
-      window.setTimeout(() => {
-        setCopiedToken(prev => (prev === value ? null : prev));
-      }, 2500);
+      setActionFeedback(`Schowek niedostępny — skopiuj ręcznie: ${value}`);
     } catch {
       setActionFeedback(`Referencja (zaznacz i skopiuj ręcznie): ${value}`);
     }

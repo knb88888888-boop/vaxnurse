@@ -123,6 +123,18 @@ export const isValidHttpUrl = (val: unknown): boolean => {
 export const isValidHttpUrlOrNull = (val: unknown): boolean =>
   val === null || val === undefined || isValidHttpUrl(val);
 
+const isValidUtcCalendarDate = (year: number, month: number, day: number): boolean => {
+  if (year < 1990 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) {
+    return false;
+  }
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  return (
+    probe.getUTCFullYear() === year &&
+    probe.getUTCMonth() === month - 1 &&
+    probe.getUTCDate() === day
+  );
+};
+
 export const isValidDateString = (val: unknown): boolean => {
   if (typeof val !== 'string') {
     return false;
@@ -131,24 +143,48 @@ export const isValidDateString = (val: unknown): boolean => {
   if (!trimmed) {
     return false;
   }
-  // Obsługa dat ISO (YYYY-MM-DD / YYYY-MM-DDTHH:mm:ssZ), polskich (DD.MM.YYYY / DD.MM.YYYY r., HH:mm)
-  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
-    const parsed = Date.parse(trimmed);
-    return !Number.isNaN(parsed);
+  // Obsługa ścisłych dat ISO (YYYY-MM-DD oraz YYYY-MM-DDTHH:mm(:ss(.sss)?)?(Z|±HH:MM)?)
+  const isoMatch = trimmed.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,6})?)?(?:Z|[+-]\d{2}:\d{2}))?$/
+  );
+  if (isoMatch) {
+    const year = Number(isoMatch[1]);
+    const month = Number(isoMatch[2]);
+    const day = Number(isoMatch[3]);
+    if (!isValidUtcCalendarDate(year, month, day)) {
+      return false;
+    }
+    if (isoMatch[4] !== undefined) {
+      const hour = Number(isoMatch[4]);
+      const minute = Number(isoMatch[5]);
+      const second = Number(isoMatch[6] ?? '0');
+      if (hour > 23 || minute > 59 || second > 59) {
+        return false;
+      }
+      return !Number.isNaN(Date.parse(trimmed));
+    }
+    return true;
   }
-  const plMatch = trimmed.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+  // Obsługa dat polskich z toLocaleDateString('pl-PL') / formatPolishDateTime: DD.MM.YYYY, D.MM.YYYY r., HH:mm(:ss)
+  const plMatch = trimmed.match(
+    /^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\s*(?:r\.)?(?:,\s*|\s+)(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
+  );
   if (plMatch) {
     const day = Number(plMatch[1]);
     const month = Number(plMatch[2]);
     const year = Number(plMatch[3]);
-    return (
-      year >= 1990 &&
-      year <= 2100 &&
-      month >= 1 &&
-      month <= 12 &&
-      day >= 1 &&
-      day <= 31
-    );
+    if (!isValidUtcCalendarDate(year, month, day)) {
+      return false;
+    }
+    if (plMatch[4] !== undefined) {
+      const hour = Number(plMatch[4]);
+      const minute = Number(plMatch[5]);
+      const second = Number(plMatch[6] ?? '0');
+      if (hour > 23 || minute > 59 || second > 59) {
+        return false;
+      }
+    }
+    return true;
   }
   return false;
 };
@@ -308,6 +344,9 @@ export const isValidStoredVaccineRecord = (item: unknown): item is VaccineProduc
     return false;
   }
   if (hasPrototypePollutionKey(item)) {
+    return false;
+  }
+  if (!isValidHttpUrlOrNull(item.rplRecordUrl) || !isValidHttpUrlOrNull(item.currentChplUrl)) {
     return false;
   }
   return true;
@@ -840,8 +879,12 @@ export const mergeVaccineCatalogWithStorage = (
       targetGroup: storedProduct.targetGroup || baseProduct.targetGroup,
       marketingAuthorizationNumber:
         storedProduct.marketingAuthorizationNumber ?? baseProduct.marketingAuthorizationNumber,
-      rplRecordUrl: storedProduct.rplRecordUrl ?? baseProduct.rplRecordUrl,
-      currentChplUrl: storedProduct.currentChplUrl ?? baseProduct.currentChplUrl,
+      rplRecordUrl: isValidHttpUrlOrNull(storedProduct.rplRecordUrl)
+        ? (storedProduct.rplRecordUrl ?? baseProduct.rplRecordUrl)
+        : baseProduct.rplRecordUrl,
+      currentChplUrl: isValidHttpUrlOrNull(storedProduct.currentChplUrl)
+        ? (storedProduct.currentChplUrl ?? baseProduct.currentChplUrl)
+        : baseProduct.currentChplUrl,
       chplRevisionDate: storedProduct.chplRevisionDate ?? baseProduct.chplRevisionDate,
       chplVersionDate: storedProduct.chplVersionDate ?? baseProduct.chplVersionDate,
       documentDownloadDate:

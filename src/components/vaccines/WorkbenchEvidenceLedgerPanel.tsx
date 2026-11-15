@@ -139,6 +139,7 @@ export const WorkbenchEvidenceLedgerPanel: React.FC<WorkbenchEvidenceLedgerPanel
     filters.productKey !== 'all' ||
     filters.qrdSection !== 'all' ||
     filters.relationship !== 'all' ||
+    filters.qualificationClass !== 'all' ||
     filters.reviewStatus !== 'all' ||
     filters.origin !== 'all' ||
     filters.searchQuery.trim() !== '';

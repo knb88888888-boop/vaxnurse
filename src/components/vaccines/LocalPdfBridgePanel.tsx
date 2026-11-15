@@ -166,11 +166,13 @@ export const LocalPdfBridgePanel: React.FC<LocalPdfBridgePanelProps> = React.mem
   const activePdfSessionRef = useRef<OpenedLocalPdfSession | null>(null);
   const renderCancelRef = useRef<(() => void) | null>(null);
   const searchAbortRef = useRef<AbortController | null>(null);
+  const loadSeqRef = useRef<number>(0);
 
   const destroyCurrentPdfSession = async () => {
     if (searchAbortRef.current) {
       searchAbortRef.current.abort();
       searchAbortRef.current = null;
+      setIsSearchingText(false);
     }
     if (renderCancelRef.current) {
       renderCancelRef.current();
@@ -190,9 +192,27 @@ export const LocalPdfBridgePanel: React.FC<LocalPdfBridgePanelProps> = React.mem
 
   useEffect(() => {
     return () => {
+      loadSeqRef.current += 1;
       void destroyCurrentPdfSession();
     };
   }, []);
+
+  // Jeśli zewnętrzny wybór dokumentu zmienił się względem otwartej sesji PDF -> zamknij poprzednią sesję w pamięci
+  useEffect(() => {
+    const activeDocId = activeSource?.documentId;
+    if (sessionInfo && activeDocId && sessionInfo.documentId !== activeDocId) {
+      loadSeqRef.current += 1;
+      void destroyCurrentPdfSession();
+      setSessionInfo(null);
+      setSearchResult(null);
+      setCurrentPagePlainText('');
+      setCurrentPage(1);
+      setPageJumpInput('1');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [activeSource?.documentId, sessionInfo]);
 
   // Dopasowanie domyślnego pytania po zmianie wybranego dokumentu (bez efektu kaskadowego)
   const [prevSyncedDocId, setPrevSyncedDocId] = useState<string | undefined>(activeSource?.documentId);
@@ -291,10 +311,14 @@ export const LocalPdfBridgePanel: React.FC<LocalPdfBridgePanelProps> = React.mem
   };
 
   const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const inputEl = event.target;
+    const file = inputEl.files?.[0];
+    inputEl.value = '';
     if (!file || !activeSource) {
       return;
     }
+
+    const requestSeq = ++loadSeqRef.current;
 
     setBridgeError(null);
     setBridgeStatusMsg(null);
@@ -304,10 +328,16 @@ export const LocalPdfBridgePanel: React.FC<LocalPdfBridgePanelProps> = React.mem
     setIsLoadingFile(true);
 
     await destroyCurrentPdfSession();
+    if (requestSeq !== loadSeqRef.current) {
+      return;
+    }
     setSessionInfo(null);
 
     try {
       const validation = await validateLocalPdfFile(file);
+      if (requestSeq !== loadSeqRef.current) {
+        return;
+      }
       if (!validation.valid || !validation.bytes) {
         setBridgeError(validation.errors.join(' '));
         setIsLoadingFile(false);
@@ -316,18 +346,30 @@ export const LocalPdfBridgePanel: React.FC<LocalPdfBridgePanelProps> = React.mem
 
       // 1. Wyliczenie rzeczywistego SHA-256 z pełnych bajtów pliku (zanim cokolwiek trafi do PDF.js)
       const shaRes = await computeSha256HexFromBytes(validation.bytes);
+      if (requestSeq !== loadSeqRef.current) {
+        return;
+      }
       const calculatedSha = shaRes.ok ? shaRes.sha256Hex : null;
       const hashError = shaRes.ok ? null : shaRes.errorMessage;
 
+      const recordedRefType = activeSource.currentArtifact?.hashProvenance.referenceType;
+      const hasTrustedRegistryRef =
+        recordedRefType === 'local_workspace_sha256' ||
+        recordedRefType === 'bundle_recorded_sha256' ||
+        recordedRefType === 'prior_session_snapshot' ||
+        (recordedRefType === undefined &&
+          (activeSource.sha256Basis === 'local_workspace_pdf_sha256' ||
+            activeSource.sha256Basis === 'bundle_recorded_pdf_sha256'));
       const registryReferenceHash =
         activeSource.currentArtifact?.hashProvenance.referenceHash ??
-        activeSource.sha256 ??
-        null;
+        (hasTrustedRegistryRef ? (activeSource.sha256 ?? null) : null);
       const registryReferenceType =
-        activeSource.currentArtifact?.hashProvenance.referenceType ??
+        recordedRefType ??
         (activeSource.documentId === 'doc-mz-pso-2027-akt'
           ? 'local_workspace_sha256'
-          : 'bundle_recorded_sha256');
+          : hasTrustedRegistryRef
+            ? 'bundle_recorded_sha256'
+            : 'none');
 
       const hashEvaluation = evaluateHashAgainstReference({
         calculatedSha256: calculatedSha,
@@ -339,6 +381,14 @@ export const LocalPdfBridgePanel: React.FC<LocalPdfBridgePanelProps> = React.mem
 
       // 2. Lazy-loaded otwarcie dokumentu przez PDF.js wyłącznie w pamięci przeglądarki
       const pdfSession = await openPdfDocumentFn(validation.bytes);
+      if (requestSeq !== loadSeqRef.current) {
+        try {
+          await pdfSession.destroy();
+        } catch {
+          // Ignoruj błędy niszczenia nieaktualnej sesji
+        }
+        return;
+      }
       activePdfSessionRef.current = pdfSession;
 
       const verificationSessionId = generateSessionToken();
@@ -394,11 +444,15 @@ export const LocalPdfBridgePanel: React.FC<LocalPdfBridgePanelProps> = React.mem
         `Otwarto lokalny PDF „${validation.sanitizedFileName}” (${pdfSession.pageCount} str.) w pamięci przeglądarki — zero przesyłania danych na serwer.`
       );
     } catch (err) {
-      await destroyCurrentPdfSession();
-      const message = err instanceof Error ? err.message : 'Nieznany błąd otwierania lokalnego pliku PDF.';
-      setBridgeError(message);
+      if (requestSeq === loadSeqRef.current) {
+        await destroyCurrentPdfSession();
+        const message = err instanceof Error ? err.message : 'Nieznany błąd otwierania lokalnego pliku PDF.';
+        setBridgeError(message);
+      }
     } finally {
-      setIsLoadingFile(false);
+      if (requestSeq === loadSeqRef.current) {
+        setIsLoadingFile(false);
+      }
     }
   };
 
@@ -431,7 +485,8 @@ export const LocalPdfBridgePanel: React.FC<LocalPdfBridgePanelProps> = React.mem
         setRenderError('Przeszukiwanie warstwy tekstowej PDF nie powiodło się.');
       }
     } finally {
-      if (!controller.signal.aborted) {
+      if (searchAbortRef.current === controller) {
+        searchAbortRef.current = null;
         setIsSearchingText(false);
       }
     }

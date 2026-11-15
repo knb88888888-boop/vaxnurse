@@ -22,7 +22,8 @@ export const MAX_KIT_ITEMS = 200;
 export const KIT_EXPIRY_WARNING_DAYS = 30;
 
 const MS_PER_DAY = 86_400_000;
-const DANGEROUS_TEXT = /<\s*\/?\s*(script|iframe|object|embed)\b|javascript\s*:|\bon\w+\s*=/i;
+const DANGEROUS_TAG_OR_SCHEME =
+  /<\s*\/?\s*(script|iframe|object|embed|svg|style)\b|<[^>]+\bon[a-z]+\s*=|(?:javascript|vbscript)\s*:|data\s*:\s*(?:text\/html|image\/svg\+xml)/i;
 const PROTO_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
 export interface StorageSaveResult {
@@ -35,7 +36,10 @@ export interface StorageSaveResult {
 // ---------------------------------------------------------------------------
 
 export function isSafeText(value: string): boolean {
-  return !DANGEROUS_TEXT.test(value);
+  const collapsed = Array.from(value)
+    .filter((ch) => ch.charCodeAt(0) > 32 && !/\s/.test(ch))
+    .join('');
+  return !DANGEROUS_TAG_OR_SCHEME.test(value) && !DANGEROUS_TAG_OR_SCHEME.test(collapsed);
 }
 
 export function normalizeText(value: unknown, maxLength: number): string {
@@ -46,9 +50,22 @@ export function normalizeText(value: unknown, maxLength: number): string {
     .slice(0, maxLength);
 }
 
+function hasUnsafePrototypeKeys(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.some((item) => hasUnsafePrototypeKeys(item));
+  }
+  if (typeof value === 'object' && value !== null) {
+    for (const key of Object.keys(value)) {
+      if (PROTO_KEYS.has(key)) return true;
+      if (hasUnsafePrototypeKeys((value as Record<string, unknown>)[key])) return true;
+    }
+  }
+  return false;
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-  return !Object.keys(value).some((k) => PROTO_KEYS.has(k));
+  return !hasUnsafePrototypeKeys(value);
 }
 
 export function generateLocalId(prefix: string): string {
@@ -75,17 +92,38 @@ function saveJson(storage: Storage | null, key: string, payload: unknown, label:
   }
 }
 
-function readJsonArray(storage: Storage | null, key: string): unknown[] {
+export interface StorageReadDiagnostic {
+  corruptOrUnreadable: boolean;
+}
+
+function readJsonArray(
+  storage: Storage | null,
+  key: string,
+  diagnostic?: StorageReadDiagnostic
+): unknown[] {
   if (!storage) return [];
   try {
     const raw = storage.getItem(key);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
-    if (!isPlainObject(parsed) || !Array.isArray(parsed.items)) return [];
+    if (!isPlainObject(parsed) || !Array.isArray(parsed.items)) {
+      if (diagnostic) diagnostic.corruptOrUnreadable = true;
+      return [];
+    }
     return parsed.items;
   } catch {
+    if (diagnostic) diagnostic.corruptOrUnreadable = true;
     return [];
   }
+}
+
+export function inspectOperationalStorageHealth(
+  storage: Storage | null,
+  key: string
+): boolean {
+  const diagnostic: StorageReadDiagnostic = { corruptOrUnreadable: false };
+  readJsonArray(storage, key, diagnostic);
+  return diagnostic.corruptOrUnreadable;
 }
 
 // ---------------------------------------------------------------------------
@@ -98,6 +136,7 @@ export function parseIsoDate(value: string): Date | null {
   const y = Number(m[1]);
   const mo = Number(m[2]);
   const d = Number(m[3]);
+  if (y < 1900 || y > 2100) return null;
   const date = new Date(Date.UTC(y, mo - 1, d));
   if (date.getUTCFullYear() !== y || date.getUTCMonth() !== mo - 1 || date.getUTCDate() !== d) {
     return null;
@@ -138,7 +177,9 @@ export function addYears(date: Date, years: number): Date {
 }
 
 export function diffDays(from: Date, to: Date): number {
-  return Math.round((to.getTime() - from.getTime()) / MS_PER_DAY);
+  const fromUtc = Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate());
+  const toUtc = Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), to.getUTCDate());
+  return Math.round((toUtc - fromUtc) / MS_PER_DAY);
 }
 
 export function todayIsoDate(now: Date = new Date()): string {
@@ -177,30 +218,43 @@ export interface NextDoseCalculationResult {
 export function calculateNextDoseDate(input: NextDoseCalculationInput): NextDoseCalculationResult {
   const errors: string[] = [];
   const last = parseIsoDate(input.lastDoseDate);
-  if (!last) errors.push('Podaj poprawną datę ostatniej dawki (RRRR-MM-DD).');
+  if (!last) errors.push('Podaj poprawną datę ostatniej dawki (RRRR-MM-DD, lata 1900–2100).');
 
   const unit: IntervalUnit = input.intervalUnit ?? 'days';
-  const maxByUnit: Record<IntervalUnit, number> = { days: 3650, months: 120, years: 100 };
+  const maxByUnit: Record<IntervalUnit, number> = { days: 3650, months: 120, years: 10 };
   const intervalRaw = input.minIntervalDays.trim();
-  const interval = /^\d{1,4}$/.test(intervalRaw) ? Number(intervalRaw) : NaN;
+  const interval = /^[1-9]\d{0,3}$/.test(intervalRaw) ? Number(intervalRaw) : NaN;
   if (!Number.isInteger(interval) || interval < 1 || interval > maxByUnit[unit]) {
     errors.push(
       `Minimalny odstęp musi być liczbą całkowitą z zakresu 1–${maxByUnit[unit]} (wartość z ChPL / PSO).`
     );
   }
 
-  const today = parseIsoDate(input.referenceToday ?? todayIsoDate()) ?? new Date();
-  if (last && last.getTime() > today.getTime()) {
+  let today: Date | null = null;
+  if (input.referenceToday !== undefined) {
+    today = parseIsoDate(input.referenceToday);
+    if (!today) {
+      errors.push('Podaj poprawną datę odniesienia (RRRR-MM-DD).');
+    }
+  } else {
+    today = parseIsoDate(todayIsoDate());
+  }
+
+  if (last && today && last.getTime() > today.getTime()) {
     errors.push('Data ostatniej dawki nie może być datą przyszłą.');
   }
 
   let planned: Date | null = null;
   if (input.plannedDate && input.plannedDate.trim()) {
     planned = parseIsoDate(input.plannedDate);
-    if (!planned) errors.push('Planowana data wizyty ma niepoprawny format (RRRR-MM-DD).');
+    if (!planned) {
+      errors.push('Planowana data wizyty ma niepoprawny format (RRRR-MM-DD).');
+    } else if (last && planned.getTime() < last.getTime()) {
+      errors.push('Planowana data wizyty nie może być wcześniejsza niż data ostatniej dawki.');
+    }
   }
 
-  if (errors.length > 0 || !last) {
+  if (errors.length > 0 || !last || !today) {
     return {
       ok: false,
       errors,
@@ -380,26 +434,44 @@ function isValidLocalDateTime(value: string): boolean {
   return Number(m[2]) < 24 && Number(m[3]) < 60;
 }
 
+function isOwnColdChainProfileId(value: unknown): value is ColdChainProfileId {
+  return (
+    typeof value === 'string' &&
+    Object.prototype.hasOwnProperty.call(COLD_CHAIN_PROFILES, value)
+  );
+}
+
 export function evaluateColdChainStatus(
   reading: Pick<ColdChainReading, 'currentC' | 'minC' | 'maxC' | 'profileId' | 'customMinC' | 'customMaxC' | 'sensorUncertain' | 'actionNote'>
 ): ColdChainStatus {
-  if (reading.sensorUncertain) return 'sensor_or_device_uncertain';
   const values = [reading.currentC, reading.minC, reading.maxC].filter(
     (v): v is number => typeof v === 'number'
   );
-  if (values.length === 0) return 'measurement_missing';
+  if (values.length === 0) {
+    return reading.sensorUncertain ? 'sensor_or_device_uncertain' : 'measurement_missing';
+  }
 
-  const profileId = reading.profileId ?? 'standard_2_8';
-  if (profileId === 'unspecified') return 'awaiting_review';
+  const profileIdRaw = reading.profileId ?? 'standard_2_8';
+  if (!isOwnColdChainProfileId(profileIdRaw)) {
+    return reading.sensorUncertain ? 'sensor_or_device_uncertain' : 'awaiting_review';
+  }
 
-  const profile = COLD_CHAIN_PROFILES[profileId];
-  if (!profile) return 'awaiting_review';
-  const minBound = profileId === 'custom_chpl' ? (reading.customMinC ?? null) : profile.minC;
-  const maxBound = profileId === 'custom_chpl' ? (reading.customMaxC ?? null) : profile.maxC;
+  if (profileIdRaw === 'unspecified') {
+    return reading.sensorUncertain ? 'sensor_or_device_uncertain' : 'awaiting_review';
+  }
+
+  const profile = COLD_CHAIN_PROFILES[profileIdRaw];
+  const minBound = profileIdRaw === 'custom_chpl' ? (reading.customMinC ?? null) : profile.minC;
+  const maxBound = profileIdRaw === 'custom_chpl' ? (reading.customMaxC ?? null) : profile.maxC;
+
+  if (minBound !== null && maxBound !== null) {
+    if (values.some((v) => v < minBound)) return 'below_configured_range';
+    if (values.some((v) => v > maxBound)) return 'above_configured_range';
+  }
+
+  if (reading.sensorUncertain) return 'sensor_or_device_uncertain';
   if (minBound === null || maxBound === null) return 'awaiting_review';
 
-  if (values.some((v) => v < minBound)) return 'below_configured_range';
-  if (values.some((v) => v > maxBound)) return 'above_configured_range';
   return 'within_configured_range';
 }
 
@@ -433,8 +505,21 @@ export function validateColdChainDraft(
   if (typeof min === 'number' && typeof max === 'number' && min > max) {
     errors.push('Temperatura minimalna nie może być wyższa niż maksymalna.');
   }
+  if (typeof min === 'number' && typeof current === 'number' && min > current) {
+    errors.push('Temperatura minimalna nie może być wyższa niż bieżąca.');
+  }
+  if (typeof current === 'number' && typeof max === 'number' && current > max) {
+    errors.push('Temperatura bieżąca nie może być wyższa niż maksymalna.');
+  }
 
-  const profileId = draft.profileId ?? 'standard_2_8';
+  const rawProfileId = draft.profileId ?? 'standard_2_8';
+  if (!isOwnColdChainProfileId(rawProfileId)) {
+    errors.push('Wybrano niepoprawny profil temperaturowy.');
+  }
+  const profileId: ColdChainProfileId = isOwnColdChainProfileId(rawProfileId)
+    ? rawProfileId
+    : 'unspecified';
+
   let customMinNum: number | null = null;
   let customMaxNum: number | null = null;
   if (profileId === 'custom_chpl') {
@@ -480,28 +565,38 @@ function sanitizeColdChainReading(raw: unknown): ColdChainReading | null {
   if (!isPlainObject(raw)) return null;
   const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= -90 && v <= 50 ? v : null);
   const current = num(raw.currentC);
-  if (typeof raw.id !== 'string' || typeof raw.measuredAt !== 'string' || current === null) return null;
-  if (!isValidLocalDateTime(raw.measuredAt)) return null;
+  const id = normalizeText(raw.id, 64);
+  if (!id || typeof raw.measuredAt !== 'string' || current === null) return null;
+  const measuredAtTrimmed = raw.measuredAt.trim();
+  if (!isValidLocalDateTime(measuredAtTrimmed)) return null;
+  const minC = num(raw.minC);
+  const maxC = num(raw.maxC);
+  if ((minC !== null && maxC !== null && minC > maxC) || (minC !== null && minC > current) || (maxC !== null && current > maxC)) {
+    return null;
+  }
+  const customMinC = num(raw.customMinC);
+  const customMaxC = num(raw.customMaxC);
+  if (customMinC !== null && customMaxC !== null && customMinC > customMaxC) return null;
+
   const deviceLabel = normalizeText(raw.deviceLabel, 80);
   const actionNote = normalizeText(raw.actionNote, 500);
   const recordedBy = normalizeText(raw.recordedBy, 40);
   if (!deviceLabel || ![deviceLabel, actionNote, recordedBy].every(isSafeText)) return null;
 
-  const validProfileId: ColdChainProfileId =
-    typeof raw.profileId === 'string' && raw.profileId in COLD_CHAIN_PROFILES
-      ? (raw.profileId as ColdChainProfileId)
-      : 'standard_2_8';
+  const validProfileId: ColdChainProfileId = isOwnColdChainProfileId(raw.profileId)
+    ? raw.profileId
+    : 'unspecified';
 
   return {
-    id: normalizeText(raw.id, 64),
+    id,
     deviceLabel,
-    measuredAt: raw.measuredAt,
+    measuredAt: measuredAtTrimmed,
     currentC: current,
-    minC: num(raw.minC),
-    maxC: num(raw.maxC),
+    minC,
+    maxC,
     profileId: validProfileId,
-    customMinC: num(raw.customMinC),
-    customMaxC: num(raw.customMaxC),
+    customMinC,
+    customMaxC,
     sensorUncertain: raw.sensorUncertain === true,
     actionNote,
     recordedBy,
@@ -530,10 +625,16 @@ export function saveColdChainReadings(
   storage: Storage | null,
   readings: readonly ColdChainReading[]
 ): StorageSaveResult {
+  if (readings.length > MAX_COLD_CHAIN_RECORDS) {
+    return {
+      success: false,
+      error: `Przekroczono limit ${MAX_COLD_CHAIN_RECORDS} odczytów temperatury. Wyeksportuj CSV i usuń najstarsze rekordy przed kolejnym zapisem.`
+    };
+  }
   return saveJson(
     storage,
     COLD_CHAIN_STORAGE_KEY,
-    { schemaVersion: '1.0.0', items: readings.slice(0, MAX_COLD_CHAIN_RECORDS) },
+    { schemaVersion: '1.0.0', items: readings },
     'rejestr odczytów temperatury'
   );
 }
@@ -555,12 +656,21 @@ export function summarizeColdChain(readings: readonly ColdChainReading[]): ColdC
   };
 }
 
-/** Pole CSV z ochroną przed wstrzyknięciem formuł arkusza (=, +, -, @, tab, CR, LF, pełnoszerokie i po spacjach). */
+/** Pole CSV z ochroną przed wstrzyknięciem formuł arkusza (=, +, -, @, tab, CR, LF, BOM, pełnoszerokie i po spacjach Unicode). */
 export function escapeCsvField(value: string | number | null): string {
   if (value === null) return '';
   let s = String(value);
-  if (typeof value === 'string' && /^[ \u00a0]*[=+\-@\t\r\n\uff1d\uff0b\uff0d\uff20]/.test(s)) s = `'${s}`;
-  return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  if (typeof value === 'string') {
+    const startsWithTrigger = /^[\uFEFF\u00a0\u3000 ]*[=+\-@\t\r\n\uff1d\uff0b\uff0d\uff20]/;
+    const hasEmbeddedTrigger = /([^\r\n][\r\n]+)([\uFEFF\u00a0\u3000 ]*[=+\-@\t\uff1d\uff0b\uff0d\uff20])/g;
+    // Najpierw neutralizujemy wyzwalacze po osadzonych końcach linii w oryginalnym tekście,
+    // aby dopisany na początku apostrof nie wywołał podwójnego znakowania np. "\n+1".
+    s = s.replace(hasEmbeddedTrigger, "$1'$2");
+    if (startsWithTrigger.test(value)) {
+      s = `'${s}`;
+    }
+  }
+  return /[";\t\n\r\uFEFF]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 export function buildColdChainCsv(readings: readonly ColdChainReading[]): string {
@@ -584,11 +694,14 @@ export function buildColdChainCsv(readings: readonly ColdChainReading[]): string
     awaiting_review: 'Oczekuje na ocenę',
     excursion_documented: 'Odchylenie udokumentowane'
   };
-  const rows = sortColdChainReadings(readings).map((r) =>
-    [
+  const rows = sortColdChainReadings(readings).map((r) => {
+    const profileLabel = isOwnColdChainProfileId(r.profileId ?? 'standard_2_8')
+      ? COLD_CHAIN_PROFILES[r.profileId ?? 'standard_2_8'].label
+      : 'Nieokreślony profil';
+    return [
       r.measuredAt.replace('T', ' '),
       r.deviceLabel,
-      COLD_CHAIN_PROFILES[r.profileId ?? 'standard_2_8']?.label ?? 'Nieokreślony profil',
+      profileLabel,
       r.currentC,
       r.minC,
       r.maxC,
@@ -597,8 +710,8 @@ export function buildColdChainCsv(readings: readonly ColdChainReading[]): string
       r.recordedBy
     ]
       .map(escapeCsvField)
-      .join(';')
-  );
+      .join(';');
+  });
   return `\ufeff${[header.map(escapeCsvField).join(';'), ...rows].join('\r\n')}`;
 }
 
@@ -623,11 +736,12 @@ export function loadLocalChecklist(storage: Storage | null): LocalChecklistItem[
   const out: LocalChecklistItem[] = [];
   const seen = new Set<string>();
   for (const raw of readJsonArray(storage, LOCAL_CHECKLIST_STORAGE_KEY)) {
-    if (!isPlainObject(raw) || typeof raw.id !== 'string') continue;
+    if (!isPlainObject(raw)) continue;
+    const id = normalizeText(raw.id, 64);
     const text = normalizeText(raw.text, 200);
-    if (text.length < 3 || !isSafeText(text) || seen.has(raw.id)) continue;
-    seen.add(raw.id);
-    out.push({ id: normalizeText(raw.id, 64), text, done: raw.done === true });
+    if (!id || text.length < 3 || !isSafeText(text) || seen.has(id)) continue;
+    seen.add(id);
+    out.push({ id, text, done: raw.done === true });
   }
   return out.slice(0, MAX_CHECKLIST_ITEMS);
 }
@@ -636,10 +750,16 @@ export function saveLocalChecklist(
   storage: Storage | null,
   items: readonly LocalChecklistItem[]
 ): StorageSaveResult {
+  if (items.length > MAX_CHECKLIST_ITEMS) {
+    return {
+      success: false,
+      error: `Przekroczono limit ${MAX_CHECKLIST_ITEMS} pozycji lokalnej checklisty. Usuń zbędne pozycje przed zapisem.`
+    };
+  }
   return saveJson(
     storage,
     LOCAL_CHECKLIST_STORAGE_KEY,
-    { schemaVersion: '1.0.0', items: items.slice(0, MAX_CHECKLIST_ITEMS) },
+    { schemaVersion: '1.0.0', items },
     'lokalna checklista'
   );
 }
@@ -669,12 +789,13 @@ export interface EmergencyKitItem {
   id: string;
   name: string;
   quantity: number;
-  expiryDate: string; // RRRR-MM-DD
+  expiryDate: string; // RRRR-MM-DD lub pusty ciąg dla pozycji wymagającej uzupełnienia po imporcie wymagań
   lastCheckedAt: string | null;
 }
 
 export function evaluateKitItemStatus(item: EmergencyKitItem, today: string = todayIsoDate()): KitItemStatus {
   if (item.quantity <= 0) return 'missing';
+  if (!item.expiryDate || item.expiryDate.trim() === '') return 'not_assessed';
   const exp = parseIsoDate(item.expiryDate);
   const ref = parseIsoDate(today);
   if (!exp || !ref) return 'expired';
@@ -695,7 +816,7 @@ export function validateKitDraft(draft: {
   if (!isSafeText(name)) errors.push('Nazwa pozycji zawiera niedozwolone znaczniki.');
   const qty = /^\d{1,3}$/.test(draft.quantity.trim()) ? Number(draft.quantity.trim()) : NaN;
   if (!Number.isInteger(qty) || qty < 0 || qty > 999) errors.push('Ilość musi być liczbą całkowitą 0–999.');
-  if (!parseIsoDate(draft.expiryDate)) errors.push('Podaj poprawną datę ważności (RRRR-MM-DD).');
+  if (!parseIsoDate(draft.expiryDate)) errors.push('Podaj poprawną datę ważności (RRRR-MM-DD, lata 1900–2100).');
   if (errors.length > 0) return { ok: false, errors };
   return {
     ok: true,
@@ -707,14 +828,17 @@ export function loadEmergencyKit(storage: Storage | null): EmergencyKitItem[] {
   const out: EmergencyKitItem[] = [];
   const seen = new Set<string>();
   for (const raw of readJsonArray(storage, EMERGENCY_KIT_STORAGE_KEY)) {
-    if (!isPlainObject(raw) || typeof raw.id !== 'string' || seen.has(raw.id)) continue;
+    if (!isPlainObject(raw)) continue;
+    const id = normalizeText(raw.id, 64);
+    if (!id || seen.has(id)) continue;
     const name = normalizeText(raw.name, 200);
     const qty = typeof raw.quantity === 'number' && Number.isInteger(raw.quantity) ? raw.quantity : -1;
-    const exp = typeof raw.expiryDate === 'string' ? raw.expiryDate : '';
-    if (name.length < 2 || !isSafeText(name) || qty < 0 || qty > 999 || !parseIsoDate(exp)) continue;
-    seen.add(raw.id);
+    const exp = typeof raw.expiryDate === 'string' ? raw.expiryDate.trim() : '';
+    if (name.length < 2 || !isSafeText(name) || qty < 0 || qty > 999) continue;
+    if (exp !== '' && !parseIsoDate(exp)) continue;
+    seen.add(id);
     out.push({
-      id: normalizeText(raw.id, 64),
+      id,
       name,
       quantity: qty,
       expiryDate: exp,
@@ -728,10 +852,16 @@ export function saveEmergencyKit(
   storage: Storage | null,
   items: readonly EmergencyKitItem[]
 ): StorageSaveResult {
+  if (items.length > MAX_KIT_ITEMS) {
+    return {
+      success: false,
+      error: `Przekroczono limit ${MAX_KIT_ITEMS} pozycji inwentarza zestawu. Usuń zbędne pozycje przed zapisem.`
+    };
+  }
   return saveJson(
     storage,
     EMERGENCY_KIT_STORAGE_KEY,
-    { schemaVersion: '1.0.0', items: items.slice(0, MAX_KIT_ITEMS) },
+    { schemaVersion: '1.0.0', items },
     'inwentarz zestawu przeciwwstrząsowego'
   );
 }

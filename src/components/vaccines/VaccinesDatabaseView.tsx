@@ -1,4 +1,4 @@
-import React, { useState, useMemo, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import {
   ArrowLeft,
   Syringe,
@@ -114,18 +114,30 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
     return null;
   });
 
-  const handleUpdateVaccine = (updatedVaccine: VaccineProduct) => {
+  useEffect(() => {
+    if (!initialSelectedVaccineId) return;
+    const target = vaccines.find((v) => v.id === initialSelectedVaccineId);
+    if (target) {
+      setActiveVaccineDetail(target);
+      try {
+        getBrowserStorage()?.setItem(VAX_ACTIVE_ID_KEY, target.id);
+      } catch {}
+    }
+  }, [initialSelectedVaccineId]);
+
+  const handleUpdateVaccine = (updatedVaccine: VaccineProduct): boolean => {
     const next = vaccines.map(v => (v.id === updatedVaccine.id ? updatedVaccine : v));
     const saveResult = saveVaccinesToStorage(getBrowserStorage(), next);
 
     if (!saveResult.success) {
       setStorageError(saveResult.error);
-    } else {
-      setStorageError(null);
+      return false;
     }
 
+    setStorageError(null);
     setVaccines(next);
     setActiveVaccineDetail(updatedVaccine);
+    return true;
   };
 
   const handleOpenDetails = (vac: VaccineProduct) => {
@@ -245,6 +257,7 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
           }
         >
           <LazyVaccineDetailView
+            key={activeVaccineDetail.id}
             vaccine={activeVaccineDetail}
             onBackToList={handleBackToList}
             onUpdateVaccine={handleUpdateVaccine}

@@ -7,6 +7,7 @@ import App from '../../src/App';
 import { SettingsView } from '../../src/components/settings/SettingsView';
 import { LocalPdfBridgePanel } from '../../src/components/vaccines/LocalPdfBridgePanel';
 import { AuditWorkspaceB5Panel } from '../../src/components/vaccines/AuditWorkspaceB5Panel';
+import { OperationalModuleView } from '../../src/components/modules/OperationalModuleView';
 import { APP_MODULES } from '../../src/data/navigationData';
 import { STAGE1_CHPL_AUDIT_BUNDLE } from '../../src/data/chplStage1AuditSheets';
 import { VACCINES_CATALOG } from '../../src/data/vaccinesCatalog';
@@ -350,4 +351,31 @@ describe('Automatyczny audyt dostępności WCAG 2.1/2.2 A/AA (axe-core w Vitest/
     await user.click(screen.getByRole('tab', { name: /4\. Portable Audit Dossier/i }));
     expect((await runWcagAxe(container, 'AuditWorkspaceB5Panel Tab 4 Dossier')).wcagViolations).toBe(0);
   }, 20000);
+
+  it('wszystkie 6 aktywnych modułów operacyjnych spełniają WCAG 2.1/2.2 A/AA w OperationalModuleView', async () => {
+    const operationalIds = [
+      'vaccination-calendar',
+      'adult-vaccinations',
+      'vaccination-calculator',
+      'procedures-checklists',
+      'cold-chain',
+      'special-situations'
+    ] as const;
+
+    for (const id of operationalIds) {
+      const mod = APP_MODULES.find((m) => m.id === id);
+      if (!mod) throw new Error(`Missing module ${id}`);
+
+      const { container, unmount } = render(
+        <OperationalModuleView
+          module={mod}
+          onBackToDashboard={vi.fn()}
+          onNavigateToModule={vi.fn()}
+        />
+      );
+      const res = await runWcagAxe(container, `OperationalModuleView:${id}`);
+      expect(res.wcagViolations).toBe(0);
+      unmount();
+    }
+  }, 30000);
 });

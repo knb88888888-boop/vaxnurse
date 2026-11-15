@@ -3702,8 +3702,19 @@ export function registerLocalPdfInspectionSession(params: {
     normalizedIncoming === normalizedPrevious &&
     existingArtifact !== null;
 
+  const hasPriorLocalSessionHash = Boolean(
+    source.hasPersistedLocalArtifactMetadata && normalizedPrevious
+  );
   const effectiveComparisonStatus: HashComparisonStatus =
-    normalizedIncoming && normalizedPrevious && !sameHashAsActive
+    inspection.comparisonStatus === 'hash_mismatch' ||
+    (hasPriorLocalSessionHash &&
+      Boolean(normalizedIncoming) &&
+      Boolean(normalizedPrevious) &&
+      !sameHashAsActive) ||
+    (Boolean(inspection.referenceHash) &&
+      Boolean(normalizedIncoming) &&
+      Boolean(normalizedPrevious) &&
+      !sameHashAsActive)
       ? 'hash_mismatch'
       : inspection.comparisonStatus;
 
@@ -4040,10 +4051,59 @@ export function loadSourceRegistryWithLocalArtifacts(
             .map((a) => sanitizeStoredArtifactRecord(a))
             .filter((a): a is DocumentArtifactRecord => a !== null)
         : [];
+      const cleanStatusAxes: PersistedLocalSourceArtifactEntry['statusAxes'] = isPlainRecord(
+        rawItem.statusAxes
+      )
+        ? {
+            originStatus:
+              typeof rawItem.statusAxes.originStatus === 'string'
+                ? (rawItem.statusAxes.originStatus as PersistedLocalSourceArtifactEntry['statusAxes']['originStatus'])
+                : 'manual_review_required',
+            acquisitionStatus:
+              typeof rawItem.statusAxes.acquisitionStatus === 'string'
+                ? (rawItem.statusAxes.acquisitionStatus as PersistedLocalSourceArtifactEntry['statusAxes']['acquisitionStatus'])
+                : 'not_acquired',
+            integrityStatus:
+              typeof rawItem.statusAxes.integrityStatus === 'string'
+                ? (rawItem.statusAxes.integrityStatus as PersistedLocalSourceArtifactEntry['statusAxes']['integrityStatus'])
+                : 'not_checked',
+            contentReviewStatus:
+              typeof rawItem.statusAxes.contentReviewStatus === 'string'
+                ? (rawItem.statusAxes.contentReviewStatus as PersistedLocalSourceArtifactEntry['statusAxes']['contentReviewStatus'])
+                : 'not_reviewed'
+          }
+        : {
+            originStatus: 'manual_review_required',
+            acquisitionStatus: 'not_acquired',
+            integrityStatus: 'not_checked',
+            contentReviewStatus: 'not_reviewed'
+          };
       persistedById.set(rawItem.documentId, {
-        ...(rawItem as unknown as PersistedLocalSourceArtifactEntry),
+        documentId: rawItem.documentId,
         currentArtifact: cleanCurrent,
-        artifactHistory: cleanHistory
+        artifactHistory: cleanHistory,
+        sha256: typeof rawItem.sha256 === 'string' ? rawItem.sha256 : null,
+        sha256Basis:
+          typeof rawItem.sha256Basis === 'string'
+            ? (rawItem.sha256Basis as PersistedLocalSourceArtifactEntry['sha256Basis'])
+            : 'not_verified_binary',
+        sha256ScopeLabel:
+          typeof rawItem.sha256ScopeLabel === 'string' ? rawItem.sha256ScopeLabel : '',
+        physicalPageCount:
+          typeof rawItem.physicalPageCount === 'number' ? rawItem.physicalPageCount : null,
+        registryReferencePageCount:
+          typeof rawItem.registryReferencePageCount === 'number'
+            ? rawItem.registryReferencePageCount
+            : null,
+        pageCountComparisonStatus:
+          typeof rawItem.pageCountComparisonStatus === 'string'
+            ? (rawItem.pageCountComparisonStatus as PersistedLocalSourceArtifactEntry['pageCountComparisonStatus'])
+            : null,
+        fileSizeBytes: typeof rawItem.fileSizeBytes === 'number' ? rawItem.fileSizeBytes : null,
+        sessionFileName:
+          typeof rawItem.sessionFileName === 'string' ? rawItem.sessionFileName : null,
+        statusAxes: cleanStatusAxes,
+        updatedAt: typeof rawItem.updatedAt === 'string' ? rawItem.updatedAt : new Date(0).toISOString()
       });
     }
 

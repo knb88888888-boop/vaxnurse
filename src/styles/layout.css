@@ -42,6 +42,23 @@
   width: var(--sidebar-width-collapsed);
 }
 
+.app-sidebar.collapsed .sidebar-brand {
+  padding: 0 6px;
+  justify-content: center;
+  gap: 4px;
+}
+
+.app-sidebar.collapsed .brand-icon-box {
+  width: 30px;
+  height: 30px;
+}
+
+.app-sidebar.collapsed .collapse-toggle-btn {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
 .sidebar-brand {
   height: var(--header-height);
   display: flex;

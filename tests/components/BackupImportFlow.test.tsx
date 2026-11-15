@@ -9,7 +9,13 @@ import {
   VAX_LAST_BACKUP_KEY,
   createBackupPayload,
   getStoredVaccines,
+  mergeImportedBackupWithLocalCatalog,
 } from '../../src/utils/backup';
+import {
+  isValidDateString,
+  isValidHttpUrlOrNull,
+  isValidStoredVaccineRecord,
+} from '../../src/utils/catalogMerge';
 import type { ModuleDefinition } from '../../src/types/navigation';
 import type { VaccineProduct } from '../../src/types/vaccines';
 
@@ -281,5 +287,35 @@ describe('SettingsView — pełny UI przepływ importu i eksportu kopii JSON', (
       expect(screen.getByText(/Błąd zapisu przywróconych danych/i)).toBeInTheDocument();
     });
     expect(setItemSpy).toHaveBeenCalled();
+  });
+
+  it('akceptuje jednocyfrowe polskie daty (1.05.2026), odrzuca niemożliwe daty kalendarzowe i javascript: URL oraz zachowuje lokalne rekordy spoza starszej kopii', () => {
+    expect(isValidDateString('1.05.2026')).toBe(true);
+    expect(isValidDateString('1.5.2026, 09:30')).toBe(true);
+    expect(isValidDateString('2026-02-31')).toBe(false);
+    expect(isValidDateString('31.02.2026')).toBe(false);
+
+    expect(isValidHttpUrlOrNull('https://rejestry.ezdrowie.gov.pl/')).toBe(true);
+    expect(isValidHttpUrlOrNull('javascript:alert(1)')).toBe(false);
+    expect(
+      isValidStoredVaccineRecord({
+        ...VACCINES_CATALOG[0],
+        rplRecordUrl: 'javascript:alert(1)',
+      })
+    ).toBe(false);
+
+    const customLocalRecord: VaccineProduct = {
+      ...VACCINES_CATALOG[0],
+      id: 'vac-custom-local-only',
+      tradeName: 'Custom Lokalna Szczepionka',
+      rplRecordUrl: null,
+      currentChplUrl: null,
+      sourceDiscrepancies: [],
+    };
+    const merged = mergeImportedBackupWithLocalCatalog(
+      [VACCINES_CATALOG[0]],
+      [...VACCINES_CATALOG, customLocalRecord]
+    );
+    expect(merged.vaccines.some((v) => v.id === 'vac-custom-local-only')).toBe(true);
   });
 });

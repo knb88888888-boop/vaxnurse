@@ -96,7 +96,7 @@ test.describe('E2E — Responsywność 6 viewportów i rzeczywisty audyt WCAG / 
 
     // ChildVaccinations + Ogólne zasady (Część IV) (standard)
     await page.locator('#app-sidebar-nav').getByRole('button', { name: /Szczepienia dzieci/i }).click();
-    await page.getByRole('button', { name: /Ogólne zasady i wyjątki \(Część IV\)/i }).click();
+    await page.getByRole('tab', { name: /Ogólne zasady i wyjątki \(Część IV\)/i }).click();
     await expect(
       page.getByRole('heading', { name: /Ogólne zasady przeprowadzania i organizacji szczepień/i })
     ).toBeVisible();

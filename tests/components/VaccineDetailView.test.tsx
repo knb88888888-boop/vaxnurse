@@ -73,4 +73,42 @@ describe('VaccineDetailView — akordeony 1–10 ChPL, klawiatura i blokada Infa
       expect(link.getAttribute('rel')).toContain('noreferrer');
     }
   });
+
+  it('wycofuje lokalną zmianę stanu (brak fałszywego awansu UI), gdy zapis do localStorage zwróci false', async () => {
+    const user = userEvent.setup();
+    const priorix = findCatalogVaccine('vac-priorix');
+    const readyPriorix: VaccineProduct = {
+      ...priorix,
+      verificationStatus: 'ready_for_manual_verification',
+      sourceDiscrepancies: [],
+    };
+    const onUpdateVaccine = vi.fn(() => false);
+
+    render(
+      <VaccineDetailView
+        vaccine={readyPriorix}
+        onBackToList={vi.fn()}
+        onUpdateVaccine={onUpdateVaccine}
+        storageError="Błąd zapisu localStorage"
+      />
+    );
+
+    await user.click(
+      screen.getByLabelText(/Potwierdzam przeprowadzenie osobnej, ręcznej weryfikacji całej dokumentacji ChPL/i)
+    );
+    await user.type(
+      screen.getByLabelText(/Osoba zatwierdzająca całą ChPL/i),
+      'mgr piel. Anna Nowak'
+    );
+    await user.type(
+      screen.getByLabelText(/Zakres i wynik ręcznej weryfikacji całej ChPL/i),
+      'Zweryfikowano pkt 1–10 z oficjalnym drukiem ChPL'
+    );
+
+    await user.click(screen.getByRole('button', { name: /Zatwierdź dokumentację/i }));
+
+    expect(onUpdateVaccine).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/Dokumentacja preparatu została zatwierdzona/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/Gotowy do ręcznej weryfikacji/i).length).toBeGreaterThan(0);
+  });
 });

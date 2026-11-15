@@ -68,9 +68,12 @@ export const App: React.FC = () => {
   const handleSelectModule = (id: ModuleId, preservePrefill: boolean = false) => {
     setActiveModuleId(id);
 
-    // Przy zwykłym opuszczeniu Bazy preparatów wyczyść wybrane ID preparatu
+    // Przy zwykłym opuszczeniu Bazy preparatów wyczyść wybrane ID preparatu (w stanie i localStorage)
     if (id !== 'vaccines-database') {
       setSelectedVaccineIdForDatabase(null);
+      try {
+        getBrowserStorage()?.removeItem('vaxnurse_active_vaccine_id_v1');
+      } catch {}
     }
 
     if (!preservePrefill && id !== 'knowledge-base') {

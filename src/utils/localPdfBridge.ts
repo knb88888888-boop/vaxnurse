@@ -81,7 +81,14 @@ export function sanitizePdfDisplayFileName(rawName: string | null | undefined): 
   if (!cleaned) {
     return 'dokument.pdf';
   }
-  return cleaned.length > 160 ? `${cleaned.slice(0, 157)}...` : cleaned;
+  if (cleaned.length > 160) {
+    if (/\.pdf$/i.test(cleaned)) {
+      const ext = cleaned.slice(-4);
+      return `${cleaned.slice(0, 153)}...${ext}`;
+    }
+    return `${cleaned.slice(0, 157)}...`;
+  }
+  return cleaned;
 }
 
 /**

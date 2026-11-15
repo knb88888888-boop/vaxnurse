@@ -14,9 +14,12 @@
   --navy-600: #475569;
 
   /* Accent 1: Medical Blue */
+  --blue-800: #0c4a6e;
   --blue-700: #075985;
   --blue-600: #0369a1;
   --blue-500: #0ea5e9;
+  --blue-300: #7dd3fc;
+  --blue-200: #bae6fd;
   --blue-100: #e0f2fe;
   --blue-50: #f0f9ff;
 
@@ -30,27 +33,48 @@
   /* Status Colors */
   --emerald-700: #047857;
   --emerald-600: #059669;
+  --emerald-500: #10b981;
   --emerald-100: #d1fae5;
   --emerald-50: #ecfdf5;
 
+  --amber-900: #78350f;
+  --amber-800: #92400e;
   --amber-700: #b45309;
   --amber-600: #d97706;
+  --amber-200: #fde68a;
   --amber-100: #fef3c7;
   --amber-50: #fffbeb;
 
   --rose-700: #be123c;
   --rose-600: #e11d48;
+  --rose-300: #fda4af;
+  --rose-200: #fecdd3;
   --rose-100: #ffe4e6;
   --rose-50: #fff1f2;
 
+  /* Slate & Semantic Aliases */
+  --slate-900: #0f172a;
+  --slate-700: #334155;
+  --slate-600: #475569;
+  --slate-400: #94a3b8;
+  --slate-300: #cbd5e1;
+  --slate-200: #e2e8f0;
+  --slate-100: #f1f5f9;
+  --slate-50: #f8fafc;
+
   /* Text Hierarchy */
   --text-main: #0f172a;
+  --text-primary: var(--text-main);
   --text-muted: #475569;
+  --text-secondary: var(--text-muted);
   --text-tertiary: #57657a;
   --text-inverse: #ffffff;
 
-  /* Borders & Dividers */
+  /* Borders & Surfaces */
+  --surface-primary: var(--bg-surface);
+  --surface-secondary: var(--bg-surface-subtle);
   --border-light: #e2e8f0;
+  --border-color: var(--border-light);
   --border-subtle: #f1f5f9;
   --border-focus: #0369a1;
 

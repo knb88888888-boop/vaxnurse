@@ -488,3 +488,21 @@
   accent-color: #1e3a8a;
   cursor: pointer;
 }
+
+.ops-inline-date {
+  width: 100%;
+  min-width: 135px;
+  max-width: 170px;
+  padding: 4px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.84rem;
+  font-family: inherit;
+}
+
+.ops-inline-date:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
+}

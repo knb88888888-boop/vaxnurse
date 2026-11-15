@@ -25,6 +25,7 @@ import {
   isValidDateString,
   isValidHttpUrl,
   isValidHttpUrlOrNull,
+  isValidStoredVaccineRecord,
   mergeVaccineCatalogWithStorage
 } from './catalogMerge.ts';
 import {
@@ -846,6 +847,14 @@ export const enforceClinicalIntegrityOnImport = (
       VACCINES_CATALOG.find(v => v.id === imported.id) ??
       currentVaccines.find(v => v.id === imported.id);
 
+    // Zabezpieczenie URL przy bezpośrednich wywołaniach API importu (np. spoza UI)
+    if (!isValidHttpUrlOrNull(imported.rplRecordUrl)) {
+      imported.rplRecordUrl = baseline?.rplRecordUrl ?? null;
+    }
+    if (!isValidHttpUrlOrNull(imported.currentChplUrl)) {
+      imported.currentChplUrl = baseline?.currentChplUrl ?? null;
+    }
+
     const discAudit = sanitizeAndVerifyDiscrepancies(imported, baseline);
     if (discAudit.sanitizedDiscrepancies) {
       imported.sourceDiscrepancies = discAudit.sanitizedDiscrepancies;
@@ -945,9 +954,19 @@ export const mergeImportedBackupWithLocalCatalog = (
     currentLocalVaccines,
     now
   );
-  return mergeVaccineCatalogWithStorage(VACCINES_CATALOG, sanitizedImported, {
-    baseCatalogVersion: CATALOG_DATA_VERSION
-  });
+  const baseIds = new Set(VACCINES_CATALOG.map(v => v.id));
+  const importedIds = new Set(sanitizedImported.map(v => v.id));
+  const preservedCustomLocal = currentLocalVaccines
+    .filter(v => isValidStoredVaccineRecord(v) && !baseIds.has(v.id) && !importedIds.has(v.id))
+    .map(v => structuredClone(v));
+
+  return mergeVaccineCatalogWithStorage(
+    VACCINES_CATALOG,
+    [...sanitizedImported, ...preservedCustomLocal],
+    {
+      baseCatalogVersion: CATALOG_DATA_VERSION
+    }
+  );
 };
 
 /**
@@ -964,7 +983,11 @@ export const triggerJsonDownload = (data: unknown, filename: string): void => {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  if (typeof window !== 'undefined' && typeof window.setTimeout === 'function') {
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } else {
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 };
 
 /**

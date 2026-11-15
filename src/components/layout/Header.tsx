@@ -44,7 +44,13 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   const desktopSearchRef = useRef<HTMLDivElement>(null);
+  const desktopInputRef = useRef<HTMLInputElement>(null);
   const mobileInputRef = useRef<HTMLInputElement>(null);
+  const mobileSearchTriggerRef = useRef<HTMLButtonElement>(null);
+  const desktopListRef = useRef<HTMLUListElement>(null);
+  const mobileListRef = useRef<HTMLUListElement>(null);
+  const wasMobileSearchOpenRef = useRef(false);
+  const skipMobileFocusRestoreRef = useRef(false);
 
   const searchResults = useMemo(
     () => searchVaxNurseNavigation(searchQuery),
@@ -69,13 +75,62 @@ export const Header: React.FC<HeaderProps> = ({
   useEffect(() => {
     if (isMobileSearchOpen) {
       mobileInputRef.current?.focus();
+    } else if (wasMobileSearchOpenRef.current) {
+      if (!skipMobileFocusRestoreRef.current) {
+        mobileSearchTriggerRef.current?.focus();
+      }
+      skipMobileFocusRestoreRef.current = false;
     }
+    wasMobileSearchOpenRef.current = isMobileSearchOpen;
   }, [isMobileSearchOpen]);
 
   const handlePickResult = (result: GlobalSearchResult) => {
+    skipMobileFocusRestoreRef.current = true;
     setIsDesktopSearchOpen(false);
     setIsMobileSearchOpen(false);
     onSelectSearchResult(result);
+  };
+
+  const focusResultButtonAt = (isMobile: boolean, index: number) => {
+    const listEl = isMobile ? mobileListRef.current : desktopListRef.current;
+    const buttons = listEl?.querySelectorAll<HTMLButtonElement>('.global-search-result-btn');
+    if (!buttons || buttons.length === 0) return false;
+    const safeIndex = Math.max(0, Math.min(index, buttons.length - 1));
+    buttons[safeIndex]?.focus();
+    return true;
+  };
+
+  const handleResultButtonKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    index: number,
+    total: number,
+    isMobile: boolean
+  ) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      focusResultButtonAt(isMobile, index + 1 < total ? index + 1 : 0);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (index === 0) {
+        (isMobile ? mobileInputRef.current : desktopInputRef.current)?.focus();
+      } else {
+        focusResultButtonAt(isMobile, index - 1);
+      }
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      focusResultButtonAt(isMobile, 0);
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      focusResultButtonAt(isMobile, total - 1);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      if (isMobile) {
+        setIsMobileSearchOpen(false);
+      } else {
+        setIsDesktopSearchOpen(false);
+        desktopInputRef.current?.focus();
+      }
+    }
   };
 
   const renderSearchResultsPanel = (panelId: string, isMobile: boolean) => {
@@ -113,13 +168,20 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
         ) : (
-          <ul className="global-search-results-list" aria-label="Lista wyników">
-            {searchResults.map(result => (
+          <ul
+            ref={isMobile ? mobileListRef : desktopListRef}
+            className="global-search-results-list"
+            aria-label="Lista wyników"
+          >
+            {searchResults.map((result, idx) => (
               <li key={result.id}>
                 <button
                   type="button"
                   className="global-search-result-btn"
                   onClick={() => handlePickResult(result)}
+                  onKeyDown={e =>
+                    handleResultButtonKeyDown(e, idx, searchResults.length, isMobile)
+                  }
                 >
                   <span className="global-result-main">
                     <span className="global-result-title-row">
@@ -174,6 +236,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="header-search-bar">
             <Search className="search-icon" size={17} aria-hidden="true" />
             <input
+              ref={desktopInputRef}
               type="text"
               className="search-input"
               placeholder="Szukaj modułów i sekcji VaxNurse"
@@ -184,7 +247,11 @@ export const Header: React.FC<HeaderProps> = ({
                 setIsDesktopSearchOpen(true);
               }}
               onKeyDown={e => {
-                if (e.key === 'Escape') {
+                if (e.key === 'ArrowDown' && searchQuery.trim().length > 0) {
+                  e.preventDefault();
+                  setIsDesktopSearchOpen(true);
+                  requestAnimationFrame(() => focusResultButtonAt(false, 0));
+                } else if (e.key === 'Escape') {
                   if (isDesktopSearchOpen) {
                     setIsDesktopSearchOpen(false);
                   } else if (searchQuery) {
@@ -218,6 +285,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         <div className="header-right">
           <button
+            ref={mobileSearchTriggerRef}
             type="button"
             className="mobile-search-trigger"
             onClick={() => setIsMobileSearchOpen(prev => !prev)}
@@ -275,7 +343,10 @@ export const Header: React.FC<HeaderProps> = ({
               value={searchQuery}
               onChange={e => onSearchChange(e.target.value)}
               onKeyDown={e => {
-                if (e.key === 'Escape') {
+                if (e.key === 'ArrowDown' && searchQuery.trim().length > 0) {
+                  e.preventDefault();
+                  focusResultButtonAt(true, 0);
+                } else if (e.key === 'Escape') {
                   setIsMobileSearchOpen(false);
                 }
               }}

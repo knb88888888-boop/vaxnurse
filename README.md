@@ -89,7 +89,7 @@ c:\VaxNurse
         ├── vaccines/                 # Baza preparatów i Karty ChPL (punkty 1–10)
         ├── knowledge/                # Baza wiedzy i oficjalnych aktów
         ├── settings/                 # Kopie bezpieczeństwa JSON + preferencje widoku
-        └── modules/                  # Ekrany nieaktywnych modułów „W przygotowaniu”
+        └── modules/                  # Sześć aktywnych modułów operacyjnych VaxNurse (kalendarz, dorośli, kalkulator, checklisty, łańcuch chłodniczy, sytuacje szczególne)
 ```
 
 ---
@@ -117,8 +117,8 @@ c:\VaxNurse
 
 ## Status etapu rozwoju i ograniczenia systemowe
 
-- **Moduły aktywne:** `Pulpit`, `Szczepienia dzieci (PSO)`, `Baza preparatów i ChPL`, `Baza wiedzy`, `Ustawienia i Kopia zapasowa`.
-- **Moduły nieaktywne (`W przygotowaniu`):** `Szczepienia dorosłych`, `Kalendarz szczepień`, `Kalkulator i przypomnienia`, `Procedury i checklisty`, `Łańcuch chłodniczy`, `Sytuacje szczególne` — prezentują wyłącznie planowany zakres funkcjonalny.
+- **Moduły referencyjne i konfiguracyjne (aktywne):** `Pulpit`, `Szczepienia dzieci (PSO)`, `Baza preparatów i ChPL`, `Baza wiedzy`, `Ustawienia i Kopia zapasowa`.
+- **Moduły operacyjne (aktywne):** `Kalendarz szczepień`, `Szczepienia dorosłych`, `Kalkulator i przypomnienia` (arytmetyka dat bez algorytmu decyzji klinicznych), `Procedury i checklisty`, `Łańcuch chłodniczy`, `Sytuacje szczególne` (w tym zestaw przeciwwstrząsowy zgodnie z rozporządzeniem MZ). Wszystkie wpisy operacyjne mają charakter pomocniczy / roboczy i nie stanowią Elektronicznej Dokumentacji Medycznej ani indywidualnego zalecenia klinicznego.
 - **Brak uwierzytelniania:** aplikacja nie posiada kont użytkowników, logowania ani weryfikacji ról; wszystkie oświadczenia wykonawcy wpisywane przy ręcznej kontroli ChPL mają charakter lokalnych oświadczeń w przeglądarce.
 - **Brak danych pacjentów:** VaxNurse nie gromadzi, nie przetwarza i nie eksportuje danych osobowych pacjentów, numerów PESEL ani wpisów dokumentacji medycznej.
 - **Brak formalnego kryptograficznego dziennika audytowego:** lokalna historia zmian (`statusHistory`) oraz zapis ostatnio używanych modułów są przechowywane w zwykłej pamięci `localStorage` i mogą zostać zmodyfikowane lub usunięte przez użytkownika w przeglądarce — nie pełnią roli kryptograficznie podpisanego ani prawnie wiążącego rejestru audytowego.

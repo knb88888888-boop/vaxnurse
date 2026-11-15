@@ -28,14 +28,19 @@ import {
   VACCINE_TYPE_LABELS,
   VERIFICATION_STATUS_META
 } from '../../data/vaccinesCatalog';
+import { loadVaccinesFromStorage } from '../../utils/vaccineVerification';
+import { isValidHttpUrl } from '../../utils/catalogMerge';
 import { KNOWLEDGE_SOURCES } from '../../data/knowledgeSources';
 import {
   COLD_CHAIN_PROFILES,
   COLD_CHAIN_REFERENCE_MAX_C,
   COLD_CHAIN_REFERENCE_MIN_C,
+  COLD_CHAIN_STORAGE_KEY,
   EMERGENCY_KIT_REGULATION_ANNEX_26,
+  EMERGENCY_KIT_STORAGE_KEY,
   FACILITY_CARE_CATEGORIES,
   KIT_EXPIRY_WARNING_DAYS,
+  LOCAL_CHECKLIST_STORAGE_KEY,
   PRODUCT_STORAGE_REFERENCE_MATRIX,
   buildColdChainCsv,
   calculateAgeAt,
@@ -45,6 +50,7 @@ import {
   formatPolishDate,
   generateLocalId,
   getBrowserStorage,
+  inspectOperationalStorageHealth,
   loadColdChainReadings,
   loadEmergencyKit,
   loadLocalChecklist,
@@ -137,16 +143,82 @@ const ModuleShell: React.FC<{
   );
 };
 
+const PartViQualificationsTable: React.FC<{ caption: string }> = ({ caption }) => (
+  <div className="ops-table-scroll">
+    <table className="ops-table">
+      <caption className="ops-sr-only">{caption}</caption>
+      <thead>
+        <tr>
+          <th scope="col">Zawód medyczny</th>
+          <th scope="col">Kwalifikacja – obowiązkowe</th>
+          <th scope="col">Podanie – obowiązkowe</th>
+          <th scope="col">Kwalifikacja – zalecane (&lt;9 lat)</th>
+          <th scope="col">Kwalifikacja – zalecane (9–18 lat)</th>
+          <th scope="col">Kwalifikacja – zalecane (&gt;18 lat)</th>
+          <th scope="col">Podanie – zalecane</th>
+          <th scope="col">Warunki formalne / prawne</th>
+        </tr>
+      </thead>
+      <tbody>
+        {STAFF_QUALIFICATIONS_PSO_PART_VI.map((s) => (
+          <tr key={s.professionId}>
+            <th scope="row">{s.professionName}</th>
+            <td>{s.qualificationMandatory ? 'Tak' : 'Nie'}</td>
+            <td>{s.administrationMandatory ? 'Tak' : 'Nie'}</td>
+            <td>{s.qualificationRecommendedUnder9 ? 'Tak' : 'Nie'}</td>
+            <td>{s.qualificationRecommended9To18 ? 'Tak' : 'Nie'}</td>
+            <td>{s.qualificationRecommendedOver18 ? 'Tak' : 'Nie'}</td>
+            <td>{s.administrationRecommended ? 'Tak' : 'Nie'}</td>
+            <td>{s.legalConditionsDescription}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
 // ---------------------------------------------------------------------------
 // Kalendarz szczepień (PSO 2027) — dane wyłącznie z rekordów PSO aplikacji
 // ---------------------------------------------------------------------------
 
 type PsoCalendarTab = 'age_schedule' | 'catch_up' | 'combined' | 'principles' | 'qualifications';
 
+const OPS_CALENDAR_TAB_ORDER: PsoCalendarTab[] = [
+  'age_schedule',
+  'catch_up',
+  'combined',
+  'principles',
+  'qualifications'
+];
+
 const CalendarView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<PsoCalendarTab>('age_schedule');
   const [stage, setStage] = useState<AgeStageGroup>('all');
   const [obligation, setObligation] = useState<'all' | 'obowiazkowe' | 'zalecane'>('all');
+
+  const handleTabKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    tab: PsoCalendarTab
+  ) => {
+    const idx = OPS_CALENDAR_TAB_ORDER.indexOf(tab);
+    if (idx === -1) return;
+    let nextTab: PsoCalendarTab | null = null;
+    if (event.key === 'ArrowRight') {
+      nextTab = OPS_CALENDAR_TAB_ORDER[(idx + 1) % OPS_CALENDAR_TAB_ORDER.length];
+    } else if (event.key === 'ArrowLeft') {
+      nextTab = OPS_CALENDAR_TAB_ORDER[(idx - 1 + OPS_CALENDAR_TAB_ORDER.length) % OPS_CALENDAR_TAB_ORDER.length];
+    } else if (event.key === 'Home') {
+      nextTab = OPS_CALENDAR_TAB_ORDER[0];
+    } else if (event.key === 'End') {
+      nextTab = OPS_CALENDAR_TAB_ORDER[OPS_CALENDAR_TAB_ORDER.length - 1];
+    }
+    if (!nextTab) return;
+    event.preventDefault();
+    setActiveTab(nextTab);
+    requestAnimationFrame(() => {
+      document.getElementById(`ops-cal-tab-${nextTab}`)?.focus();
+    });
+  };
 
   const grouped = useMemo(() => {
     const brackets = [...CHILD_AGE_BRACKETS].sort((a, b) => a.order - b.order);
@@ -176,9 +248,11 @@ const CalendarView: React.FC = () => {
           type="button"
           role="tab"
           aria-selected={activeTab === 'age_schedule'}
-          aria-controls="ops-cal-panel-age_schedule"
+          aria-controls={activeTab === 'age_schedule' ? 'ops-cal-panel-age_schedule' : undefined}
+          tabIndex={activeTab === 'age_schedule' ? 0 : -1}
           className={`ops-tab ${activeTab === 'age_schedule' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('age_schedule')}
+          onKeyDown={(e) => handleTabKeyDown(e, 'age_schedule')}
         >
           Część I i II: Kalendarz wieku (12 grup)
         </button>
@@ -187,9 +261,11 @@ const CalendarView: React.FC = () => {
           type="button"
           role="tab"
           aria-selected={activeTab === 'catch_up'}
-          aria-controls="ops-cal-panel-catch_up"
+          aria-controls={activeTab === 'catch_up' ? 'ops-cal-panel-catch_up' : undefined}
+          tabIndex={activeTab === 'catch_up' ? 0 : -1}
           className={`ops-tab ${activeTab === 'catch_up' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('catch_up')}
+          onKeyDown={(e) => handleTabKeyDown(e, 'catch_up')}
         >
           Część V: Szczepienia wyrównawcze (12 zasad)
         </button>
@@ -198,9 +274,11 @@ const CalendarView: React.FC = () => {
           type="button"
           role="tab"
           aria-selected={activeTab === 'combined'}
-          aria-controls="ops-cal-panel-combined"
+          aria-controls={activeTab === 'combined' ? 'ops-cal-panel-combined' : undefined}
+          tabIndex={activeTab === 'combined' ? 0 : -1}
           className={`ops-tab ${activeTab === 'combined' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('combined')}
+          onKeyDown={(e) => handleTabKeyDown(e, 'combined')}
         >
           Część III.M: Warianty 5w1 i 6w1
         </button>
@@ -209,9 +287,11 @@ const CalendarView: React.FC = () => {
           type="button"
           role="tab"
           aria-selected={activeTab === 'principles'}
-          aria-controls="ops-cal-panel-principles"
+          aria-controls={activeTab === 'principles' ? 'ops-cal-panel-principles' : undefined}
+          tabIndex={activeTab === 'principles' ? 0 : -1}
           className={`ops-tab ${activeTab === 'principles' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('principles')}
+          onKeyDown={(e) => handleTabKeyDown(e, 'principles')}
         >
           Część IV: 7 zasad ogólnych
         </button>
@@ -220,9 +300,11 @@ const CalendarView: React.FC = () => {
           type="button"
           role="tab"
           aria-selected={activeTab === 'qualifications'}
-          aria-controls="ops-cal-panel-qualifications"
+          aria-controls={activeTab === 'qualifications' ? 'ops-cal-panel-qualifications' : undefined}
+          tabIndex={activeTab === 'qualifications' ? 0 : -1}
           className={`ops-tab ${activeTab === 'qualifications' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('qualifications')}
+          onKeyDown={(e) => handleTabKeyDown(e, 'qualifications')}
         >
           Część VI: Uprawnienia personelu
         </button>
@@ -267,7 +349,26 @@ const CalendarView: React.FC = () => {
             </p>
           </section>
 
-          {grouped.map(({ bracket, items }) => (
+          {grouped.length === 0 ? (
+            <section className="ops-panel" role="status">
+              <p className="ops-muted">
+                Brak pozycji PSO 2027 spełniających wybrane kryteria filtra.
+              </p>
+              <div className="ops-actions">
+                <button
+                  type="button"
+                  className="ops-btn-secondary"
+                  onClick={() => {
+                    setStage('all');
+                    setObligation('all');
+                  }}
+                >
+                  Zresetuj filtry kalendarza
+                </button>
+              </div>
+            </section>
+          ) : (
+            grouped.map(({ bracket, items }) => (
             <section key={bracket.id} className="ops-panel" aria-labelledby={`ops-cal-${bracket.id}`}>
               <h2 id={`ops-cal-${bracket.id}`} className="ops-panel-title">
                 {bracket.label} <span className="ops-tag">{bracket.shortLabel}</span>
@@ -309,7 +410,8 @@ const CalendarView: React.FC = () => {
                 </table>
               </div>
             </section>
-          ))}
+            ))
+          )}
         </div>
       )}
 
@@ -419,31 +521,7 @@ const CalendarView: React.FC = () => {
           <h2 id="ops-cal-qualifications" className="ops-panel-title">
             Część VI PSO 2027 — Uprawnienia osób wykonujących zawód medyczny
           </h2>
-          <div className="ops-table-scroll">
-            <table className="ops-table">
-              <caption className="ops-sr-only">Tabela uprawnień personelu z Części VI PSO 2027</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Zawód medyczny</th>
-                  <th scope="col">Kwalifikacja – obowiązkowe</th>
-                  <th scope="col">Podanie – obowiązkowe</th>
-                  <th scope="col">Podanie – zalecane</th>
-                  <th scope="col">Warunki formalne / prawne</th>
-                </tr>
-              </thead>
-              <tbody>
-                {STAFF_QUALIFICATIONS_PSO_PART_VI.map((s) => (
-                  <tr key={s.professionId}>
-                    <th scope="row">{s.professionName}</th>
-                    <td>{s.qualificationMandatory ? 'Tak' : 'Nie'}</td>
-                    <td>{s.administrationMandatory ? 'Tak' : 'Nie'}</td>
-                    <td>{s.administrationRecommended ? 'Tak' : 'Nie'}</td>
-                    <td>{s.legalConditionsDescription}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PartViQualificationsTable caption="Tabela uprawnień personelu z Części VI PSO 2027" />
         </section>
       )}
 
@@ -460,20 +538,26 @@ const CalendarView: React.FC = () => {
 };
 
 // ---------------------------------------------------------------------------
-// Szczepienia dorosłych — rekordy PSO o zakresie adult/cross_age + katalog
+// Szczepienia dorosłych — rekordy PSO o zakresie adult/cross_age/adultScopes + katalog
 // ---------------------------------------------------------------------------
 
 const AdultView: React.FC<{ onSelectVaccineProduct?: (id: string) => void }> = ({
   onSelectVaccineProduct
 }) => {
   const [query, setQuery] = useState('');
+  const liveCatalogVaccines = useMemo(() => {
+    const storage = getBrowserStorage();
+    return loadVaccinesFromStorage(storage, VACCINES_CATALOG).vaccines;
+  }, []);
   const q = query.trim().toLowerCase();
   const psoItems = CHILD_VACCINES_CATALOG.filter(
     (v) =>
-      (v.populationScope === 'adult' || v.populationScope === 'cross_age') &&
+      (v.populationScope === 'adult' ||
+        v.populationScope === 'cross_age' ||
+        Boolean(v.fundingAuditDetails?.adultAndSpecialReferenceScopes?.length)) &&
       (!q || `${v.disease} ${v.shortCode} ${v.targetGroupDescription}`.toLowerCase().includes(q))
   );
-  const products = VACCINES_CATALOG.filter(
+  const products = liveCatalogVaccines.filter(
     (p) =>
       (p.targetGroup === 'dorosli' || p.targetGroup === 'uniwersalna') &&
       (!q || `${p.tradeName} ${p.activeSubstance}`.toLowerCase().includes(q))
@@ -514,7 +598,11 @@ const AdultView: React.FC<{ onSelectVaccineProduct?: (id: string) => void }> = (
                 </p>
                 <p className="ops-small">
                   Źródło: {v.sourcePart}, s. {v.sourcePrintedPage} •{' '}
-                  {v.populationScope === 'cross_age' ? 'procedura wielowiekowa' : 'dorośli'}
+                  {v.populationScope === 'adult'
+                    ? 'dorośli'
+                    : v.populationScope === 'cross_age'
+                      ? 'procedura wielowiekowa'
+                      : 'zawiera wyodrębniony zakres dla dorosłych / grup ryzyka'}
                 </p>
               </li>
             ))}
@@ -600,6 +688,7 @@ const CalculatorView: React.FC = () => {
         </h2>
         <form
           className="ops-form-grid"
+          noValidate
           onSubmit={(e) => {
             e.preventDefault();
             setSubmitted(true);
@@ -625,7 +714,7 @@ const CalculatorView: React.FC = () => {
               type="number"
               inputMode="numeric"
               min={1}
-              max={unit === 'days' ? 3650 : unit === 'months' ? 120 : 100}
+              max={unit === 'days' ? 3650 : unit === 'months' ? 120 : 10}
               value={interval}
               onChange={(e) => setInterval(e.target.value)}
               required
@@ -656,6 +745,7 @@ const CalculatorView: React.FC = () => {
               onClick={() => {
                 setLastDose('');
                 setInterval('');
+                setUnit('days');
                 setPlanned('');
                 setRefProcId('');
                 setSubmitted(false);
@@ -728,20 +818,25 @@ const CalculatorView: React.FC = () => {
 
 const ProceduresView: React.FC = () => {
   const storage = getBrowserStorage();
+  const [storageWarning] = useState(() =>
+    inspectOperationalStorageHealth(storage, LOCAL_CHECKLIST_STORAGE_KEY)
+  );
   const [items, setItems] = useState<LocalChecklistItem[]>(() => loadLocalChecklist(storage));
   const [text, setText] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const persist = (next: LocalChecklistItem[], msg: string) => {
+  const persist = (next: LocalChecklistItem[], msg: string): boolean => {
     const res = saveLocalChecklist(storage, next);
     if (!res.success) {
       setErrors([res.error ?? 'Błąd zapisu.']);
-      return;
+      setSuccess(null);
+      return false;
     }
     setItems(next);
     setErrors([]);
     setSuccess(msg);
+    return true;
   };
 
   const done = items.filter((i) => i.done).length;
@@ -769,42 +864,28 @@ const ProceduresView: React.FC = () => {
         <h2 id="ops-proc-staff" className="ops-panel-title">
           Uprawnienia personelu (Część VI PSO 2027)
         </h2>
-        <div className="ops-table-scroll">
-          <table className="ops-table">
-            <caption className="ops-sr-only">Uprawnienia zawodów medycznych do kwalifikacji i podania szczepień</caption>
-            <thead>
-              <tr>
-                <th scope="col">Zawód</th>
-                <th scope="col">Kwalifikacja – obowiązkowe</th>
-                <th scope="col">Podanie – obowiązkowe</th>
-                <th scope="col">Podanie – zalecane</th>
-                <th scope="col">Warunki formalne</th>
-              </tr>
-            </thead>
-            <tbody>
-              {STAFF_QUALIFICATIONS_PSO_PART_VI.map((s) => (
-                <tr key={s.professionId}>
-                  <th scope="row">{s.professionName}</th>
-                  <td>{s.qualificationMandatory ? 'Tak' : 'Nie'}</td>
-                  <td>{s.administrationMandatory ? 'Tak' : 'Nie'}</td>
-                  <td>{s.administrationRecommended ? 'Tak' : 'Nie'}</td>
-                  <td>{s.legalConditionsDescription}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <PartViQualificationsTable caption="Uprawnienia zawodów medycznych do kwalifikacji i podania szczepień" />
       </section>
 
       <section className="ops-panel" aria-labelledby="ops-proc-local">
         <h2 id="ops-proc-local" className="ops-panel-title">
           Lokalna checklista punktu szczepień ({done}/{items.length})
         </h2>
+        {storageWarning && (
+          <div className="ops-note ops-note--danger" role="alert">
+            <AlertTriangle size={18} aria-hidden="true" />
+            <p>
+              Wykryto uszkodzony lub nieczytelny zapis lokalnej checklisty w pamięci przeglądarki — wczytano stan
+              bezpieczny.
+            </p>
+          </div>
+        )}
         <p className="ops-muted">
           Treść punktów określa placówka zgodnie z własnymi procedurami. Nie wpisuj danych pacjentów.
         </p>
         <form
           className="ops-inline-form"
+          noValidate
           onSubmit={(e) => {
             e.preventDefault();
             const err = validateChecklistText(text);
@@ -813,8 +894,9 @@ const ProceduresView: React.FC = () => {
               setSuccess(null);
               return;
             }
-            persist([...items, { id: generateLocalId('chk'), text: text.trim(), done: false }], 'Dodano punkt checklisty.');
-            setText('');
+            if (persist([...items, { id: generateLocalId('chk'), text: text.trim(), done: false }], 'Dodano punkt checklisty.')) {
+              setText('');
+            }
           }}
         >
           <label className="ops-field ops-grow">
@@ -849,7 +931,11 @@ const ProceduresView: React.FC = () => {
                   type="button"
                   className="ops-icon-btn"
                   aria-label={`Usuń punkt: ${i.text}`}
-                  onClick={() => persist(items.filter((x) => x.id !== i.id), 'Usunięto punkt checklisty.')}
+                  onClick={() => {
+                    if (window.confirm(`Usunąć punkt checklisty: „${i.text}”?`)) {
+                      persist(items.filter((x) => x.id !== i.id), 'Usunięto punkt checklisty.');
+                    }
+                  }}
                 >
                   <Trash2 size={16} aria-hidden="true" />
                 </button>
@@ -861,7 +947,11 @@ const ProceduresView: React.FC = () => {
           <button
             type="button"
             className="ops-btn-secondary"
-            onClick={() => persist(items.map((x) => ({ ...x, done: false })), 'Wyzerowano zaznaczenia checklisty.')}
+            onClick={() => {
+              if (window.confirm('Czy na pewno wyzerować wszystkie zaznaczenia lokalnej checklisty?')) {
+                persist(items.map((x) => ({ ...x, done: false })), 'Wyzerowano zaznaczenia checklisty.');
+              }
+            }}
           >
             <RotateCcw size={16} aria-hidden="true" /> Wyzeruj zaznaczenia (nowa zmiana)
           </button>
@@ -907,6 +997,9 @@ const emptyDraft = (): ColdChainReadingDraft => ({
 
 const ColdChainView: React.FC = () => {
   const storage = getBrowserStorage();
+  const [storageWarning] = useState(() =>
+    inspectOperationalStorageHealth(storage, COLD_CHAIN_STORAGE_KEY)
+  );
   const [readings, setReadings] = useState<ColdChainReading[]>(() => loadColdChainReadings(storage));
   const [draft, setDraft] = useState<ColdChainReadingDraft>(emptyDraft);
   const [errors, setErrors] = useState<string[]>([]);
@@ -930,6 +1023,7 @@ const ColdChainView: React.FC = () => {
   };
 
   const exportCsv = () => {
+    if (readings.length === 0) return;
     const blob = new Blob([buildColdChainCsv(readings)], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -946,6 +1040,16 @@ const ColdChainView: React.FC = () => {
         referencyjnym dla standardowego profilu. Aplikacja nie łączy się z rejestratorami — odczyty wprowadza się ręcznie z certyfikowanego
         termometru. Przy przekroczeniu postępuj zgodnie z procedurą placówki i wytycznymi GIS/GIF oraz ChPL preparatu.
       </SafetyNote>
+
+      {storageWarning && (
+        <div className="ops-note ops-note--danger" role="alert">
+          <AlertTriangle size={18} aria-hidden="true" />
+          <p>
+            Wykryto uszkodzony lub nieczytelny zapis rejestru temperatur w pamięci przeglądarki — wczytano stan
+            bezpieczny.
+          </p>
+        </div>
+      )}
 
       <div className="ops-metrics" data-testid="ops-cold-metrics">
         <div className="ops-metric">
@@ -974,6 +1078,7 @@ const ColdChainView: React.FC = () => {
         </h2>
         <form
           className="ops-form-grid"
+          noValidate
           onSubmit={(e) => {
             e.preventDefault();
             const res = validateColdChainDraft(draft);
@@ -1227,6 +1332,9 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
   onNavigateToModule
 }) => {
   const storage = getBrowserStorage();
+  const [storageWarning] = useState(() =>
+    inspectOperationalStorageHealth(storage, EMERGENCY_KIT_STORAGE_KEY)
+  );
   const [items, setItems] = useState<EmergencyKitItem[]>(() => loadEmergencyKit(storage));
   const [draft, setDraft] = useState({ name: '', quantity: '1', expiryDate: '' });
   const [selectedCategory, setSelectedCategory] = useState<FacilityCareCategory>('ambulatory_facility');
@@ -1238,16 +1346,17 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
     (s) => s.category === 'gis-gif' || s.category === 'pso' || s.category === 'law'
   );
 
-  const persist = (next: EmergencyKitItem[], msg: string) => {
+  const persist = (next: EmergencyKitItem[], msg: string): boolean => {
     const res = saveEmergencyKit(storage, next);
     if (!res.success) {
       setErrors([res.error ?? 'Błąd zapisu.']);
       setSuccess(null);
-      return;
+      return false;
     }
     setItems(next);
     setErrors([]);
     setSuccess(msg);
+    return true;
   };
 
   const categoryLabel =
@@ -1258,9 +1367,6 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
       (reg) => reg.requirements[selectedCategory]
     );
     const existingNames = new Set(items.map((i) => i.name.trim().toLowerCase()));
-    const nextDate = new Date();
-    nextDate.setFullYear(nextDate.getFullYear() + 1);
-    const defaultExpiry = todayIsoDate(nextDate);
 
     const toAdd: EmergencyKitItem[] = [];
     for (const req of requiredItems) {
@@ -1272,8 +1378,8 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
           id: generateLocalId('kit'),
           name: fullLabel,
           quantity: 1,
-          expiryDate: defaultExpiry,
-          lastCheckedAt: new Date().toISOString()
+          expiryDate: '',
+          lastCheckedAt: null
         });
       }
     }
@@ -1286,7 +1392,7 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
 
     persist(
       [...items, ...toAdd],
-      `Wczytano ${toAdd.length} wymaganych pozycji dla kategorii: ${categoryLabel}.`
+      `Wczytano ${toAdd.length} wymaganych pozycji (status „Nieoceniona” do czasu uzupełnienia rzeczywistych dat ważności i ilości) dla kategorii: ${categoryLabel}.`
     );
   };
 
@@ -1310,9 +1416,13 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
             <li key={s.id} className="ops-card">
               <h3 className="ops-card-title">{s.title}</h3>
               <p className="ops-small">{s.publisher}</p>
-              <a className="ops-link" href={s.officialUrl} target="_blank" rel="noopener noreferrer">
-                Otwórz źródło <ExternalLink size={14} aria-hidden="true" />
-              </a>
+              {isValidHttpUrl(s.officialUrl) ? (
+                <a className="ops-link" href={s.officialUrl} target="_blank" rel="noopener noreferrer">
+                  Otwórz źródło <ExternalLink size={14} aria-hidden="true" />
+                </a>
+              ) : (
+                <span className="ops-small">Brak poprawnego odnośnika HTTP(S)</span>
+              )}
             </li>
           ))}
         </ul>
@@ -1325,6 +1435,15 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
         <h2 id="ops-sit-kit" className="ops-panel-title">
           Inwentarz zestawu przeciwwstrząsowego ({items.length} poz., {problems} wymaga uwagi)
         </h2>
+        {storageWarning && (
+          <div className="ops-note ops-note--danger" role="alert">
+            <AlertTriangle size={18} aria-hidden="true" />
+            <p>
+              Wykryto uszkodzony lub nieczytelny zapis inwentarza zestawu w pamięci przeglądarki — wczytano stan
+              bezpieczny.
+            </p>
+          </div>
+        )}
         <p className="ops-muted">
           Skład zestawu określa placówka w oparciu o obowiązujące przepisy. Narzędzie kontroluje stan ilościowy i daty ważności.
         </p>
@@ -1354,6 +1473,7 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
 
         <form
           className="ops-form-grid"
+          noValidate
           onSubmit={(e) => {
             e.preventDefault();
             const res = validateKitDraft(draft);
@@ -1362,8 +1482,9 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
               setSuccess(null);
               return;
             }
-            persist([...items, res.item], 'Dodano pozycję zestawu.');
-            setDraft({ name: '', quantity: '1', expiryDate: '' });
+            if (persist([...items, res.item], 'Dodano pozycję zestawu.')) {
+              setDraft({ name: '', quantity: '1', expiryDate: '' });
+            }
           }}
         >
           <label className="ops-field">
@@ -1427,7 +1548,27 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
                     <tr key={i.id}>
                       <th scope="row">{i.name}</th>
                       <td>{i.quantity}</td>
-                      <td>{fmtDate(i.expiryDate)}</td>
+                      <td>
+                        {i.expiryDate ? fmtDate(i.expiryDate) : 'Brak daty — uzupełnij'}
+                        <input
+                          type="date"
+                          className="ops-inline-date"
+                          aria-label={`Weryfikowany termin przydatności: ${i.name}`}
+                          value={i.expiryDate}
+                          onChange={(e) => {
+                            const nextVal = e.target.value;
+                            if (nextVal !== '' && !parseIsoDate(nextVal)) {
+                              setErrors(['Podaj poprawny termin przydatności w formacie RRRR-MM-DD (lata 1900–2100).']);
+                              setSuccess(null);
+                              return;
+                            }
+                            persist(
+                              items.map((x) => (x.id === i.id ? { ...x, expiryDate: nextVal } : x)),
+                              `Zaktualizowano termin przydatności pozycji: ${i.name}.`
+                            );
+                          }}
+                        />
+                      </td>
                       <td>
                         <span className={`ops-badge ops-badge--${meta.tone}`}>{meta.label}</span>
                       </td>
@@ -1450,7 +1591,11 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
                           type="button"
                           className="ops-icon-btn"
                           aria-label={`Usuń pozycję: ${i.name}`}
-                          onClick={() => persist(items.filter((x) => x.id !== i.id), 'Usunięto pozycję zestawu.')}
+                          onClick={() => {
+                            if (window.confirm(`Usunąć pozycję z inwentarza zestawu: „${i.name}”?`)) {
+                              persist(items.filter((x) => x.id !== i.id), 'Usunięto pozycję zestawu.');
+                            }
+                          }}
                         >
                           <Trash2 size={16} aria-hidden="true" />
                         </button>

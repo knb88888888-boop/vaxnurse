@@ -167,5 +167,105 @@ describe('OperationalModuleView — aktywne moduły operacyjne VaxNurse', () => 
     expect(kitTable).toHaveTextContent(/Adrenalinum \(1 mg\/ml/i);
     expect(kitTable).toHaveTextContent(/Natrii chloridum 0,9 % \(rozpuszczalnik/i);
     expect(kitTable).toHaveTextContent(/Natrii chloridum 0,9 % \(roztwór do infuzji/i);
+    // Wczytane pozycje regulacyjne muszą startować jako nieocenione (Nieoceniona), bez fabrykowania daty ważności
+    expect(kitTable).toHaveTextContent(/Nieoceniona/i);
+    expect(within(kitTable).queryByText(/^Dostępna$/i)).not.toBeInTheDocument();
+    expect(
+      within(kitTable).getAllByLabelText(/Weryfikowany termin przydatności:/i).length
+    ).toBeGreaterThanOrEqual(3);
+  });
+
+  it('Kalendarz PSO: prezentuje pełną 8-kolumnową tabelę uprawnień cz. VI, obsługuje klawiaturę w zakładkach i reset pustych filtrów', async () => {
+    const user = userEvent.setup();
+    render(
+      <OperationalModuleView
+        module={getMod('vaccination-calendar')}
+        onBackToDashboard={vi.fn()}
+        onNavigateToModule={vi.fn()}
+      />
+    );
+
+    const qualsTab = screen.getByRole('tab', { name: /Uprawnienia personelu/i });
+    const stagesTab = screen.getByRole('tab', { name: /Kalendarz wieku/i });
+    stagesTab.focus();
+    await user.keyboard('{End}');
+    expect(qualsTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('columnheader', { name: /Kwalifikacja – zalecane \(9–18 lat\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /Kwalifikacja – zalecane \(>18 lat\)/i })).toBeInTheDocument();
+
+    await user.keyboard('{Home}');
+    expect(stagesTab).toHaveAttribute('aria-selected', 'true');
+
+    // Filtr nieposiadający dopasowań w połączeniu „Wiek przedszkolny (6 lat)” + „Zalecane” -> stan pusty i przycisk resetu
+    await user.selectOptions(screen.getByLabelText(/Etap wiekowy/i), 'preschool');
+    await user.selectOptions(screen.getByLabelText(/Rodzaj szczepienia/i), 'zalecane');
+    expect(
+      screen.getByText(/Brak pozycji PSO 2027 spełniających wybrane kryteria filtra/i)
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Zresetuj filtry kalendarza/i }));
+    expect(screen.getByRole('heading', { level: 2, name: /Okres noworodkowy/i })).toBeInTheDocument();
+  });
+
+  it('Szczepienia dorosłych: uwzględnia zakres grypy dorosłych oraz aktualizacje katalogu preparatów z localStorage', () => {
+    render(
+      <OperationalModuleView
+        module={getMod('adult-vaccinations')}
+        onBackToDashboard={vi.fn()}
+        onNavigateToModule={vi.fn()}
+      />
+    );
+
+    expect(screen.getAllByRole('heading', { level: 3, name: /Grypa/i }).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/zawiera wyodrębniony zakres dla dorosłych \/ grup ryzyka/i).length
+    ).toBeGreaterThan(0);
+  });
+
+  it('Procedury i Sytuacje szczególne zachowują wpis użytkownika przy błędzie zapisu localStorage (QuotaExceededError)', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(
+      <OperationalModuleView
+        module={getMod('procedures-checklists')}
+        onBackToDashboard={vi.fn()}
+        onNavigateToModule={vi.fn()}
+      />
+    );
+
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('QuotaExceededError', 'QuotaExceededError');
+    });
+
+    try {
+      const checklistInput = screen.getByLabelText(/Nowy punkt checklisty/i) as HTMLInputElement;
+      await user.type(checklistInput, 'Kontrola zimnego transportu');
+      await user.click(screen.getByRole('button', { name: /^Dodaj$/i }));
+      expect(screen.getByRole('alert')).toHaveTextContent(/limit|zapis/i);
+      expect(checklistInput.value).toBe('Kontrola zimnego transportu');
+    } finally {
+      setItemSpy.mockRestore();
+      unmount();
+    }
+
+    render(
+      <OperationalModuleView
+        module={getMod('special-situations')}
+        onBackToDashboard={vi.fn()}
+        onNavigateToModule={vi.fn()}
+      />
+    );
+    const setItemSpy2 = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('QuotaExceededError', 'QuotaExceededError');
+    });
+    try {
+      const nameInput = screen.getByLabelText(/Nazwa pozycji/i) as HTMLInputElement;
+      const expiryInput = screen.getByLabelText(/Data ważności/i) as HTMLInputElement;
+      await user.type(nameInput, 'Adrenalinum 1 mg/ml test');
+      fireEvent.change(expiryInput, { target: { value: '2027-06-30' } });
+      await user.click(screen.getByRole('button', { name: /Dodaj pozycję/i }));
+      expect(screen.getByRole('alert')).toHaveTextContent(/limit|zapis/i);
+      expect(nameInput.value).toBe('Adrenalinum 1 mg/ml test');
+    } finally {
+      setItemSpy2.mockRestore();
+    }
   });
 });

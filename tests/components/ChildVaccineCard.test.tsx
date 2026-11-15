@@ -82,4 +82,40 @@ describe('ChildVaccineCard — prezentacja 43 procedur PSO 2027 i statusów ChPL
       expect(item.chplContentVerificationStatus).not.toBe('verified_full');
     }
   });
+
+  it('prezentuje otwarte pytania audytowe humanDecisionChecklist dla BCG 10 oraz wyłącza sekcje not_present_in_document z licznika sprawdzonych sekcji', () => {
+    const bcgProc = findProcedure((p) => p.id === 'pso-bcg-0');
+
+    render(
+      <ChildVaccineCard
+        item={bcgProc}
+        catalogVaccines={VACCINES_CATALOG}
+        defaultExpanded
+      />
+    );
+
+    expect(screen.getByText(/dec-bcg-42-injection-site/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Otwarte pytania do decyzji kompetentnego audytora klinicznego/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/sprawdzonych sekcji/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Wariantem A\.2/i)).not.toBeInTheDocument();
+  });
+
+  it('utrzymuje rozdzielenie pediatryczne grypy (pso-rec-influenza-1): brak karty wyboru Eflueldy oraz ukrycie adultReferenceScopes dla procedury pediatric', () => {
+    const fluProc = findProcedure((p) => p.id === 'pso-rec-influenza-1');
+
+    render(
+      <ChildVaccineCard
+        item={fluProc}
+        catalogVaccines={VACCINES_CATALOG}
+        defaultExpanded
+      />
+    );
+
+    expect(screen.queryByText(/Zakresy dla osób ≥18\. roku życia/i)).not.toBeInTheDocument();
+    expect(document.querySelector('.excluded-pediatric-products-box')).toBeNull();
+    expect(screen.getAllByText(/Influvac/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Vaxigrip/i).length).toBeGreaterThan(0);
+  });
 });
