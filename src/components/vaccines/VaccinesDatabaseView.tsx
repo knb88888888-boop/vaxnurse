@@ -114,16 +114,27 @@ export const VaccinesDatabaseView: React.FC<VaccinesDatabaseViewProps> = ({
     return null;
   });
 
+  const [prevInitialSelectedId, setPrevInitialSelectedId] = useState<string | null | undefined>(
+    initialSelectedVaccineId
+  );
+
+  if (initialSelectedVaccineId !== prevInitialSelectedId) {
+    setPrevInitialSelectedId(initialSelectedVaccineId);
+    if (initialSelectedVaccineId) {
+      const target = vaccines.find((v) => v.id === initialSelectedVaccineId);
+      if (target) {
+        setActiveVaccineDetail(target);
+      }
+    }
+  }
+
   useEffect(() => {
     if (!initialSelectedVaccineId) return;
-    const target = vaccines.find((v) => v.id === initialSelectedVaccineId);
-    if (target) {
-      setActiveVaccineDetail(target);
-      try {
-        getBrowserStorage()?.setItem(VAX_ACTIVE_ID_KEY, target.id);
-      } catch {}
-    }
-  }, [initialSelectedVaccineId]);
+    if (activeVaccineDetail?.id !== initialSelectedVaccineId) return;
+    try {
+      getBrowserStorage()?.setItem(VAX_ACTIVE_ID_KEY, initialSelectedVaccineId);
+    } catch {}
+  }, [initialSelectedVaccineId, activeVaccineDetail?.id]);
 
   const handleUpdateVaccine = (updatedVaccine: VaccineProduct): boolean => {
     const next = vaccines.map(v => (v.id === updatedVaccine.id ? updatedVaccine : v));

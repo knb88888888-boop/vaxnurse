@@ -810,20 +810,38 @@ export const VACCINES_CATALOG: VaccineProduct[] = [
     userVerificationDate: null,
     userVerificationNotes: null,
     verificationStatus: 'uncompleted',
-    atcCode: 'J07CA01',
-    chpl: buildChPLStructure({
-      tradeName: 'VaxigripTetra zawiesina do wstrzykiwań w ampułko-strzykawce',
-      activeSubstance: 'Inaktywowane rozszczepione wirusy grypy odpowiadające 4 szczepom (dwóm szczepom typu A i dwóm szczepom typu B) zalecanym przez WHO na dany sezon epidemiczny',
-      pharmaceuticalForm: 'Zawiesina do wstrzykiwań w ampułko-strzykawce 0,5 ml',
-      atcCode: 'J07CA01',
-      storageInfo: 'Przechowywać w lodówce (2°C – 8°C). Nie zamrażać. Przechowywać w tekturowym pudełku w celu ochrony przed światłem.',
-      packagingInfo: 'Ampułko-strzykawka ze szkła ze stałą igłą lub bez igły, z korkiem tłoka z elastomeru.',
-      handlingInfo: 'Przed użyciem szczepionka powinna osiągnąć temperaturę pokojową. Przed podaniem wstrząsnąć.',
-      manufacturer: 'Sanofi Pasteur, 14 Espace Henry Vallée, 69007 Lyon, Francja',
-      authorizationNumber: 'EU/1/16/1097/001',
-      authorizationDates: null,
-      revisionDate: null,
-      overallStatus: 'uncompleted'
-    })
+    atcCode: 'J07BB02',
+    chpl: (() => {
+      const baseChpl = buildChPLStructure({
+        tradeName: 'VaxigripTetra zawiesina do wstrzykiwań w ampułko-strzykawce',
+        activeSubstance: 'Inaktywowane rozszczepione wirusy grypy odpowiadające 4 szczepom (dwóm szczepom typu A i dwóm szczepom typu B) zalecanym przez WHO na dany sezon epidemiczny',
+        pharmaceuticalForm: 'Zawiesina do wstrzykiwań w ampułko-strzykawce 0,5 ml',
+        atcCode: 'J07BB02',
+        storageInfo: 'Przechowywać w lodówce (2°C – 8°C). Nie zamrażać. Przechowywać w tekturowym pudełku w celu ochrony przed światłem.',
+        packagingInfo: 'Ampułko-strzykawka ze szkła ze stałą igłą lub bez igły, z korkiem tłoka z elastomeru.',
+        handlingInfo: 'Przed użyciem szczepionka powinna osiągnąć temperaturę pokojową. Przed podaniem wstrząsnąć.',
+        manufacturer: 'Sanofi Pasteur, 14 Espace Henry Vallée, 69007 Lyon, Francja',
+        authorizationNumber: 'EU/1/16/1097/001',
+        authorizationDates: null,
+        revisionDate: null,
+        overallStatus: 'uncompleted'
+      });
+
+      return {
+        ...baseChpl,
+        pharmacologicalProperties: {
+          ...baseChpl.pharmacologicalProperties,
+          pharmacodynamics: {
+            ...baseChpl.pharmacologicalProperties.pharmacodynamics,
+            officialSource:
+              'ChPL VaxigripTetra (pkt 5.1, https://leki.urpl.gov.pl/files/81_VaxigripTetra.pdf) oraz AOTMiT APD Vaxigrip (007_OTOW.4130.3.2026_Vaxigrip_APD.pdf, Tabela 27, str. 93)',
+            pdfPageNumber: 'ChPL pkt 5.1 / AOTMiT APD str. 93',
+            sourceDocumentUrl: 'https://leki.urpl.gov.pl/files/81_VaxigripTetra.pdf',
+            verificationNote:
+              'Skorygowano błędny kod ATC z J07CA01 na J07BB02 zgodnie z pkt 5.1 ChPL VaxigripTetra i Tabelą 27 AOTMiT APD; pozostałe sekcje ChPL pozostają niezweryfikowane.'
+          }
+        }
+      };
+    })()
   }
 ];

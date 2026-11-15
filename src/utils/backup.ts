@@ -847,6 +847,31 @@ export const enforceClinicalIntegrityOnImport = (
       VACCINES_CATALOG.find(v => v.id === imported.id) ??
       currentVaccines.find(v => v.id === imported.id);
 
+    // Migracja zweryfikowanej korekty ATC VaxigripTetra (J07CA01 -> J07BB02) na starszych kopiach JSON
+    if (imported.id === 'vac-vaxigrip-tetra' && baseline?.atcCode === 'J07BB02') {
+      if (imported.atcCode === 'J07CA01' || !imported.atcCode) {
+        imported.atcCode = baseline.atcCode;
+      }
+      const importedPd = imported.chpl?.pharmacologicalProperties?.pharmacodynamics;
+      const baselinePd = baseline.chpl?.pharmacologicalProperties?.pharmacodynamics;
+      if (
+        baselinePd &&
+        importedPd &&
+        typeof importedPd.content === 'string' &&
+        importedPd.content.includes('J07CA01')
+      ) {
+        imported.chpl.pharmacologicalProperties.pharmacodynamics = {
+          ...importedPd,
+          content: baselinePd.content,
+          officialSource: baselinePd.officialSource,
+          pdfPageNumber: baselinePd.pdfPageNumber,
+          sourceDocumentUrl: baselinePd.sourceDocumentUrl,
+          verificationNote: baselinePd.verificationNote,
+          verificationStatus: baselinePd.verificationStatus
+        };
+      }
+    }
+
     // Zabezpieczenie URL przy bezpośrednich wywołaniach API importu (np. spoza UI)
     if (!isValidHttpUrlOrNull(imported.rplRecordUrl)) {
       imported.rplRecordUrl = baseline?.rplRecordUrl ?? null;

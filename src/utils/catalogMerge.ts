@@ -352,12 +352,35 @@ export const isValidStoredVaccineRecord = (item: unknown): item is VaccineProduc
   return true;
 };
 
+const isLegacyVaxigripTetraAtcMigration = (
+  productId: string | undefined,
+  storedAtc: unknown,
+  baseAtc: unknown
+): boolean =>
+  productId === 'vac-vaxigrip-tetra' &&
+  baseAtc === 'J07BB02' &&
+  (storedAtc === 'J07CA01' || storedAtc === null || storedAtc === undefined || storedAtc === '');
+
+const isLegacyVaxigripTetraPharmacodynamicsContent = (
+  productId: string | undefined,
+  label: string,
+  storedContent: string | null,
+  baseContent: string | null
+): boolean =>
+  productId === 'vac-vaxigrip-tetra' &&
+  label === '5.1' &&
+  storedContent !== null &&
+  baseContent !== null &&
+  storedContent.includes('J07CA01') &&
+  baseContent.includes('J07BB02');
+
 const mergeChplSectionPreservingLocal = (
   baseSection: ChPLSection,
   storedSection: ChPLSection | undefined,
   label: string,
   baseSnapshotSection: ChPLSection | undefined,
-  conflictFields: string[]
+  conflictFields: string[],
+  productId?: string
 ): ChPLSection => {
   if (!storedSection || !isPlainRecord(storedSection)) {
     return structuredClone(baseSection);
@@ -371,6 +394,20 @@ const mergeChplSectionPreservingLocal = (
     typeof baseSection.content === 'string' && baseSection.content.trim().length > 0
       ? baseSection.content
       : null;
+
+  if (
+    isLegacyVaxigripTetraPharmacodynamicsContent(
+      productId,
+      label,
+      storedContent,
+      baseContent
+    )
+  ) {
+    return {
+      ...structuredClone(baseSection),
+      chplVersionDate: storedSection.chplVersionDate ?? baseSection.chplVersionDate
+    };
+  }
 
   // Jeżeli treść w nowej bazie różni się od treści lokalnej użytkownika (i nie jest pustym wypełnieniem),
   // zachowaj lokalną treść użytkownika oraz oznacz konflikt do przeglądu.
@@ -399,7 +436,8 @@ const mergeChplStructures = (
   baseChpl: ChPLStructure,
   storedChpl: ChPLStructure | undefined,
   snapshotChpl: ChPLStructure | undefined,
-  conflictFields: string[]
+  conflictFields: string[],
+  productId?: string
 ): ChPLStructure => {
   if (!storedChpl || !isPlainRecord(storedChpl)) {
     return structuredClone(baseChpl);
@@ -508,7 +546,8 @@ const mergeChplStructures = (
         ppStored?.pharmacodynamics,
         '5.1',
         snapshotChpl?.pharmacologicalProperties?.pharmacodynamics,
-        conflictFields
+        conflictFields,
+        productId
       ),
       pharmacokinetics: mergeChplSectionPreservingLocal(
         baseChpl.pharmacologicalProperties.pharmacokinetics,
@@ -787,6 +826,12 @@ export const mergeVaccineCatalogWithStorage = (
       const baseVal = baseProduct[field];
       const storedVal = storedProduct[field];
       if (
+        field === 'atcCode' &&
+        isLegacyVaxigripTetraAtcMigration(baseProduct.id, storedVal, baseVal)
+      ) {
+        continue;
+      }
+      if (
         baseVal !== undefined &&
         baseVal !== null &&
         storedVal !== undefined &&
@@ -801,7 +846,8 @@ export const mergeVaccineCatalogWithStorage = (
       baseProduct.chpl,
       storedProduct.chpl,
       snapshot?.chpl,
-      conflictFields
+      conflictFields,
+      baseProduct.id
     );
 
     const mergedDiscrepancies = mergeDiscrepanciesPreservingLocal(
@@ -889,7 +935,13 @@ export const mergeVaccineCatalogWithStorage = (
       chplVersionDate: storedProduct.chplVersionDate ?? baseProduct.chplVersionDate,
       documentDownloadDate:
         storedProduct.documentDownloadDate ?? baseProduct.documentDownloadDate,
-      atcCode: storedProduct.atcCode ?? baseProduct.atcCode,
+      atcCode: isLegacyVaxigripTetraAtcMigration(
+        baseProduct.id,
+        storedProduct.atcCode,
+        baseProduct.atcCode
+      )
+        ? baseProduct.atcCode
+        : (storedProduct.atcCode ?? baseProduct.atcCode),
       // Bezwzględna ochrona statusu i danych lokalnych użytkownika
       verificationStatus: storedProduct.verificationStatus,
       userVerificationDate: storedProduct.userVerificationDate ?? null,

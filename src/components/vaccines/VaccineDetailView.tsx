@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -64,11 +64,15 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
   storageError,
   onDismissStorageError
 }) => {
-  const [currentVaccine, setCurrentVaccine] = useState<VaccineProduct>(initialVaccine);
+  const [localOverride, setLocalOverride] = useState<{
+    base: VaccineProduct;
+    value: VaccineProduct;
+  } | null>(null);
 
-  useEffect(() => {
-    setCurrentVaccine(initialVaccine);
-  }, [initialVaccine]);
+  const currentVaccine =
+    localOverride && localOverride.base === initialVaccine
+      ? localOverride.value
+      : initialVaccine;
 
   const persistVaccineUpdate = (updated: VaccineProduct): boolean => {
     if (onUpdateVaccine) {
@@ -77,7 +81,7 @@ export const VaccineDetailView: React.FC<VaccineDetailViewProps> = ({
         return false;
       }
     }
-    setCurrentVaccine(updated);
+    setLocalOverride({ base: initialVaccine, value: updated });
     return true;
   };
   const statusMeta = VERIFICATION_STATUS_META[currentVaccine.verificationStatus];
