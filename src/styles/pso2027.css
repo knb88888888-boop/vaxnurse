@@ -1,0 +1,635 @@
+/* ==========================================================================
+   PSO 2027 Complete 7-Part Explorer & Matrices (WCAG 2.2 AA & 360px safe)
+   ========================================================================== */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pso-complete-section-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.pso-block-card,
+.pso-separate-law-panel,
+.pso-footnotes-panel {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 1.15rem 1.25rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.pso-separate-law-panel {
+  border-left: 4px solid #b45309;
+  background-color: #fffdf7;
+}
+
+.pso-separate-law-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.pso-separate-law-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.pso-separate-law-intro {
+  margin: 0 0 0.9rem 0;
+  font-size: 0.875rem;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.pso-separate-rule-card {
+  border: 1px solid #fed7aa;
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+}
+
+.pso-separate-rule-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.pso-separate-rule-top h5 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.pso-rule-category-tag {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.pso-block-header,
+.pso-item-panel-header,
+.pso-subvariant-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.pso-block-title,
+.pso-item-panel-header h4,
+.pso-item-panel-header h5,
+.pso-footnotes-panel h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
+.pso-source-meta-bar {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: 100%;
+}
+
+.pso-pdf-anchor-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.55rem;
+  border-radius: 6px;
+  background-color: #f8fafc;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-decoration: none;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.pso-pdf-anchor-link:hover {
+  background-color: #e0f2fe;
+  text-decoration: underline;
+}
+
+.pso-pdf-anchor-link:focus-visible {
+  outline: 2px solid #0369a1;
+  outline-offset: 2px;
+}
+
+.pso-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.73rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.pso-status-badge--verified {
+  background-color: #ecfdf5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+
+.pso-status-badge--partially_verified {
+  background-color: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
+.pso-status-badge--not_verified {
+  background-color: #f1f5f9;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+.pso-status-badge--conflicting {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
+.pso-subfilter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.pso-subfilter-pills .subtab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  color: #1e293b;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: normal;
+  text-align: left;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  transition: all 0.15s ease;
+}
+
+.pso-subfilter-pills .subtab-btn:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.pso-subfilter-pills .subtab-btn.active {
+  background-color: #0369a1;
+  border-color: #0369a1;
+  color: #ffffff;
+}
+
+.pso-subfilter-pills .subtab-btn:focus-visible {
+  outline: 2px solid #0369a1;
+  outline-offset: 2px;
+}
+
+.pso-inline-search-row {
+  margin-top: 0.75rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.pso-inline-search-row .search-input-wrapper,
+.pso-search-filters-grid .search-input-wrapper {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.pso-complete-section-stack p,
+.pso-complete-section-stack h3,
+.pso-complete-section-stack h4,
+.pso-complete-section-stack h5,
+.pso-complete-section-stack li,
+.pso-complete-section-stack strong {
+  overflow-wrap: anywhere;
+}
+
+.pso-two-col-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.9rem;
+  margin-top: 0.75rem;
+}
+
+.pso-subvariant-card,
+.pso-item-panel {
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0.95rem 1rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.pso-cards-vertical-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.pso-highlights-list,
+.pso-structured-bullet-list {
+  margin: 0.5rem 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  color: #1e293b;
+  line-height: 1.5;
+}
+
+.pso-structured-bullet-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.pso-structured-bullet-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.pso-bullet-marker {
+  font-weight: 700;
+  color: #0369a1;
+  min-width: 1.5rem;
+  flex-shrink: 0;
+}
+
+.pso-bullet-content {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.pso-structured-sublist {
+  margin: 0.35rem 0 0 0;
+  padding-left: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pso-item-intro,
+.pso-item-recommendations,
+.pso-official-note,
+.pso-rules-summary-box p {
+  margin: 0 0 0.55rem 0;
+  font-size: 0.88rem;
+  color: #1e293b;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.pso-footnote-muted {
+  margin: 0.35rem 0 0 0;
+  font-size: 0.8rem;
+  color: #475569;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.pso-footnote-literal {
+  margin: 0.65rem 0 0 0;
+  padding: 0.6rem 0.8rem;
+  background-color: #f8fafc;
+  border-left: 3px solid #64748b;
+  font-size: 0.83rem;
+  color: #1e293b;
+  line-height: 1.45;
+}
+
+.pso-related-records-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.pso-related-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.pso-related-chip {
+  display: inline-block;
+  padding: 0.14rem 0.45rem;
+  border-radius: 5px;
+  background-color: #e2e8f0;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  font-size: 0.72rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.pso-related-chip--interactive {
+  cursor: pointer;
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border-color: #7dd3fc;
+  font-weight: 600;
+}
+
+.pso-related-chip--interactive:hover {
+  background-color: #bae6fd;
+}
+
+.pso-related-chip--interactive:focus-visible {
+  outline: 2px solid #0369a1;
+  outline-offset: 2px;
+}
+
+.pso-matrix-scroll {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background-color: #ffffff;
+}
+
+.pso-matrix-scroll:focus-visible {
+  outline: 2px solid #0369a1;
+  outline-offset: 2px;
+}
+
+.pso-data-table,
+.pso-part-vii-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  text-align: left;
+  color: #0f172a;
+}
+
+.pso-data-table th,
+.pso-data-table td,
+.pso-part-vii-table th,
+.pso-part-vii-table td {
+  border: 1px solid #cbd5e1;
+  padding: 0.55rem 0.65rem;
+  vertical-align: top;
+  overflow-wrap: break-word;
+}
+
+.pso-data-table thead th,
+.pso-part-vii-table thead th {
+  background-color: #0f172a;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.77rem;
+}
+
+.pso-data-table tbody th,
+.pso-vii-row-header {
+  background-color: #f8fafc;
+  font-weight: 700;
+  color: #0f172a;
+  min-width: 145px;
+}
+
+.pso-vii-age-col {
+  min-width: 82px;
+  text-align: center;
+}
+
+.pso-vii-col-sub {
+  display: block;
+  font-weight: 400;
+  font-size: 0.72rem;
+  color: #e2e8f0;
+}
+
+.pso-vii-cell {
+  position: relative;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.pso-vii-cell .sr-only {
+  top: 0;
+  left: 0;
+}
+
+.pso-vii-cell--active {
+  background-color: #e2e8f0;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.pso-vii-cell--conditional {
+  background-color: #fef3c7;
+  color: #78350f;
+  font-weight: 600;
+}
+
+.pso-vii-cell--empty {
+  background-color: #ffffff;
+  color: #475569;
+}
+
+.pso-vii-empty-dash {
+  color: #475569;
+}
+
+.pso-audit-warning-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.75rem 0.9rem;
+  margin-bottom: 0.75rem;
+  border-radius: 8px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #7f1d1d;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.pso-footnotes-list {
+  margin: 0.8rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.pso-footnote-item {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: #1e293b;
+  line-height: 1.45;
+}
+
+.pso-footnote-item dt {
+  font-weight: 700;
+  color: #0f172a;
+  min-width: 1.5rem;
+}
+
+.pso-footnote-item dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pso-summary-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.pso-metric-tile {
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.65rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.pso-metric-tile--ok {
+  background-color: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.pso-metric-tile--warn {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+}
+
+.pso-metric-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.pso-metric-label {
+  font-size: 0.78rem;
+  color: #334155;
+  font-weight: 600;
+}
+
+.pso-search-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.pso-search-span-2 {
+  grid-column: 1 / -1;
+}
+
+.pso-select-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #334155;
+  min-width: 0;
+}
+
+.pso-select-label select {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #94a3b8;
+  background-color: #ffffff;
+  color: #0f172a;
+  font-size: 0.85rem;
+}
+
+.pso-select-label select:focus-visible {
+  outline: 2px solid #0369a1;
+  outline-offset: 2px;
+}
+
+.pso-col-source-note {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #cbd5e1;
+  text-transform: none;
+  margin-top: 0.2rem;
+}
+
+.pso-empty-hint {
+  color: #475569;
+  font-size: 0.88rem;
+  margin: 0.5rem 0;
+}
+
+.ops-sub-title {
+  margin: 0.9rem 0 0.5rem 0;
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+@media (max-width: 640px) {
+  .pso-block-card,
+  .pso-separate-law-panel,
+  .pso-footnotes-panel {
+    padding: 0.85rem;
+  }
+
+  .pso-two-col-grid,
+  .pso-search-filters-grid,
+  .pso-summary-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -18,10 +18,34 @@ import {
   CHILD_VACCINES_CATALOG,
   STAGE_GROUPS_CONFIG,
   PSO_GENERAL_PRINCIPLES_PART_IV,
+  PSO_PART_IV_PREAMBLE,
+  PSO_PART_VI_OFFICIAL_FOOTNOTES,
+  SEPARATE_LEGAL_ACT_RULES_NON_PSO,
   STAFF_QUALIFICATIONS_PSO_PART_VI,
   PSO_CATCH_UP_12_POINTS_PART_V,
   COMBINED_VACCINES_VARIANTS_PART_III_M
 } from '../../data/childVaccinesData';
+import {
+  PSO_PART_IIB_ADULTS_RECOMMENDED,
+  PSO_PART_IIC_PREGNANCY,
+  PSO_PART_IID_HEALTHCARE_WORKERS,
+  PSO_PART_IIE_OCCUPATIONAL_INTRO,
+  PSO_PART_IIE_OTHER_WORKERS,
+  PSO_PART_IIF_POST_EXPOSURE,
+  PSO_PART_IIG_HBV_PEP_MATRIX,
+  PSO_PART_III_TRAVEL_ENDEMIC,
+  PSO_PART_III_TRAVEL_NOTE,
+} from '../../data/pso2027CompleteData';
+import {
+  Pso2027SearchAndCompletenessPanel,
+  PsoPartISectionsView,
+  PsoPartIISectionsView,
+  PsoPartIIISectionsView,
+  PsoPartIVSeparateLawsSection,
+  PsoPartVIFootnotesBlock,
+  PsoPartVIIMatrices,
+  PsoSourceLinkBadge,
+} from '../pso/Pso2027CompleteExplorer';
 import {
   VACCINES_CATALOG,
   TARGET_GROUP_LABELS,
@@ -144,51 +168,73 @@ const ModuleShell: React.FC<{
 };
 
 const PartViQualificationsTable: React.FC<{ caption: string }> = ({ caption }) => (
-  <div className="ops-table-scroll">
-    <table className="ops-table">
-      <caption className="ops-sr-only">{caption}</caption>
-      <thead>
-        <tr>
-          <th scope="col">Zawód medyczny</th>
-          <th scope="col">Kwalifikacja – obowiązkowe</th>
-          <th scope="col">Podanie – obowiązkowe</th>
-          <th scope="col">Kwalifikacja – zalecane (&lt;9 lat)</th>
-          <th scope="col">Kwalifikacja – zalecane (9–18 lat)</th>
-          <th scope="col">Kwalifikacja – zalecane (&gt;18 lat)</th>
-          <th scope="col">Podanie – zalecane</th>
-          <th scope="col">Warunki formalne / prawne</th>
-        </tr>
-      </thead>
-      <tbody>
-        {STAFF_QUALIFICATIONS_PSO_PART_VI.map((s) => (
-          <tr key={s.professionId}>
-            <th scope="row">{s.professionName}</th>
-            <td>{s.qualificationMandatory ? 'Tak' : 'Nie'}</td>
-            <td>{s.administrationMandatory ? 'Tak' : 'Nie'}</td>
-            <td>{s.qualificationRecommendedUnder9 ? 'Tak' : 'Nie'}</td>
-            <td>{s.qualificationRecommended9To18 ? 'Tak' : 'Nie'}</td>
-            <td>{s.qualificationRecommendedOver18 ? 'Tak' : 'Nie'}</td>
-            <td>{s.administrationRecommended ? 'Tak' : 'Nie'}</td>
-            <td>{s.legalConditionsDescription}</td>
+  <>
+    <p className="ops-muted">
+      Pierwsze 7 kolumn odwzorowuje literalnie tabelę Części VI PSO 2027 (Dz. Urz. MZ 2026 poz. 77, str. 45: „Tak” lub „–”);
+      ostatnia kolumna zawiera komentarz wynikający z odrębnych aktów prawnych wskazanych w przypisach * i **.
+    </p>
+    <div className="ops-table-scroll">
+      <table className="ops-table">
+        <caption className="ops-sr-only">{caption}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Zawód medyczny (PSO cz. VI, str. 45)</th>
+            <th scope="col">Kwalifikacja – obowiązkowe* (PSO str. 45)</th>
+            <th scope="col">Podanie – obowiązkowe* (PSO str. 45)</th>
+            <th scope="col">Kwalifikacja – zalecane (&lt;9 lat)** (PSO str. 45)</th>
+            <th scope="col">Kwalifikacja – zalecane (9–18 lat)** (PSO str. 45)</th>
+            <th scope="col">Kwalifikacja – zalecane (&gt;18 lat)** (PSO str. 45)</th>
+            <th scope="col">Podanie – zalecane** (PSO str. 45)</th>
+            <th scope="col">Warunki formalne / prawne (ustawy odrębne — poza tabelą PSO)</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
+        </thead>
+        <tbody>
+          {STAFF_QUALIFICATIONS_PSO_PART_VI.map((s) => (
+            <tr key={s.professionId}>
+              <th scope="row">{s.professionName}</th>
+              <td>{s.qualificationMandatory ? 'Tak' : '– (Nie)'}</td>
+              <td>{s.administrationMandatory ? 'Tak' : '– (Nie)'}</td>
+              <td>{s.qualificationRecommendedUnder9 ? 'Tak' : '– (Nie)'}</td>
+              <td>{s.qualificationRecommended9To18 ? 'Tak' : '– (Nie)'}</td>
+              <td>{s.qualificationRecommendedOver18 ? 'Tak' : '– (Nie)'}</td>
+              <td>{s.administrationRecommended ? 'Tak' : '– (Nie)'}</td>
+              <td>{s.legalConditionsDescription}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <PsoPartVIFootnotesBlock footnotes={PSO_PART_VI_OFFICIAL_FOOTNOTES} />
+  </>
 );
 
 // ---------------------------------------------------------------------------
 // Kalendarz szczepień (PSO 2027) — dane wyłącznie z rekordów PSO aplikacji
 // ---------------------------------------------------------------------------
 
-type PsoCalendarTab = 'age_schedule' | 'catch_up' | 'combined' | 'principles' | 'qualifications';
+type PsoCalendarTab =
+  | 'age_schedule'
+  | 'part_1_full'
+  | 'part_2_full'
+  | 'part_3_full'
+  | 'catch_up'
+  | 'combined'
+  | 'principles'
+  | 'part_7_matrices'
+  | 'completeness'
+  | 'qualifications';
 
 const OPS_CALENDAR_TAB_ORDER: PsoCalendarTab[] = [
   'age_schedule',
+  'part_1_full',
+  'part_2_full',
+  'part_3_full',
   'catch_up',
   'combined',
   'principles',
-  'qualifications'
+  'part_7_matrices',
+  'completeness',
+  'qualifications',
 ];
 
 const CalendarView: React.FC = () => {
@@ -257,6 +303,45 @@ const CalendarView: React.FC = () => {
           Część I i II: Kalendarz wieku (12 grup)
         </button>
         <button
+          id="ops-cal-tab-part_1_full"
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'part_1_full'}
+          aria-controls={activeTab === 'part_1_full' ? 'ops-cal-panel-part_1_full' : undefined}
+          tabIndex={activeTab === 'part_1_full' ? 0 : -1}
+          className={`ops-tab ${activeTab === 'part_1_full' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('part_1_full')}
+          onKeyDown={(e) => handleTabKeyDown(e, 'part_1_full')}
+        >
+          Część I pełna (I.A–I.E)
+        </button>
+        <button
+          id="ops-cal-tab-part_2_full"
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'part_2_full'}
+          aria-controls={activeTab === 'part_2_full' ? 'ops-cal-panel-part_2_full' : undefined}
+          tabIndex={activeTab === 'part_2_full' ? 0 : -1}
+          className={`ops-tab ${activeTab === 'part_2_full' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('part_2_full')}
+          onKeyDown={(e) => handleTabKeyDown(e, 'part_2_full')}
+        >
+          Część II pełna (II.A–II.I)
+        </button>
+        <button
+          id="ops-cal-tab-part_3_full"
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'part_3_full'}
+          aria-controls={activeTab === 'part_3_full' ? 'ops-cal-panel-part_3_full' : undefined}
+          tabIndex={activeTab === 'part_3_full' ? 0 : -1}
+          className={`ops-tab ${activeTab === 'part_3_full' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('part_3_full')}
+          onKeyDown={(e) => handleTabKeyDown(e, 'part_3_full')}
+        >
+          Część III: Uzupełniające (A–M)
+        </button>
+        <button
           id="ops-cal-tab-catch_up"
           type="button"
           role="tab"
@@ -294,6 +379,32 @@ const CalendarView: React.FC = () => {
           onKeyDown={(e) => handleTabKeyDown(e, 'principles')}
         >
           Część IV: 7 zasad ogólnych
+        </button>
+        <button
+          id="ops-cal-tab-part_7_matrices"
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'part_7_matrices'}
+          aria-controls={activeTab === 'part_7_matrices' ? 'ops-cal-panel-part_7_matrices' : undefined}
+          tabIndex={activeTab === 'part_7_matrices' ? 0 : -1}
+          className={`ops-tab ${activeTab === 'part_7_matrices' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('part_7_matrices')}
+          onKeyDown={(e) => handleTabKeyDown(e, 'part_7_matrices')}
+        >
+          Część VII: Skrócone kalendarze
+        </button>
+        <button
+          id="ops-cal-tab-completeness"
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'completeness'}
+          aria-controls={activeTab === 'completeness' ? 'ops-cal-panel-completeness' : undefined}
+          tabIndex={activeTab === 'completeness' ? 0 : -1}
+          className={`ops-tab ${activeTab === 'completeness' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('completeness')}
+          onKeyDown={(e) => handleTabKeyDown(e, 'completeness')}
+        >
+          Kompletność i wyszukiwarka PSO
         </button>
         <button
           id="ops-cal-tab-qualifications"
@@ -415,6 +526,42 @@ const CalendarView: React.FC = () => {
         </div>
       )}
 
+      {activeTab === 'part_1_full' && (
+        <section
+          id="ops-cal-panel-part_1_full"
+          role="tabpanel"
+          aria-labelledby="ops-cal-tab-part_1_full"
+          className="ops-panel"
+        >
+          <h2 className="ops-sr-only">Część I PSO 2027 — Szczepienia obowiązkowe (pełny zakres)</h2>
+          <PsoPartISectionsView />
+        </section>
+      )}
+
+      {activeTab === 'part_2_full' && (
+        <section
+          id="ops-cal-panel-part_2_full"
+          role="tabpanel"
+          aria-labelledby="ops-cal-tab-part_2_full"
+          className="ops-panel"
+        >
+          <h2 className="ops-sr-only">Część II PSO 2027 — Szczepienia zalecane i uodpornienie bierne</h2>
+          <PsoPartIISectionsView />
+        </section>
+      )}
+
+      {activeTab === 'part_3_full' && (
+        <section
+          id="ops-cal-panel-part_3_full"
+          role="tabpanel"
+          aria-labelledby="ops-cal-tab-part_3_full"
+          className="ops-panel"
+        >
+          <h2 className="ops-sr-only">Część III PSO 2027 — Informacje uzupełniające A–M</h2>
+          <PsoPartIIISectionsView />
+        </section>
+      )}
+
       {activeTab === 'catch_up' && (
         <section
           id="ops-cal-panel-catch_up"
@@ -423,7 +570,7 @@ const CalendarView: React.FC = () => {
           className="ops-panel"
         >
           <h2 id="ops-cal-catchup" className="ops-panel-title">
-            Część V PSO 2027 — Szczepienia wyrównawcze (s. 44–45 Dz. Urz. 2026 poz. 77)
+            Część V PSO 2027 — Szczepienia wyrównawcze (s. 44 Dz. Urz. 2026 poz. 77)
           </h2>
           <p className="ops-muted">
             12 oficjalnych zasad prawnych regulujących postępowanie w przypadku opóźnień i szczepień wyrównawczych.
@@ -495,8 +642,11 @@ const CalendarView: React.FC = () => {
           className="ops-panel"
         >
           <h2 id="ops-cal-principles" className="ops-panel-title">
-            Część IV PSO 2027 — Ogólne zasady przeprowadzania i organizacji szczepień
+            Część IV PSO 2027 — Ogólne zasady przeprowadzania i organizacji szczepień (s. 43)
           </h2>
+          <p className="ops-muted">
+            <strong>Preambuła Części IV PSO:</strong> {PSO_PART_IV_PREAMBLE.officialText}
+          </p>
           <ol className="ops-ordered">
             {PSO_GENERAL_PRINCIPLES_PART_IV.map((p) => (
               <li key={p.pointNumber}>
@@ -508,6 +658,31 @@ const CalendarView: React.FC = () => {
               </li>
             ))}
           </ol>
+          <PsoPartIVSeparateLawsSection rules={SEPARATE_LEGAL_ACT_RULES_NON_PSO} />
+        </section>
+      )}
+
+      {activeTab === 'part_7_matrices' && (
+        <section
+          id="ops-cal-panel-part_7_matrices"
+          role="tabpanel"
+          aria-labelledby="ops-cal-tab-part_7_matrices"
+          className="ops-panel"
+        >
+          <h2 className="ops-sr-only">Część VII PSO 2027 — Skrócone kalendarze szczepień</h2>
+          <PsoPartVIIMatrices />
+        </section>
+      )}
+
+      {activeTab === 'completeness' && (
+        <section
+          id="ops-cal-panel-completeness"
+          role="tabpanel"
+          aria-labelledby="ops-cal-tab-completeness"
+          className="ops-panel"
+        >
+          <h2 className="ops-sr-only">Kompletność 7 części PSO 2027 i wyszukiwarka</h2>
+          <Pso2027SearchAndCompletenessPanel />
         </section>
       )}
 
@@ -563,6 +738,23 @@ const AdultView: React.FC<{ onSelectVaccineProduct?: (id: string) => void }> = (
       (!q || `${p.tradeName} ${p.activeSubstance}`.toLowerCase().includes(q))
   );
 
+  const matchAdultPsoRow = (row: (typeof PSO_PART_IIB_ADULTS_RECOMMENDED)[number]) =>
+    !q || `${row.subjectLabel} ${row.recommendations} ${row.notes} ${row.sourceSubsection}`.toLowerCase().includes(q);
+
+  const adultRecommendedIIB = PSO_PART_IIB_ADULTS_RECOMMENDED.filter(matchAdultPsoRow);
+  const pregnancyIIC = PSO_PART_IIC_PREGNANCY.filter(matchAdultPsoRow);
+  const healthcareWorkersIID = PSO_PART_IID_HEALTHCARE_WORKERS.filter(matchAdultPsoRow);
+  const otherWorkersIIE = PSO_PART_IIE_OTHER_WORKERS.filter(matchAdultPsoRow);
+  const postExposureIIF = PSO_PART_IIF_POST_EXPOSURE.filter(matchAdultPsoRow);
+  const travelII = PSO_PART_III_TRAVEL_ENDEMIC.filter(matchAdultPsoRow);
+  const showHbvMatrixIIG =
+    !q ||
+    PSO_PART_IIG_HBV_PEP_MATRIX.some((r) =>
+      `${r.exposedPersonStatus} ${r.sourceHbsAgPositive} ${r.sourceHbsAgNegative} ${r.sourceUnknown}`
+        .toLowerCase()
+        .includes(q)
+    );
+
   return (
     <>
       <SafetyNote>
@@ -577,6 +769,164 @@ const AdultView: React.FC<{ onSelectVaccineProduct?: (id: string) => void }> = (
           <span>Choroba, antygen lub nazwa preparatu</span>
           <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
+      </section>
+
+      <section className="ops-panel" aria-labelledby="ops-adult-iib">
+        <div className="pso-block-header">
+          <h2 id="ops-adult-iib" className="ops-panel-title">
+            Część II.B PSO 2027 — Szczepienia zalecane dorosłym ({adultRecommendedIIB.length} pozycji, str. 22–27)
+          </h2>
+          <PsoSourceLinkBadge subsection="Część II.B" pages={[22, 27]} verificationStatus="verified" />
+        </div>
+        {adultRecommendedIIB.length === 0 ? (
+          <p className="ops-muted">Brak pozycji z Części II.B pasujących do kryteriów.</p>
+        ) : (
+          <ul className="ops-card-list">
+            {adultRecommendedIIB.map((row) => (
+              <li key={row.id} className="ops-card">
+                <h3 className="ops-card-title">{row.subjectLabel}</h3>
+                <p className="ops-muted">{row.recommendations}</p>
+                {row.notes && <p className="ops-small">Uwagi: {row.notes}</p>}
+                <PsoSourceLinkBadge
+                  subsection={row.sourceSubsection}
+                  pages={row.sourcePages}
+                  verificationStatus={row.verificationStatus}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="ops-panel" aria-labelledby="ops-adult-special-groups">
+        <div className="pso-block-header">
+          <h2 id="ops-adult-special-groups" className="ops-panel-title">
+            Część II.C–II.E PSO 2027 — Kobiety w ciąży, personel medyczny i grupy zawodowe
+          </h2>
+          <PsoSourceLinkBadge subsection="Część II.C–II.E" pages={[28, 31]} verificationStatus="verified" />
+        </div>
+        {pregnancyIIC.length > 0 && (
+          <>
+            <h3 className="ops-sub-title">II.C — Kobiety w ciąży (str. 28–29)</h3>
+            <ul className="ops-card-list">
+              {pregnancyIIC.map((row) => (
+                <li key={row.id} className="ops-card">
+                  <h4 className="ops-card-title">{row.subjectLabel}</h4>
+                  <p className="ops-muted">{row.recommendations}</p>
+                  {row.notes && <p className="ops-small">{row.notes}</p>}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        {healthcareWorkersIID.length > 0 && (
+          <>
+            <h3 className="ops-sub-title">II.D — Osoby wykonujące zawód medyczny (str. 29–30)</h3>
+            <ul className="ops-card-list">
+              {healthcareWorkersIID.map((row) => (
+                <li key={row.id} className="ops-card">
+                  <h4 className="ops-card-title">{row.subjectLabel}</h4>
+                  <p className="ops-muted">{row.recommendations}</p>
+                  {row.notes && <p className="ops-small">{row.notes}</p>}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        {otherWorkersIIE.length > 0 && (
+          <>
+            <h3 className="ops-sub-title">II.E — Szczepienia pracownicze finansowane przez pracodawcę (str. 30–31)</h3>
+            <p className="ops-small">{PSO_PART_IIE_OCCUPATIONAL_INTRO.legalBasisText}</p>
+            <ul className="ops-card-list">
+              {otherWorkersIIE.map((row) => (
+                <li key={row.id} className="ops-card">
+                  <h4 className="ops-card-title">{row.subjectLabel}</h4>
+                  <p className="ops-muted">{row.recommendations}</p>
+                  {row.notes && <p className="ops-small">{row.notes}</p>}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
+
+      {(postExposureIIF.length > 0 || showHbvMatrixIIG || travelII.length > 0) && (
+        <section className="ops-panel" aria-labelledby="ops-adult-pep-travel">
+          <div className="pso-block-header">
+            <h2 id="ops-adult-pep-travel" className="ops-panel-title">
+              Część II.F–G i II.I PSO 2027 — Profilaktyka poekspozycyjna, HBV oraz medycyna podróży
+            </h2>
+            <PsoSourceLinkBadge subsection="Część II.F–G, II.I" pages={[32, 35]} verificationStatus="verified" />
+          </div>
+          {postExposureIIF.length > 0 && (
+            <>
+              <h3 className="ops-sub-title">II.F — Szczepienia poekspozycyjne (str. 32)</h3>
+              <ul className="ops-card-list">
+                {postExposureIIF.map((row) => (
+                  <li key={row.id} className="ops-card">
+                    <h4 className="ops-card-title">{row.subjectLabel}</h4>
+                    <p className="ops-muted">{row.recommendations}</p>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {showHbvMatrixIIG && (
+            <>
+              <h3 className="ops-sub-title">II.G — Swoiste zapobieganie WZW typu B po ekspozycji na HBV (str. 33–34)</h3>
+              <div
+                className="pso-matrix-scroll"
+                tabIndex={0}
+                role="region"
+                aria-label="Matryca II.G profilaktyki poekspozycyjnej WZW typu B dla dorosłych"
+              >
+                <table className="pso-data-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Status uodpornienia osoby eksponowanej</th>
+                      <th scope="col">Źródło HBsAg (+)</th>
+                      <th scope="col">Źródło HBsAg (–)</th>
+                      <th scope="col">Źródło nieznane</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {PSO_PART_IIG_HBV_PEP_MATRIX.map((r) => (
+                      <tr key={r.id}>
+                        <th scope="row">{r.exposedPersonStatus}</th>
+                        <td>{r.sourceHbsAgPositive}</td>
+                        <td>{r.sourceHbsAgNegative}</td>
+                        <td>{r.sourceUnknown}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+          {travelII.length > 0 && (
+            <>
+              <h3 className="ops-sub-title">II.I — Szczepienia zalecane podróżującym za granicę (str. 35)</h3>
+              <p className="ops-small">{PSO_PART_III_TRAVEL_NOTE}</p>
+              <ul className="ops-card-list">
+                {travelII.map((row) => (
+                  <li key={row.id} className="ops-card">
+                    <h4 className="ops-card-title">{row.subjectLabel}</h4>
+                    <p className="ops-muted">{row.recommendations}</p>
+                    {row.notes && <p className="ops-small">{row.notes}</p>}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+      )}
+
+      <section className="ops-panel" aria-labelledby="ops-adult-viic">
+        <h2 id="ops-adult-viic" className="ops-panel-title">
+          Część VII.C PSO 2027 — Skrócony kalendarz szczepień dorosłych (str. 48)
+        </h2>
+        <h3 className="ops-sub-title">Rozkład szczepień zalecanych dorosłym według przedziałów wieku</h3>
+        <PsoPartVIIMatrices subsectionFilter={['VII.C']} />
       </section>
 
       <section className="ops-panel" aria-labelledby="ops-adult-pso">
@@ -845,8 +1195,11 @@ const ProceduresView: React.FC = () => {
     <>
       <section className="ops-panel" aria-labelledby="ops-proc-pso">
         <h2 id="ops-proc-pso" className="ops-panel-title">
-          Ogólne zasady przeprowadzania szczepień (Część IV PSO 2027)
+          Ogólne zasady przeprowadzania szczepień (Część IV PSO 2027, s. 43)
         </h2>
+        <p className="ops-muted">
+          <strong>Preambuła Części IV PSO:</strong> {PSO_PART_IV_PREAMBLE.officialText}
+        </p>
         <ol className="ops-ordered">
           {PSO_GENERAL_PRINCIPLES_PART_IV.map((p) => (
             <li key={p.pointNumber}>
@@ -858,6 +1211,7 @@ const ProceduresView: React.FC = () => {
             </li>
           ))}
         </ol>
+        <PsoPartIVSeparateLawsSection rules={SEPARATE_LEGAL_ACT_RULES_NON_PSO} />
       </section>
 
       <section className="ops-panel" aria-labelledby="ops-proc-staff">

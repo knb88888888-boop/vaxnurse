@@ -27,10 +27,23 @@ import {
   STAGE_GROUPS_CONFIG,
   STAFF_QUALIFICATIONS_PSO_PART_VI,
   PSO_GENERAL_PRINCIPLES_PART_IV,
+  PSO_PART_IV_PREAMBLE,
+  PSO_PART_VI_OFFICIAL_FOOTNOTES,
+  SEPARATE_LEGAL_ACT_RULES_NON_PSO,
   PSO_CATCH_UP_12_POINTS_PART_V,
   CATCH_UP_IMMUNIZATION_PART_V,
   COMBINED_VACCINES_VARIANTS_PART_III_M
 } from '../../data/childVaccinesData';
+import {
+  Pso2027SearchAndCompletenessPanel,
+  PsoPartISectionsView,
+  PsoPartIISectionsView,
+  PsoPartIIISectionsView,
+  PsoPartIVSeparateLawsSection,
+  PsoPartVIFootnotesBlock,
+  PsoPartVIIMatrices,
+  PsoSourceLinkBadge,
+} from '../pso/Pso2027CompleteExplorer';
 import { VACCINES_CATALOG } from '../../data/vaccinesCatalog';
 import { loadVaccinesFromStorage } from '../../utils/vaccineVerification';
 import {
@@ -47,14 +60,29 @@ interface ChildVaccinationsViewProps {
 }
 
 
-type ViewTab = 'procedures' | 'qualifications' | 'principles' | 'catchup' | 'combined';
+type ViewTab =
+  | 'procedures'
+  | 'part1'
+  | 'part2'
+  | 'part3'
+  | 'qualifications'
+  | 'principles'
+  | 'catchup'
+  | 'combined'
+  | 'part7'
+  | 'completeness';
 
 const VIEW_TABS_ORDER: ViewTab[] = [
   'procedures',
+  'part1',
+  'part2',
+  'part3',
   'qualifications',
   'principles',
   'catchup',
   'combined',
+  'part7',
+  'completeness',
 ];
 
 const formatProcedureRecordsCount = (count: number): string => {
@@ -115,6 +143,7 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
       // 4. Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
+        const matchesId = item.id.toLowerCase().includes(q);
         const matchesDisease = item.disease.toLowerCase().includes(q);
         const matchesShortCode = item.shortCode.toLowerCase().includes(q);
         const matchesDose = item.doseLabel.toLowerCase().includes(q);
@@ -140,6 +169,7 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
         );
 
         if (
+          !matchesId &&
           !matchesDisease &&
           !matchesShortCode &&
           !matchesDose &&
@@ -232,6 +262,14 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
     setSelectedObligation('all');
     setSelectedStageGroup('all');
     setSelectedPathogen('all');
+  };
+
+  const handleOpenCatalogRecord = (recordId: string) => {
+    setSelectedObligation('all');
+    setSelectedStageGroup('all');
+    setSelectedPathogen('all');
+    setSearchQuery(recordId);
+    setActiveTab('procedures');
   };
 
   const handleSelectBracketDirectly = (bracketId: ChildAgeBracketId) => {
@@ -329,9 +367,54 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
           onClick={() => setActiveTab('procedures')}
           onKeyDown={e => handleSectionTabKeyDown(e, 'procedures')}
         >
-          <Baby size={16} />
+          <Baby size={16} aria-hidden="true" />
           <span>Procedury i etapy wiekowe</span>
           <span className="section-tab-count">{CHILD_VACCINES_CATALOG.length} procedur w bazie</span>
+        </button>
+
+        <button
+          id="pso-tab-part1"
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'part1'}
+          aria-controls={activeTab === 'part1' ? 'pso-tabpanel-part1' : undefined}
+          tabIndex={activeTab === 'part1' ? 0 : -1}
+          className={`pso-section-nav-btn ${activeTab === 'part1' ? 'active' : ''}`}
+          onClick={() => setActiveTab('part1')}
+          onKeyDown={e => handleSectionTabKeyDown(e, 'part1')}
+        >
+          <ShieldCheck size={16} aria-hidden="true" />
+          <span>Część I pełna (I.A–I.E)</span>
+        </button>
+
+        <button
+          id="pso-tab-part2"
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'part2'}
+          aria-controls={activeTab === 'part2' ? 'pso-tabpanel-part2' : undefined}
+          tabIndex={activeTab === 'part2' ? 0 : -1}
+          className={`pso-section-nav-btn ${activeTab === 'part2' ? 'active' : ''}`}
+          onClick={() => setActiveTab('part2')}
+          onKeyDown={e => handleSectionTabKeyDown(e, 'part2')}
+        >
+          <Sparkles size={16} aria-hidden="true" />
+          <span>Część II (Zalecane i bierne II.A–II.I)</span>
+        </button>
+
+        <button
+          id="pso-tab-part3"
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'part3'}
+          aria-controls={activeTab === 'part3' ? 'pso-tabpanel-part3' : undefined}
+          tabIndex={activeTab === 'part3' ? 0 : -1}
+          className={`pso-section-nav-btn ${activeTab === 'part3' ? 'active' : ''}`}
+          onClick={() => setActiveTab('part3')}
+          onKeyDown={e => handleSectionTabKeyDown(e, 'part3')}
+        >
+          <BookOpen size={16} aria-hidden="true" />
+          <span>Część III (Uzupełniające A–M)</span>
         </button>
 
         <button
@@ -345,7 +428,7 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
           onClick={() => setActiveTab('qualifications')}
           onKeyDown={e => handleSectionTabKeyDown(e, 'qualifications')}
         >
-          <Users size={16} />
+          <Users size={16} aria-hidden="true" />
           <span>Uprawnienia personelu (Część VI)</span>
         </button>
 
@@ -360,7 +443,7 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
           onClick={() => setActiveTab('principles')}
           onKeyDown={e => handleSectionTabKeyDown(e, 'principles')}
         >
-          <BookOpen size={16} />
+          <BookOpen size={16} aria-hidden="true" />
           <span>Ogólne zasady i wyjątki (Część IV)</span>
         </button>
 
@@ -375,7 +458,7 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
           onClick={() => setActiveTab('catchup')}
           onKeyDown={e => handleSectionTabKeyDown(e, 'catchup')}
         >
-          <Layers size={16} />
+          <Layers size={16} aria-hidden="true" />
           <span>Szczepienia wyrównawcze (Część V)</span>
         </button>
 
@@ -390,8 +473,38 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
           onClick={() => setActiveTab('combined')}
           onKeyDown={e => handleSectionTabKeyDown(e, 'combined')}
         >
-          <AlertCircle size={16} />
+          <AlertCircle size={16} aria-hidden="true" />
           <span>Warianty 5w1 i 6w1 (Część I.A / III.M)</span>
+        </button>
+
+        <button
+          id="pso-tab-part7"
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'part7'}
+          aria-controls={activeTab === 'part7' ? 'pso-tabpanel-part7' : undefined}
+          tabIndex={activeTab === 'part7' ? 0 : -1}
+          className={`pso-section-nav-btn ${activeTab === 'part7' ? 'active' : ''}`}
+          onClick={() => setActiveTab('part7')}
+          onKeyDown={e => handleSectionTabKeyDown(e, 'part7')}
+        >
+          <CalendarDays size={16} aria-hidden="true" />
+          <span>Skrócone kalendarze (Część VII)</span>
+        </button>
+
+        <button
+          id="pso-tab-completeness"
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'completeness'}
+          aria-controls={activeTab === 'completeness' ? 'pso-tabpanel-completeness' : undefined}
+          tabIndex={activeTab === 'completeness' ? 0 : -1}
+          className={`pso-section-nav-btn ${activeTab === 'completeness' ? 'active' : ''}`}
+          onClick={() => setActiveTab('completeness')}
+          onKeyDown={e => handleSectionTabKeyDown(e, 'completeness')}
+        >
+          <Search size={16} aria-hidden="true" />
+          <span>Kompletność i wyszukiwarka PSO</span>
         </button>
       </div>
 
@@ -637,6 +750,24 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
         </div>
       )}
 
+      {activeTab === 'part1' && (
+        <div role="tabpanel" id="pso-tabpanel-part1" aria-labelledby="pso-tab-part1">
+          <PsoPartISectionsView onOpenCatalogRecord={handleOpenCatalogRecord} />
+        </div>
+      )}
+
+      {activeTab === 'part2' && (
+        <div role="tabpanel" id="pso-tabpanel-part2" aria-labelledby="pso-tab-part2">
+          <PsoPartIISectionsView onOpenCatalogRecord={handleOpenCatalogRecord} />
+        </div>
+      )}
+
+      {activeTab === 'part3' && (
+        <div role="tabpanel" id="pso-tabpanel-part3" aria-labelledby="pso-tab-part3">
+          <PsoPartIIISectionsView onOpenCatalogRecord={handleOpenCatalogRecord} />
+        </div>
+      )}
+
       {/* =========================================================================
           TAB 2: UPRAWNIENIA PERSONELU (CZĘŚĆ VI PSO 2027)
           ========================================================================= */}
@@ -649,14 +780,15 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
         >
           <div className="section-intro-card">
             <div className="intro-title-row">
-              <Users size={22} className="intro-icon" />
+              <Users size={22} className="intro-icon" aria-hidden="true" />
               <h3>Kwalifikacje osób przeprowadzających badania kwalifikacyjne i szczepienia ochronne</h3>
+              <PsoSourceLinkBadge subsection="Część VI" pages={45} verificationStatus="verified" />
             </div>
             <p className="intro-text">
-              Tabela sporządzona na podstawie <strong>Części VI Programu Szczepień Ochronnych na 2027 rok</strong> (Dz. Urz. Min. Zdrow. 2026 poz. 77, str. 45–46) oraz art. 17 ust. 4, 6 i 6a ustawy z dnia 5 grudnia 2008 r. o zapobieganiu oraz zwalczaniu zakażeń i chorób zakaźnych u ludzi.
+              Tabela sporządzona dosłownie na podstawie <strong>Części VI Programu Szczepień Ochronnych na 2027 rok</strong> (Dz. Urz. Min. Zdrow. 2026 poz. 77, str. 45) — 7 literalnych kolumn urzędowych (zawód oraz 6 kolumn Tak / –) wraz z komentarzem prawnym wynikającym z ustaw i rozporządzeń odrębnych.
             </p>
             <div className="legal-notice-banner">
-              <strong>Zasada prawna:</strong> Żadna grupa zawodowa nie może samodzielnie rozszerzać swoich uprawnień poza zakres określony w ustawie i rozporządzeniu Ministra Zdrowia.
+              <strong>Zasada prawna:</strong> Żadna grupa zawodowa nie może samodzielnie rozszerzać swoich uprawnień poza zakres określony w ustawie z dnia 5 grudnia 2008 r. i rozporządzeniach Ministra Zdrowia wskazanych w przypisach * i ** poniżej tabeli.
             </div>
           </div>
 
@@ -664,13 +796,34 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
             <table className="qualifications-matrix-table">
               <thead>
                 <tr>
-                  <th className="col-profession">Zawód / Grupa zawodowa</th>
-                  <th className="col-check">1. Kwalifikacja do szczepień obowiązkowych</th>
-                  <th className="col-check">2. Podanie szczepień obowiązkowych</th>
-                  <th className="col-check">3. Kwalifikacja do zalecanych (&lt;9 lat)</th>
-                  <th className="col-check">4. Kwalifikacja do zalecanych (9–18 lat)</th>
-                  <th className="col-check">5. Kwalifikacja do zalecanych (&gt;18 lat)</th>
-                  <th className="col-check">6. Podanie szczepień zalecanych</th>
+                  <th scope="col" className="col-profession">
+                    Zawód / Grupa zawodowa
+                    <span className="pso-col-source-note">Kolumna 1 tabeli PSO str. 45 + komentarz ustaw odrębnych</span>
+                  </th>
+                  <th scope="col" className="col-check">
+                    1. Kwalifikacja do szczepień obowiązkowych*
+                    <span className="pso-col-source-note">PSO cz. VI, str. 45</span>
+                  </th>
+                  <th scope="col" className="col-check">
+                    2. Podanie szczepień obowiązkowych*
+                    <span className="pso-col-source-note">PSO cz. VI, str. 45</span>
+                  </th>
+                  <th scope="col" className="col-check">
+                    3. Kwalifikacja do zalecanych (&lt;9 lat)**
+                    <span className="pso-col-source-note">PSO cz. VI, str. 45</span>
+                  </th>
+                  <th scope="col" className="col-check">
+                    4. Kwalifikacja do zalecanych (9–18 lat)**
+                    <span className="pso-col-source-note">PSO cz. VI, str. 45</span>
+                  </th>
+                  <th scope="col" className="col-check">
+                    5. Kwalifikacja do zalecanych (&gt;18 lat)**
+                    <span className="pso-col-source-note">PSO cz. VI, str. 45</span>
+                  </th>
+                  <th scope="col" className="col-check">
+                    6. Podanie szczepień zalecanych**
+                    <span className="pso-col-source-note">PSO cz. VI, str. 45</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -689,12 +842,12 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                     {/* 1. Kwalifikacja obowiązkowa */}
                     <td className="status-cell">
                       {staff.qualificationMandatory ? (
-                        <span className="perm-badge perm-allowed" title="Uprawnienie przysługuje">
-                          <Check size={16} /> TAK
+                        <span className="perm-badge perm-allowed" title="Uprawnienie przysługuje (Tak)">
+                          <Check size={16} aria-hidden="true" /> TAK
                         </span>
                       ) : (
-                        <span className="perm-badge perm-denied" title="Brak uprawnienia">
-                          <Minus size={14} /> NIE
+                        <span className="perm-badge perm-denied" title="Brak uprawnienia wg tabeli PSO (–)">
+                          <Minus size={14} aria-hidden="true" /> – (NIE)
                         </span>
                       )}
                     </td>
@@ -703,11 +856,11 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                     <td className="status-cell">
                       {staff.administrationMandatory ? (
                         <span className="perm-badge perm-allowed">
-                          <Check size={16} /> TAK
+                          <Check size={16} aria-hidden="true" /> TAK
                         </span>
                       ) : (
                         <span className="perm-badge perm-denied">
-                          <Minus size={14} /> NIE
+                          <Minus size={14} aria-hidden="true" /> – (NIE)
                         </span>
                       )}
                     </td>
@@ -716,11 +869,11 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                     <td className="status-cell">
                       {staff.qualificationRecommendedUnder9 ? (
                         <span className="perm-badge perm-allowed">
-                          <Check size={16} /> TAK
+                          <Check size={16} aria-hidden="true" /> TAK
                         </span>
                       ) : (
                         <span className="perm-badge perm-denied">
-                          <Minus size={14} /> NIE
+                          <Minus size={14} aria-hidden="true" /> – (NIE)
                         </span>
                       )}
                     </td>
@@ -729,11 +882,11 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                     <td className="status-cell">
                       {staff.qualificationRecommended9To18 ? (
                         <span className="perm-badge perm-allowed">
-                          <Check size={16} /> TAK
+                          <Check size={16} aria-hidden="true" /> TAK
                         </span>
                       ) : (
                         <span className="perm-badge perm-denied">
-                          <Minus size={14} /> NIE
+                          <Minus size={14} aria-hidden="true" /> – (NIE)
                         </span>
                       )}
                     </td>
@@ -742,11 +895,11 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                     <td className="status-cell">
                       {staff.qualificationRecommendedOver18 ? (
                         <span className="perm-badge perm-allowed">
-                          <Check size={16} /> TAK
+                          <Check size={16} aria-hidden="true" /> TAK
                         </span>
                       ) : (
                         <span className="perm-badge perm-denied">
-                          <Minus size={14} /> NIE
+                          <Minus size={14} aria-hidden="true" /> – (NIE)
                         </span>
                       )}
                     </td>
@@ -755,11 +908,11 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                     <td className="status-cell">
                       {staff.administrationRecommended ? (
                         <span className="perm-badge perm-allowed">
-                          <Check size={16} /> TAK
+                          <Check size={16} aria-hidden="true" /> TAK
                         </span>
                       ) : (
                         <span className="perm-badge perm-denied">
-                          <Minus size={14} /> NIE
+                          <Minus size={14} aria-hidden="true" /> – (NIE)
                         </span>
                       )}
                     </td>
@@ -768,6 +921,8 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
               </tbody>
             </table>
           </div>
+
+          <PsoPartVIFootnotesBlock footnotes={PSO_PART_VI_OFFICIAL_FOOTNOTES} />
         </div>
       )}
 
@@ -783,12 +938,16 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
         >
           <div className="section-intro-card">
             <div className="intro-title-row">
-              <BookOpen size={22} className="intro-icon" />
+              <BookOpen size={22} className="intro-icon" aria-hidden="true" />
               <h3>Ogólne zasady przeprowadzania i organizacji szczepień (Część IV PSO 2027)</h3>
+              <PsoSourceLinkBadge subsection="Część IV" pages={43} verificationStatus="verified" />
             </div>
             <p className="intro-text">
-              Poniższe 7 punktów stanowi integralny tekst wytycznych Głównego Inspektora Sanitarnego (Dz. Urz. Min. Zdrow. z 30.10.2026 r. poz. 77, strony 43–44). Wszelkie wyjątki i warunki kliniczne zostały zachowane w pełnym brzmieniu.
+              Poniższe 7 punktów stanowi literalny tekst Części IV wytycznych Głównego Inspektora Sanitarnego (Dz. Urz. Min. Zdrow. z 30.10.2026 r. poz. 77, strona 43). Wszelkie wyjątki i warunki kliniczne zostały zachowane w pełnym brzmieniu, natomiast przepisy pochodzące z ustaw odrębnych umieszczono poniżej w osobnym bloku.
             </p>
+            <div className="legal-notice-banner">
+              <strong>Preambuła Części IV PSO (str. 43):</strong> {PSO_PART_IV_PREAMBLE.officialText}
+            </div>
           </div>
 
           <div className="principles-detailed-list">
@@ -814,7 +973,7 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
                   {item.specificExceptions.length > 0 && (
                     <div className="exceptions-container">
                       <span className="box-label-amber">
-                        <AlertTriangle size={14} /> Kluczowe wyjątki i warunki wykonawcze:
+                        <AlertTriangle size={14} aria-hidden="true" /> Kluczowe wyjątki i warunki wykonawcze:
                       </span>
                       <ul className="exceptions-list">
                         {item.specificExceptions.map((ex, idx) => (
@@ -827,6 +986,8 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
               </div>
             ))}
           </div>
+
+          <PsoPartIVSeparateLawsSection rules={SEPARATE_LEGAL_ACT_RULES_NON_PSO} />
         </div>
       )}
 
@@ -842,11 +1003,12 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
         >
           <div className="section-intro-card">
             <div className="intro-title-row">
-              <Layers size={22} className="intro-icon" />
+              <Layers size={22} className="intro-icon" aria-hidden="true" />
               <h3>Zasady przeprowadzania szczepień wyrównawczych (Część V PSO 2027)</h3>
+              <PsoSourceLinkBadge subsection="Część V" pages={44} verificationStatus="verified" />
             </div>
             <p className="intro-text">
-              Oficjalne wytyczne Głównego Inspektora Sanitarnego dotyczące szczepień wyrównawczych obejmują 12 numerowanych punktów regulujących postępowanie w przypadku opóźnień, niepełnej dokumentacji, ustalania Indywidualnego Kalendarza Szczepień (IKSz) oraz zakończenia okresu obowiązku (Dz. Urz. Min. Zdrow. z 30.10.2026 r. poz. 77, strona 44–45).
+              Oficjalne wytyczne Głównego Inspektora Sanitarnego dotyczące szczepień wyrównawczych obejmują 12 numerowanych punktów regulujących postępowanie w przypadku opóźnień, niepełnej dokumentacji, ustalania Indywidualnego Kalendarza Szczepień (IKSz) oraz zakończenia okresu obowiązku (Dz. Urz. Min. Zdrow. z 30.10.2026 r. poz. 77, strona 44).
             </p>
 
             <div className="catchup-subtabs-bar">
@@ -1011,6 +1173,18 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {activeTab === 'part7' && (
+        <div role="tabpanel" id="pso-tabpanel-part7" aria-labelledby="pso-tab-part7">
+          <PsoPartVIIMatrices onOpenCatalogRecord={handleOpenCatalogRecord} />
+        </div>
+      )}
+
+      {activeTab === 'completeness' && (
+        <div role="tabpanel" id="pso-tabpanel-completeness" aria-labelledby="pso-tab-completeness">
+          <Pso2027SearchAndCompletenessPanel onOpenCatalogRecord={handleOpenCatalogRecord} />
         </div>
       )}
 

@@ -11,6 +11,10 @@ import type {
   CatchUpImmunizationGuideline,
   CombinedVaccineVariant
 } from '../types/childVaccines';
+import type {
+  PsoPartVITableFootnote,
+  SeparateLegalOrPracticeRule
+} from '../types/pso2027';
 
 export const CHILD_AGE_BRACKETS: ChildAgeBracketDefinition[] = [
   {
@@ -4246,7 +4250,7 @@ export function findChildVaccine(id: string): ChildVaccineItem | undefined {
 
 /**
  * Tabela uprawnień personelu medycznego do kwalifikacji i wykonywania szczepień ochronnych
- * na podstawie Części VI PSO 2027 (Dziennik Urzędowy Ministra Zdrowia 2026 poz. 77, str. 45–46).
+ * na podstawie Części VI PSO 2027 (Dziennik Urzędowy Ministra Zdrowia 2026 poz. 77, str. 45 akt.pdf).
  */
 export const STAFF_QUALIFICATIONS_PSO_PART_VI: StaffQualificationEntry[] = [
   {
@@ -4258,20 +4262,30 @@ export const STAFF_QUALIFICATIONS_PSO_PART_VI: StaffQualificationEntry[] = [
     qualificationRecommended9To18: true,
     qualificationRecommendedOver18: true,
     administrationRecommended: true,
-    legalBasisFootnoteRefs: ['art. 17 ust. 6 ustawy o chorobach zakaźnych', 'przypis 1 części VI PSO'],
-    legalConditionsDescription: 'Posiada pełne uprawnienia do badania kwalifikacyjnego i wykonywania wszystkich szczepień (obowiązkowych i zalecanych) u dzieci i dorosłych bez ograniczeń wiekowych.'
+    legalBasisFootnoteRefs: [
+      'Część VI PSO 2027 (str. 45)',
+      'Przypis * (Rozp. MZ z 27.09.2023 r.)',
+      'Przypis ** (art. 19 ustawy z 5.12.2008 r.)'
+    ],
+    legalConditionsDescription:
+      'Wg tabeli Części VI PSO (str. 45): „Tak” we wszystkich 6 kolumnach (kwalifikacja i podanie szczepień obowiązkowych oraz zalecanych <9 lat, 9–18 lat i >18 lat).'
   },
   {
     professionId: 'felczer',
     professionName: 'Felczer',
-    qualificationMandatory: true,
+    qualificationMandatory: false,
     administrationMandatory: true,
     qualificationRecommendedUnder9: true,
     qualificationRecommended9To18: true,
     qualificationRecommendedOver18: true,
     administrationRecommended: true,
-    legalBasisFootnoteRefs: ['art. 17 ust. 6 ustawy o chorobach zakaźnych', 'ustawa o zawodzie felczera', 'przypis 2 części VI PSO'],
-    legalConditionsDescription: 'Uprawniony do badania kwalifikacyjnego i wykonywania szczepień ochronnych w zakresie przewidzianym w ustawie o zawodzie felczera.'
+    legalBasisFootnoteRefs: [
+      'Część VI PSO 2027 (str. 45)',
+      'Przypis * (Rozp. MZ z 27.09.2023 r.)',
+      'Przypis ** (art. 19 ustawy z 5.12.2008 r.)'
+    ],
+    legalConditionsDescription:
+      'Wg tabeli Części VI PSO (str. 45): w szczepieniach obowiązkowych kwalifikacja „–” (brak wskazania Tak w PSO), podanie „Tak”; w szczepieniach zalecanych „Tak” dla kwalifikacji <9 lat, 9–18 lat, >18 lat oraz podania (w zakresie ustawowym zawodu felczera).'
   },
   {
     professionId: 'pielegniarka',
@@ -4279,11 +4293,16 @@ export const STAFF_QUALIFICATIONS_PSO_PART_VI: StaffQualificationEntry[] = [
     qualificationMandatory: false,
     administrationMandatory: true,
     qualificationRecommendedUnder9: false,
-    qualificationRecommended9To18: false,
+    qualificationRecommended9To18: true,
     qualificationRecommendedOver18: true,
     administrationRecommended: true,
-    legalBasisFootnoteRefs: ['art. 17 ust. 6 i ust. 6a ustawy o chorobach zakaźnych', 'przypis 3 i 4 części VI PSO'],
-    legalConditionsDescription: 'Wykonuje szczepienia obowiązkowe i zalecane po odbyciu kursu szczepień lub specjalizacji. Kwalifikację może przeprowadzać WYŁĄCZNIE do szczepień zalecanych u osób dorosłych (>18 r.ż.) po ukończeniu dedykowanego kursu kwalifikacyjnego. Nie kwalifikuje dzieci do szczepień obowiązkowych.'
+    legalBasisFootnoteRefs: [
+      'Część VI PSO 2027 (str. 45)',
+      'Przypis * (Rozp. MZ z 27.09.2023 r.)',
+      'Przypis ** (art. 19 ustawy z 5.12.2008 r.)'
+    ],
+    legalConditionsDescription:
+      'Wg tabeli Części VI PSO (str. 45): w szczepieniach obowiązkowych kwalifikacja „–”, podanie „Tak”; w szczepieniach zalecanych kwalifikacja „–” dla <9 lat, „Tak” dla 9–18 lat oraz >18 lat, podanie „Tak” (warunki szkoleń i kwalifikacji zawodowych reguluje art. 19 ustawy oraz Rozp. MZ z 27.09.2023 r.).'
   },
   {
     professionId: 'polozna',
@@ -4291,11 +4310,16 @@ export const STAFF_QUALIFICATIONS_PSO_PART_VI: StaffQualificationEntry[] = [
     qualificationMandatory: false,
     administrationMandatory: true,
     qualificationRecommendedUnder9: false,
-    qualificationRecommended9To18: false,
+    qualificationRecommended9To18: true,
     qualificationRecommendedOver18: true,
     administrationRecommended: true,
-    legalBasisFootnoteRefs: ['art. 17 ust. 6 i ust. 6a ustawy o chorobach zakaźnych', 'przypis 5 części VI PSO'],
-    legalConditionsDescription: 'Podaje szczepionki noworodkom (BCG, WZW B w 1. dobie) oraz szczepienia zalecane po kursie. Kwalifikację może przeprowadzać wyłącznie u osób dorosłych (>18 r.ż.) do szczepień zalecanych po odbyciu przeszkolenia.'
+    legalBasisFootnoteRefs: [
+      'Część VI PSO 2027 (str. 45)',
+      'Przypis * (Rozp. MZ z 27.09.2023 r.)',
+      'Przypis ** (art. 19 ustawy z 5.12.2008 r.)'
+    ],
+    legalConditionsDescription:
+      'Wg tabeli Części VI PSO (str. 45): w szczepieniach obowiązkowych kwalifikacja „–”, podanie „Tak”; w szczepieniach zalecanych kwalifikacja „–” dla <9 lat, „Tak” dla 9–18 lat oraz >18 lat, podanie „Tak” (warunki ustawowe określają Rozp. MZ z 27.09.2023 r. i art. 19 ustawy).'
   },
   {
     professionId: 'farmaceuta',
@@ -4306,8 +4330,12 @@ export const STAFF_QUALIFICATIONS_PSO_PART_VI: StaffQualificationEntry[] = [
     qualificationRecommended9To18: false,
     qualificationRecommendedOver18: true,
     administrationRecommended: true,
-    legalBasisFootnoteRefs: ['art. 17 ust. 6a i art. 19 ust. 5a ustawy o chorobach zakaźnych', 'ustawa o zawodzie farmaceuty', 'przypis 6 części VI PSO'],
-    legalConditionsDescription: 'Wykonuje badanie kwalifikacyjne i podaje szczepionki WYŁĄCZNIE w aptekach ogólnodostępnych do szczepień zalecanych u osób dorosłych (>18 r.ż.) po ukończeniu szkolenia teoretycznego i praktycznego.'
+    legalBasisFootnoteRefs: [
+      'Część VI PSO 2027 (str. 45)',
+      'Przypis ** (art. 19 ustawy z 5.12.2008 r.)'
+    ],
+    legalConditionsDescription:
+      'Wg tabeli Części VI PSO (str. 45): „–” dla szczepień obowiązkowych i kwalifikacji zalecanych <9 oraz 9–18 lat; „Tak” dla kwalifikacji zalecanych >18 lat oraz podania szczepionki zalecanej (szczegóły w odrębnych przepisach ustawowych).'
   },
   {
     professionId: 'ratownik',
@@ -4318,8 +4346,13 @@ export const STAFF_QUALIFICATIONS_PSO_PART_VI: StaffQualificationEntry[] = [
     qualificationRecommended9To18: false,
     qualificationRecommendedOver18: true,
     administrationRecommended: true,
-    legalBasisFootnoteRefs: ['art. 17 ust. 6 i ust. 6a ustawy o chorobach zakaźnych', 'ustawa o PRM', 'przypis 7 części VI PSO'],
-    legalConditionsDescription: 'Podaje szczepienia na zlecenie lekarskie. Kwalifikację może przeprowadzać wyłącznie do szczepień zalecanych u osób dorosłych (>18 r.ż.) po ukończeniu wymaganego kursu kwalifikacyjnego.'
+    legalBasisFootnoteRefs: [
+      'Część VI PSO 2027 (str. 45)',
+      'Przypis * (Rozp. MZ z 27.09.2023 r.)',
+      'Przypis ** (art. 19 ustawy z 5.12.2008 r.)'
+    ],
+    legalConditionsDescription:
+      'Wg tabeli Części VI PSO (str. 45): „–” dla kwalifikacji obowiązkowej i zalecanych <18 lat; „Tak” dla podania szczepień obowiązkowych, kwalifikacji zalecanych >18 lat oraz podania zalecanych (po spełnieniu wymogów z odrębnych przepisów).'
   },
   {
     professionId: 'fizjoterapeuta',
@@ -4330,8 +4363,12 @@ export const STAFF_QUALIFICATIONS_PSO_PART_VI: StaffQualificationEntry[] = [
     qualificationRecommended9To18: false,
     qualificationRecommendedOver18: true,
     administrationRecommended: true,
-    legalBasisFootnoteRefs: ['art. 17 ust. 6a ustawy o chorobach zakaźnych', 'przypis 8 części VI PSO'],
-    legalConditionsDescription: 'Uprawniony wyłącznie do badania kwalifikacyjnego i podawania szczepień zalecanych u osób dorosłych (>18 r.ż.) po ukończeniu dedykowanego szkolenia z zakresu badania kwalifikacyjnego i techniki iniekcji.'
+    legalBasisFootnoteRefs: [
+      'Część VI PSO 2027 (str. 45)',
+      'Przypis ** (art. 19 ustawy z 5.12.2008 r.)'
+    ],
+    legalConditionsDescription:
+      'Wg tabeli Części VI PSO (str. 45): „–” dla szczepień obowiązkowych oraz kwalifikacji zalecanych <18 lat; „Tak” dla kwalifikacji zalecanych >18 lat oraz podania zalecanych (po ukończeniu wymaganego przeszkolenia wg art. 19 ustawy).'
   },
   {
     professionId: 'diagnosta',
@@ -4342,8 +4379,12 @@ export const STAFF_QUALIFICATIONS_PSO_PART_VI: StaffQualificationEntry[] = [
     qualificationRecommended9To18: false,
     qualificationRecommendedOver18: true,
     administrationRecommended: true,
-    legalBasisFootnoteRefs: ['art. 17 ust. 6a ustawy o chorobach zakaźnych', 'przypis 9 części VI PSO'],
-    legalConditionsDescription: 'Uprawniony wyłącznie do badania kwalifikacyjnego i wykonywania szczepień zalecanych u osób dorosłych (>18 r.ż.) po ukończeniu szkolenia uprawniającego.'
+    legalBasisFootnoteRefs: [
+      'Część VI PSO 2027 (str. 45)',
+      'Przypis ** (art. 19 ustawy z 5.12.2008 r.)'
+    ],
+    legalConditionsDescription:
+      'Wg tabeli Części VI PSO (str. 45): „–” dla szczepień obowiązkowych oraz kwalifikacji zalecanych <18 lat; „Tak” dla kwalifikacji zalecanych >18 lat oraz podania zalecanych (po spełnieniu wymagań z art. 19 ustawy).'
   },
   {
     professionId: 'higienistka',
@@ -4354,8 +4395,13 @@ export const STAFF_QUALIFICATIONS_PSO_PART_VI: StaffQualificationEntry[] = [
     qualificationRecommended9To18: false,
     qualificationRecommendedOver18: false,
     administrationRecommended: true,
-    legalBasisFootnoteRefs: ['ustawa o opiece zdrowotnej nad uczniami', 'art. 17 ust. 6 ustawy o chorobach zakaźnych', 'przypis 10 części VI PSO'],
-    legalConditionsDescription: 'Wykonuje szczepienia u uczniów w środowisku szkolnym (np. program HPV) na pisemne zlecenie lekarskie, o ile posiada uprawnienia pielęgniarskie i ukończony kurs szczepień. Nie przeprowadza badań kwalifikacyjnych.'
+    legalBasisFootnoteRefs: [
+      'Część VI PSO 2027 (str. 45)',
+      'Przypis * (Rozp. MZ z 27.09.2023 r.)',
+      'Przypis ** (art. 19 ustawy z 5.12.2008 r.)'
+    ],
+    legalConditionsDescription:
+      'Wg tabeli Części VI PSO (str. 45): „–” dla wszystkich kolumn kwalifikacji; „Tak” dla podania szczepień obowiązkowych oraz podania szczepień zalecanych (warunki ustawowe z odrębnych aktów prawnych).'
   },
   {
     professionId: 'dentysta',
@@ -4366,87 +4412,181 @@ export const STAFF_QUALIFICATIONS_PSO_PART_VI: StaffQualificationEntry[] = [
     qualificationRecommended9To18: false,
     qualificationRecommendedOver18: true,
     administrationRecommended: true,
-    legalBasisFootnoteRefs: ['art. 17 ust. 6 i 6a ustawy o chorobach zakaźnych', 'przypis 11 części VI PSO'],
-    legalConditionsDescription: 'Uprawniony do badania kwalifikacyjnego i wykonywania szczepień zalecanych u osób dorosłych (>18 r.ż.) po ukończeniu odpowiedniego przeszkolenia.'
+    legalBasisFootnoteRefs: [
+      'Część VI PSO 2027 (str. 45)',
+      'Przypis ** (art. 19 ustawy z 5.12.2008 r.)'
+    ],
+    legalConditionsDescription:
+      'Wg tabeli Części VI PSO (str. 45): „–” dla szczepień obowiązkowych oraz kwalifikacji zalecanych <18 lat; „Tak” dla kwalifikacji zalecanych >18 lat oraz podania zalecanych (szczegóły wg art. 19 ustawy).'
   }
 ];
 
 /**
- * 7 ogólnych zasad przeprowadzania i organizacji szczepień wg Części IV PSO 2027 (str. 43–44 akt.pdf).
+ * Dosłowne przypisy pod tabelą Części VI PSO 2027 (str. 45 akt.pdf).
+ */
+export const PSO_PART_VI_OFFICIAL_FOOTNOTES: PsoPartVITableFootnote[] = [
+  {
+    marker: '*',
+    text: 'Kwalifikacje osób przeprowadzających obowiązkowe szczepienia ochronne zostały określone w rozporządzeniu Ministra Zdrowia z dnia 27 września 2023 r. w sprawie obowiązkowych szczepień ochronnych, wydanym na podstawie art. 17 ust. 10 pkt 3 ustawy z dnia 5 grudnia 2008 r. o zapobieganiu oraz zwalczaniu zakażeń i chorób zakaźnych u ludzi (Dz. U. z 2025 r. poz. 1675 oraz z 2026 r. poz. 26 i 791).',
+    sourcePage: 45
+  },
+  {
+    marker: '**',
+    text: 'Kwalifikacje osób przeprowadzających zalecane szczepienia ochronne zostały określone w art. 19 ustawy z dnia 5 grudnia 2008 r. o zapobieganiu oraz zwalczaniu zakażeń i chorób zakaźnych u ludzi.',
+    sourcePage: 45
+  }
+];
+
+/**
+ * Preambuła Części IV PSO 2027 (str. 43 akt.pdf) — finansowanie szczepionki zakupionej przez MZ vs wybór innej.
+ */
+export const PSO_PART_IV_PREAMBLE = {
+  psoSection: 'Część IV — Wprowadzenie PSO 2027',
+  psoPdfPage: 43,
+  officialText:
+    'Obowiązkowe szczepienia ochronne są realizowane szczepionkami, które zostały zakupione przez ministra właściwego do spraw zdrowia z przeznaczeniem dla realizacji Programu Szczepień Ochronnych w populacji ogólnej lub w określonych grupach ryzyka klinicznego i epidemiologicznego. Obowiązkowe szczepienie ochronne może być wykonane szczepionką inną niż szczepionka zakupiona przez ministra właściwego do spraw zdrowia. W takim przypadku osoba szczepiona ponosi koszt zakupu szczepionki. Przy przeprowadzaniu szczepień ochronnych należy stosować następujące zasady:'
+} as const;
+
+/**
+ * 7 literalnych ogólnych zasad przeprowadzania i organizacji szczepień wg Części IV PSO 2027 (str. 43 akt.pdf).
+ * Nie zawiera dopisanych norm z ustaw/rozporządzeń odrębnych (które wydzielono do SEPARATE_LEGAL_ACT_RULES_NON_PSO).
  */
 export const PSO_GENERAL_PRINCIPLES_PART_IV: PsoGeneralPrincipleItem[] = [
   {
     pointNumber: 1,
-    title: 'Jednoczesne podawanie szczepionek',
-    officialRuleText: 'Zgodnie z zasadami wakcynologii, różne szczepionki mogą być podawane podczas tej samej wizyty szczepiennej, pod warunkiem podania ich w oddzielne miejsca anatomiczne przy użyciu osobnych strzykawek i igieł.',
-    clinicalApplication: 'Decyzję o jednoczesnym podaniu podejmuje każdorazowo lekarz kwalifikujący po uzyskaniu zgody przedstawiciela ustawowego pacjenta (rodziców). Wstrzyknięcia wykonuje się w różne kończyny lub z zachowaniem co najmniej 2,5–3 cm odstępu.',
-    specificExceptions: ['Należy używać osobnych sterylnych strzykawek i igieł dla każdego preparatu', 'Wymagana zgoda rodziców i kwalifikacja lekarska'],
+    title: 'Jednoczesne wykonywanie szczepień w trakcie jednej wizyty',
+    officialRuleText:
+      'O ile Charakterystyka Produktu Leczniczego nie wskazuje inaczej, szczepienia przewidziane zgodnie z kalendarzem szczepień do realizacji w określonym miesiącu lub roku życia dziecka mogą być wykonywane jednocześnie w trakcie jednej wizyty szczepiennej – szczepionki należy podawać w różne miejsca ciała z użyciem oddzielnych strzykawek i igieł zgodnie z Charakterystyką Produktu Leczniczego. Decyzję o liczbie i rodzaju szczepień wykonywanych w czasie jednej wizyty szczepiennej podejmuje lekarz za zgodą rodziców lub opiekunów prawnych.',
+    clinicalApplication:
+      'Szczepienia przewidziane w tym samym okresie wieku można łączyć na jednej wizycie, pod warunkiem braku przeciwwskazań w ChPL, zgody rodziców/opiekunów prawnych, kwalifikacji lekarskiej oraz podania w różne miejsca ciała osobnymi strzykawkami i igłami.',
+    specificExceptions: [
+      'O ile Charakterystyka Produktu Leczniczego nie wskazuje inaczej (konieczne sprawdzenie ChPL poszczególnych preparatów)',
+      'Oddzielne strzykawki, igły oraz różne miejsca ciała; decyzja lekarza za zgodą rodziców lub opiekunów prawnych'
+    ],
     psoSection: 'Część IV, punkt 1 PSO 2027',
     psoPdfPage: 43
   },
   {
     pointNumber: 2,
-    title: 'Odstępy między szczepionkami niepodanymi jednocześnie',
-    officialRuleText: 'Pomiędzy dwiema różnymi szczepionkami żywymi niepodanymi jednocześnie należy zachować odstęp co najmniej 4 tygodni (28 dni). Szczepionki inaktywowane mogą być podawane w dowolnym odstępie od innych szczepionek (żywych lub inaktywowanych).',
-    clinicalApplication: 'Od zasady 4 tygodni między szczepionkami żywymi obowiązuje jeden fundamentalny wyjątek dotyczący rotawirusów.',
+    title: 'Odstęp między dwiema różnymi szczepionkami zawierającymi żywe drobnoustroje',
+    officialRuleText:
+      'Odstęp czasu między dwiema różnymi szczepionkami zawierającymi żywe drobnoustroje powinien być nie krótszy niż 4 tygodnie o ile nie są podawane na jednej wizycie (nie dotyczy szczepionek przeciw ROTAWIRUSOM).',
+    clinicalApplication:
+      'Jeżeli dwie różne szczepionki żywe (np. BCG i MMR lub MMR i VZV) nie zostaną podane na jednej wizycie, odstęp między nimi wynosi minimum 4 tygodnie, z wyraźnym wyłączeniem szczepionek przeciw rotawirusom.',
     specificExceptions: [
-      'WYJĄTEK DLA ROTAWIRUSÓW: Doustna żywa szczepionka przeciwko rotawirusom (RV) może być podana w DOWOLNYM odstępie czasowym przed, po lub jednocześnie z jakąkolwiek inną szczepionką żywą (np. BCG, MMR, VZV) lub inaktywowaną.',
-      'Odstęp między dwiema różnymi szczepionkami inaktywowanymi („zabitymi”): DOWOLNY.',
-      'Odstęp między szczepionką inaktywowaną a żywą: DOWOLNY.'
+      'WYJĄTEK DLA ROTAWIRUSÓW (Część IV pkt 2, str. 43): reguła co najmniej 4 tygodni nie dotyczy szczepionek przeciw ROTAWIRUSOM — mogą być podane w dowolnym odstępie od innych szczepionek żywych (zobacz także Część III.D pkt 6, str. 38 dla relacji z BCG).'
     ],
     psoSection: 'Część IV, punkt 2 PSO 2027',
     psoPdfPage: 43
   },
   {
     pointNumber: 3,
-    title: 'Zasady odstępów między dawkami tej samej szczepionki',
-    officialRuleText: 'Minimalne odstępy między kolejnymi dawkami tej samej szczepionki określone w ChPL i PSO nie mogą być skracane. Podanie dawki przed upływem minimalnego odstępu uznaje się za dawkę nieważną klinicznie, wymagającą powtórzenia.',
-    clinicalApplication: 'Wydłużenie odstępu między dawkami (np. z powodu infekcji, odroczenia) nie zmniejsza ostatecznej odpowiedzi odpornościowej i NIE wymaga rozpoczynania cyklu szczepienia od początku. Podaje się jedynie brakujące dawki.',
-    specificExceptions: ['Podanie dawki przed minimalnym odstępem wymaga powtórzenia po upływie zalecanego okresu karencji'],
+    title: 'Odstęp między różnymi szczepionkami niezawierającymi żywych drobnoustrojów',
+    officialRuleText:
+      'Odstęp czasu między różnymi szczepionkami nie zawierającymi żywych drobnoustrojów jest dowolny, z zachowaniem niezbędnego odstępu dla uniknięcia nałożenia się ewentualnego niepożądanego odczynu poszczepiennego (NOP) na kolejne szczepienie.',
+    clinicalApplication:
+      'Różne szczepionki inaktywowane („nieżywe”) mogą być podawane w dowolnym odstępie lub jednoczasowo, z uwzględnieniem uniknięcia nakładania się ewentualnych NOP.',
+    specificExceptions: [
+      'Zachować odstęp niezbędny dla uniknięcia nałożenia się ewentualnego NOP na kolejne szczepienie'
+    ],
     psoSection: 'Część IV, punkt 3 PSO 2027',
     psoPdfPage: 43
   },
   {
     pointNumber: 4,
-    title: 'Interpretacja wieku i ukończenia roku życia',
-    officialRuleText: 'Wiek podania określony w PSO jako „w x. roku życia” oznacza okres od dnia x-tych urodzin do dnia poprzedzającego kolejne urodziny. „Po ukończeniu x. tygodnia/miesiąca życia” oznacza okres po upływie pełnych x tygodni/miesięcy.',
-    clinicalApplication: 'Przykładowo: „w 6. roku życia” oznacza okres od ukończenia 5 lat do dnia poprzedzającego 6. urodziny. „Po ukończeniu 6. tygodnia życia” oznacza 43. dzień życia dziecka i później.',
-    specificExceptions: ['Wiek maksymalny podania szczepionki rotawirusowej (24. lub 32. tydzień życia) jest rygorystycznie określony w ChPL preparatu'],
+    title: 'Odstęp między szczepionką żywą a szczepionką niezawierającą żywych drobnoustrojów',
+    officialRuleText:
+      'Odstęp czasu między szczepionką zawierającą żywe drobnoustroje, a szczepionką niezawierającą żywych drobnoustrojów jest dowolny, z zachowaniem niezbędnego odstępu dla uniknięcia nałożenia się ewentualnego niepożądanego odczynu poszczepiennego (NOP) na kolejne szczepienie.',
+    clinicalApplication:
+      'Pomiędzy preparatem żywym a inaktywowanym nie obowiązuje minimalny odstęp 4-tygodniowy — mogą być podane w dowolnym odstępie z uwzględnieniem uniknięcia nałożenia się NOP.',
+    specificExceptions: [
+      'Zachować niezbędny odstęp dla uniknięcia nałożenia się ewentualnego NOP na kolejne szczepienie'
+    ],
     psoSection: 'Część IV, punkt 4 PSO 2027',
     psoPdfPage: 43
   },
   {
     pointNumber: 5,
-    title: 'Ważność badania kwalifikacyjnego i odroczenie szczepienia',
-    officialRuleText: 'Badanie kwalifikacyjne zachowuje ważność przez 24 godziny od momentu jego przeprowadzenia. W przypadku wystąpienia wskazań do odroczenia szczepienia, lekarz odnotowuje ten fakt w dokumentacji medycznej wraz z określeniem terminu kolejnej wizyty.',
-    clinicalApplication: 'Jeżeli szczepienie nie zostanie wykonane w ciągu 24 h od badania lekarskiego, konieczne jest powtórzenie pełnego badania kwalifikacyjnego.',
-    specificExceptions: ['Ważność badania wynosi ściśle 24 godziny'],
+    title: 'Odstęp między kolejnymi dawkami tej samej szczepionki',
+    officialRuleText:
+      'Odstęp czasu między kolejnymi dawkami tej samej szczepionki powinien być zgodny z Charakterystyką Produktu Leczniczego dotyczącą schematu szczepienia; może on ulec wydłużeniu, ale nie powinien być skracany.',
+    clinicalApplication:
+      'Nie wolno skracać minimalnych odstępów pomiędzy kolejnymi dawkami określonymi w ChPL; wydłużenie odstępu jest dopuszczalne bez utraty ważności wcześniejszych dawek (szczegóły uzupełniania schematu: Część V pkt 10, str. 44).',
+    specificExceptions: [
+      'Odstęp może ulec wydłużeniu, lecz nie powinien być skracany względem schematu ChPL'
+    ],
     psoSection: 'Część IV, punkt 5 PSO 2027',
     psoPdfPage: 43
   },
   {
     pointNumber: 6,
-    title: 'Zgłaszanie Niepożądanych Odczynów Poszczepiennych (NOP)',
-    officialRuleText: 'Lekarz lub felczer, który podejrzewa lub rozpoznaje wystąpienie niepożądanego odczynu poszczepiennego (NOP), ma ustawowy obowiązek zgłoszenia tego faktu do Państwowej Inspekcji Sanitarnej w ciągu 24 godzin od powzięcia podejrzenia.',
-    clinicalApplication: 'Zgłoszenie NOP następuje drogą elektroniczną za pośrednictwem dedykowanego formularza w systemie teleinformatycznym (gabinet.gov.pl / P1).',
-    specificExceptions: ['Termin zgłoszenia: 24 godziny od powzięcia podejrzenia NOP'],
+    title: 'Interpretacja określenia wieku dziecka w Części I.A PSO',
+    officialRuleText:
+      'Określony w części I. A PSO wiek dziecka należy rozumieć jak w przykładzie: dziecko, które ukończyło 5 lat jest w 6. roku życia.',
+    clinicalApplication:
+      'Sformułowanie „w N. roku życia” oznacza okres po ukończeniu (N−1). roku życia do dnia ukończenia N. roku życia (np. po 5. urodzinach dziecko jest w 6. roku życia).',
+    specificExceptions: [],
     psoSection: 'Część IV, punkt 6 PSO 2027',
-    psoPdfPage: 44
+    psoPdfPage: 43
   },
   {
     pointNumber: 7,
-    title: 'Dokumentacja szczepień w Elektronicznej Karcie Szczepień (P1)',
-    officialRuleText: 'Każde wykonane szczepienie ochronne oraz każde badanie kwalifikacyjne (zarówno dopuszczające, jak i odraczające) musi zostać niezwłocznie odnotowane w Elektronicznej Karcie Szczepień w systemie P1.',
-    clinicalApplication: 'Obowiązek dokumentowania w e-Karcie Szczepień obejmuje numer partii, datę ważności, datę i godzinę podania, drogę i miejsce iniekcji oraz podpis osoby wykonującej szczepienie.',
-    specificExceptions: ['Brak dostępu do systemu P1 nakłada obowiązek sporządzenia dokumentacji papierowej i późniejszego niezwłocznego uzupełnienia w e-Karcie'],
+    title: 'Dokumentowanie szczepień zalecanych i badania kwalifikacyjnego w e-Karcie Szczepień',
+    officialRuleText:
+      'Od dnia 1 października 2023 r. wszystkie szczepienia zalecane niezwłocznie po ich wykonaniu są dokumentowane w elektronicznej Karcie Szczepień (e-Karcie Szczepień). Po przeprowadzeniu badania kwalifikacyjnego osoba, która je przeprowadziła, dokonuje wpisu ze wskazaniem daty i godziny przeprowadzenia badania. Do dokonywania wpisów w e-Karcie Szczepień lekarz może upoważnić asystenta medycznego (pracownika medycznego, inną osobę wykonującą zawód medyczny). Szczepienie zalecane, udokumentowane w papierowej dokumentacji medycznej pacjenta, może być wpisane jako szczepienie historyczne w e-Karcie Szczepień.',
+    clinicalApplication:
+      'Wpis w e-Karcie Szczepień wymaga daty i godziny badania kwalifikacyjnego oraz niezwłocznego odnotowania wykonanych szczepień zalecanych; lekarz może upoważnić inną osobę wykonującą zawód medyczny do dokonywania wpisów.',
+    specificExceptions: [
+      'Szczepienia zalecane z dokumentacji papierowej mogą zostać wprowadzone do e-Karty Szczepień jako szczepienia historyczne'
+    ],
     psoSection: 'Część IV, punkt 7 PSO 2027',
-    psoPdfPage: 44
+    psoPdfPage: 43
+  }
+];
+
+/**
+ * Zasady wynikające z odrębnych aktów prawnych oraz dobra praktyka punktu szczepień —
+ * celowo oddzielone od 7 literalnych punktów Części IV PSO 2027, aby nie przypisywać im treści nieobecnej w komunikacie GIS.
+ */
+export const SEPARATE_LEGAL_ACT_RULES_NON_PSO: SeparateLegalOrPracticeRule[] = [
+  {
+    id: 'non-pso-qualification-24h',
+    category: 'separate_legal_act',
+    title: 'Ważność lekarskiego badania kwalifikacyjnego (24 godziny)',
+    summary:
+      'Po przeprowadzeniu lekarskiego badania kwalifikacyjnego szczepienie obowiązkowe przeprowadza się nie później niż w ciągu 24 godzin od wskazanej na zaświadczeniu daty i godziny badania.',
+    exactLegalBasis:
+      'Przepisy odrębne poza PSO: Ustawa z dnia 5 grudnia 2008 r. o zapobieganiu oraz zwalczaniu zakażeń i chorób zakaźnych u ludzi (art. 17) oraz rozporządzenie Ministra Zdrowia z dnia 27 września 2023 r. w sprawie obowiązkowych szczepień ochronnych.',
+    whySeparatedFromPsoPartIV:
+      'Część IV PSO 2027 (str. 43) nakazuje wpis daty i godziny badania w e-Karcie Szczepień (pkt 7), lecz sama norma 24-godzinnego terminu ważności badania kwalifikacyjnego nie stanowi jednego z punktów 1–7 Części IV PSO.'
+  },
+  {
+    id: 'non-pso-nop-reporting-24h',
+    category: 'separate_legal_act',
+    title: 'Obowiązek zgłoszenia Niepożądanego Odczynu Poszczepiennego (NOP) w ciągu 24 godzin',
+    summary:
+      'Lekarz lub felczer, który podejrzewa lub rozpoznaje wystąpienie niepożądanego odczynu poszczepiennego, ma obowiązek zgłoszenia tego faktu do właściwego państwowego powiatowego inspektora sanitarnego w ciągu 24 godzin od powzięcia podejrzenia.',
+    exactLegalBasis:
+      'Przepisy odrębne poza PSO: Art. 21 ustawy z dnia 5 grudnia 2008 r. o zapobieganiu oraz zwalczaniu zakażeń i chorób zakaźnych u ludzi.',
+    whySeparatedFromPsoPartIV:
+      'Regulacja zgłaszania NOP w terminie 24 godzin jest normą ustawową, natomiast Część IV PSO 2027 (pkt 3–4) wspomina NOP jedynie w kontekście unikania nakładania się odczynów przy kolejnych szczepieniach.'
+  },
+  {
+    id: 'practice-limb-injection-distance',
+    category: 'clinical_good_practice',
+    title: 'Odległość między dwoma wkłuciami w tę samą kończynę i organizacja dokumentacji awaryjnej',
+    summary:
+      'Przy konieczności podania dwóch preparatów w tę samą kończynę zaleca się zachowanie odstępu anatomicznego co najmniej 2,5 cm zgodnie z wytycznymi techniki iniekcji; przy braku łączności z systemem P1 stosuje się lokalną procedurę ciągłości dokumentacji.',
+    exactLegalBasis:
+      'Dobra praktyka kliniczna i procedury organizacyjne podmiotu leczniczego (nie stanowi literalnej treści komunikatu GIS Części IV).',
+    whySeparatedFromPsoPartIV:
+      'Część IV pkt 1 PSO 2027 posługuje się sformułowaniem „różne miejsca ciała” i nie określa odległości w centymetrach ani lokalnych procedur awaryjnych.'
   }
 ];
 
 /**
  * 12 oficjalnych numerowanych punktów szczepień wyrównawczych z Części V PSO 2027
- * (Dziennik Urzędowy Ministra Zdrowia 2026 poz. 77, str. 44–45 akt.pdf).
+ * (Dziennik Urzędowy Ministra Zdrowia 2026 poz. 77, str. 44 akt.pdf).
  */
 export const PSO_CATCH_UP_12_POINTS_PART_V: CatchUpPrincipleItem[] = [
   {

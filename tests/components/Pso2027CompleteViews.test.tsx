@@ -1,0 +1,82 @@
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { ChildVaccinationsView } from '../../src/components/childVaccinations/ChildVaccinationsView';
+import { OperationalModuleView } from '../../src/components/modules/OperationalModuleView';
+import { APP_MODULES } from '../../src/data/navigationData';
+
+const getMod = (id: string) => {
+  const found = APP_MODULES.find((m) => m.id === id);
+  if (!found) throw new Error(`Brak modułu ${id}`);
+  return found;
+};
+
+describe('MASTER 15 — Integracja UI 7 części PSO 2027 w widokach VaxNurse', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('ChildVaccinationsView renderuje wszystkie nowe zakładki (Część I–VII + Kompletność) i przypisy str. 43/45', async () => {
+    const user = userEvent.setup();
+    render(
+      <ChildVaccinationsView
+        module={getMod('child-vaccinations')}
+        onBackToDashboard={vi.fn()}
+        onNavigateToModule={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('tab', { name: /Część I pełna/i }));
+    expect(
+      screen.getByRole('heading', { name: /I\.D — Wytyczne dotyczące swoistego zapobiegania wściekliźnie/i }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: /^Część II \(/i }));
+    expect(
+      screen.getByRole('heading', { name: /II\.H — Inne formy immunoprofilaktyki: uodpornienie bierne przeciw RSV/i }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: /Część III \(Uzupełniające/i }));
+    expect(
+      screen.getByRole('heading', { name: /III\.A\. Szczepienia dzieci urodzonych przedwcześnie/i }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: /Ogólne zasady i wyjątki \(Część IV\)/i }));
+    expect(screen.getByText(/Przepisy z ustaw i rozporządzeń odrębnych oraz dobra praktyka gabinetowa/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: /Uprawnienia personelu \(Część VI\)/i }));
+    expect(screen.getByText(/Dosłowne przypisy pod tabelą Części VI PSO 2027/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: /Skrócone kalendarze \(Część VII\)/i }));
+    expect(screen.getByText(/Nota audytowa dotycząca tabeli VII\.C/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: /Kompletność i wyszukiwarka PSO/i }));
+    const searchInput = screen.getByLabelText(/Szukaj we wszystkich częściach PSO 2027/i);
+    await user.type(searchInput, 'Półpaścowi');
+    expect(
+      screen.getByRole('heading', { level: 5, name: /\[VII\.C\].*SKRÓCONY KALENDARZ/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('AdultView zachowuje ścisłą izolację populacyjną (renderuje II.B–II.I + VII.C dorosłych bez sekcji II.A i II.H RSV niemowląt)', () => {
+    render(
+      <OperationalModuleView
+        module={getMod('adult-vaccinations')}
+        onBackToDashboard={vi.fn()}
+        onNavigateToModule={vi.fn()}
+      />,
+    );
+
+    const adultIibHeading = screen.getByRole('heading', {
+      level: 2,
+      name: /Część II\.B PSO 2027 — Szczepienia zalecane dorosłym/i,
+    });
+    expect(adultIibHeading).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: /Część VII\.C PSO 2027 — Skrócony kalendarz szczepień dorosłych/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/uodpornienie bierne przeciw RSV/i)).not.toBeInTheDocument();
+    const iibRegion = adultIibHeading.closest('section')!;
+    expect(within(iibRegion).getByText(/Półpaścowi/i)).toBeInTheDocument();
+  });
+});

@@ -7,6 +7,9 @@ import {
   STAGE_GROUPS_CONFIG,
   STAFF_QUALIFICATIONS_PSO_PART_VI,
   PSO_GENERAL_PRINCIPLES_PART_IV,
+  PSO_PART_IV_PREAMBLE,
+  PSO_PART_VI_OFFICIAL_FOOTNOTES,
+  SEPARATE_LEGAL_ACT_RULES_NON_PSO,
   CATCH_UP_IMMUNIZATION_PART_V,
   PSO_CATCH_UP_12_POINTS_PART_V,
   COMBINED_VACCINES_VARIANTS_PART_III_M,
@@ -152,15 +155,25 @@ assert.equal(lekarz.qualificationRecommended9To18, true, 'Lekarz kwalifikuje do 
 assert.equal(lekarz.qualificationRecommendedOver18, true, 'Lekarz kwalifikuje do zalecanych >18 lat');
 assert.equal(lekarz.administrationRecommended, true, 'Lekarz wykonuje szczepienia zalecane');
 
-// 2. Pielęgniarka – brak kwalifikacji dzieci (<18 r.ż.), uprawnienie do podawania oraz kwalifikacji dorosłych (>18 r.ż.)
+// 2. Pielęgniarka i położna – brak kwalifikacji dzieci <9 r.ż., „Tak” w tabeli PSO 2027 str. 45 dla 9–18 lat oraz >18 lat (po spełnieniu wymogów ustawowych)
 const pielegniarka = STAFF_QUALIFICATIONS_PSO_PART_VI.find(p => p.professionId === 'pielegniarka');
 assert.ok(pielegniarka, 'Pielęgniarka musi być obecna');
-assert.equal(pielegniarka.qualificationMandatory, false, 'Pielęgniarka NIE kwalifikuje do szczepień obowiązkowych');
+assert.equal(pielegniarka.qualificationMandatory, false, 'Pielęgniarka NIE kwalifikuje do szczepień obowiązkowych (– w str. 45)');
 assert.equal(pielegniarka.administrationMandatory, true, 'Pielęgniarka podaje szczepienia obowiązkowe');
 assert.equal(pielegniarka.qualificationRecommendedUnder9, false, 'Pielęgniarka NIE kwalifikuje dzieci <9 lat');
-assert.equal(pielegniarka.qualificationRecommended9To18, false, 'Pielęgniarka NIE kwalifikuje młodzieży 9-18 lat');
-assert.equal(pielegniarka.qualificationRecommendedOver18, true, 'Pielęgniarka kwalifikuje do zalecanych dorosłych >18 lat po kursie');
+assert.equal(pielegniarka.qualificationRecommended9To18, true, 'Pielęgniarka ma „Tak” w tabeli Części VI PSO (str. 45) dla zalecanych 9–18 lat');
+assert.equal(pielegniarka.qualificationRecommendedOver18, true, 'Pielęgniarka kwalifikuje do zalecanych dorosłych >18 lat');
 assert.equal(pielegniarka.administrationRecommended, true, 'Pielęgniarka podaje szczepienia zalecane');
+
+const polozna = STAFF_QUALIFICATIONS_PSO_PART_VI.find(p => p.professionId === 'polozna');
+assert.ok(polozna, 'Położna musi być obecna');
+assert.equal(polozna.qualificationRecommended9To18, true, 'Położna ma „Tak” w tabeli Części VI PSO (str. 45) dla zalecanych 9–18 lat');
+
+const felczer = STAFF_QUALIFICATIONS_PSO_PART_VI.find(p => p.professionId === 'felczer');
+assert.ok(felczer, 'Felczer musi być obecny');
+assert.equal(felczer.qualificationMandatory, false, 'Felczer ma „–” (false) w kolumnie kwalifikacji obowiązkowych w str. 45');
+assert.equal(felczer.qualificationRecommendedUnder9, true, 'Felczer ma „Tak” w kolumnie kwalifikacji zalecanych <9 lat');
+assert.equal(PSO_PART_VI_OFFICIAL_FOOTNOTES.length, 2, 'Część VI PSO (str. 45) ma dokładnie dwa dosłowne przypisy (* i **)');
 
 // 3. Farmaceuta – brak kwalifikacji i szczepień obowiązkowych oraz dzieci, uprawnienia u dorosłych >18 lat
 const farmaceuta = STAFF_QUALIFICATIONS_PSO_PART_VI.find(p => p.professionId === 'farmaceuta');
@@ -187,16 +200,26 @@ console.log('   ✓ SCENARIUSZ 3 ZALICZONY: Tabela uprawnień personelu z Częś
 console.log('Test 4: 7 ogólnych zasad przeprowadzania szczepień i wyjątek dla rotawirusów (Część IV PSO 2027)');
 
 assert.equal(PSO_GENERAL_PRINCIPLES_PART_IV.length, 7, 'Musi być dokładnie 7 punktów zasad ogólnych Części IV');
+assert.ok(PSO_PART_IV_PREAMBLE.officialText.includes('zakupione przez ministra właściwego do spraw zdrowia'), 'Preambuła Części IV str. 43 musi być zachowana');
+for (const pt of PSO_GENERAL_PRINCIPLES_PART_IV) {
+  assert.equal(pt.psoPdfPage, 43, `Punkt ${pt.pointNumber} Części IV znajduje się na str. 43 akt.pdf`);
+}
 
 const point2 = PSO_GENERAL_PRINCIPLES_PART_IV.find(p => p.pointNumber === 2);
 assert.ok(point2, 'Punkt 2 musi istnieć');
-assert.ok(point2.officialRuleText.includes('4 tygodni'), 'Punkt 2 musi zawierać regułę 4 tygodni dla szczepionek żywych');
-assert.ok(point2.specificExceptions.some(ex => ex.includes('ROTAWIRUSÓW')), 'Punkt 2 musi zawierać WYJĄTEK DLA ROTAWIRUSÓW');
-assert.ok(point2.specificExceptions.some(ex => ex.includes('DOWOLNYM odstępie')), 'Wyjątek rotawirusów musi wyraźnie dopuszczać dowolny odstęp');
+assert.ok(point2.officialRuleText.includes('nie krótszy niż 4 tygodnie'), 'Punkt 2 musi zawierać regułę odstępu nie krótszego niż 4 tygodnie');
+assert.ok(
+  point2.specificExceptions.some(ex => ex.includes('ROTAWIRUSOM') && ex.includes('w dowolnym odstępie')),
+  'Punkt 2 musi zawierać dosłowny wyjątek dla rotawirusów z str. 43 akt.pdf'
+);
 
 const point7 = PSO_GENERAL_PRINCIPLES_PART_IV.find(p => p.pointNumber === 7);
 assert.ok(point7, 'Punkt 7 musi istnieć');
-assert.ok(point7.officialRuleText.includes('Karcie Szczepień'), 'Punkt 7 musi precyzować wpis do e-Karty Szczepień w systemie P1');
+assert.ok(point7.officialRuleText.includes('Karcie Szczepień'), 'Punkt 7 musi precyzować wpis do Karcie Szczepień w systemie P1');
+
+assert.equal(SEPARATE_LEGAL_ACT_RULES_NON_PSO.length, 3, 'Odrębne normy ustawowe/praktyczne (24 godzin kwalifikacja, 24 godzin NOP, 2,5 cm) muszą być rozdzielone od Części IV');
+assert.ok(SEPARATE_LEGAL_ACT_RULES_NON_PSO.some(r => r.summary.includes('24 godzin') && r.title.includes('kwalifikacyjnego')));
+assert.ok(SEPARATE_LEGAL_ACT_RULES_NON_PSO.some(r => r.summary.includes('24 godzin') && r.title.includes('NOP')));
 
 console.log('   ✓ SCENARIUSZ 4 ZALICZONY: Wszystkie 7 punktów Części IV zweryfikowane, w tym pełne brzmienie wyjątku dla rotawirusów.\n');
 
