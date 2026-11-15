@@ -9,7 +9,9 @@
 
 ## Wersja produkcyjna online
 
-> Sekcja w trakcie konfiguracji wdrożenia produkcyjnego na platformie Vercel (`main` → automatyczny deploy). Adres URL zostanie uzupełniony po zakończeniu publikacji produkcyjnej.
+Aplikacja jest wdrożona publicznie na platformie Vercel (automatyczne wdrożenia z gałęzi `main` repozytorium GitHub):
+
+- **Adres produkcyjny:** [https://vaxnurse-app.vercel.app](https://vaxnurse-app.vercel.app)
 
 ---
 
