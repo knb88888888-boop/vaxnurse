@@ -4781,9 +4781,9 @@ export const COMBINED_VACCINES_VARIANTS_PART_III_M: CombinedVaccineVariant[] = [
     psoPartAndSection: 'Część I.A.1 oraz Część III.M PSO 2027',
     psoPdfPage: 9,
     antigenComposition: 'Błonica, tężec, krztusiec (bezkomórkowy), poliomyelitis (inaktywowany), Haemophilus influenzae typ b',
-    hbvAdministrationRule: 'Wymaga ODDZIELNEGO podania monowalentnej szczepionki przeciw WZW B w 1. dobie, 2. miesiącu i 7. miesiącu życia.',
-    scheduleDetails: 'Cykl pierwotny: 3 dawki 5w1 (w 2., 4., 5.–6. m.ż.) + dawka uzupełniająca (16.–18. m.ż.). Osobne iniekcje WZW B.',
-    interchangeabilityWarning: 'Szczepionka 5w1 NIE zastępuje komponentu WZW B. Nie można pominąć dawek HBV w 2. i 7. miesiącu życia bez weryfikacji schematu!',
+    hbvAdministrationRule: 'Wymaga ODDZIELNEGO podania monowalentnej szczepionki przeciw WZW B w 1. dobie, 2. miesiącu i 6.–7. miesiącu życia (od ukończenia 5. m.ż.).',
+    scheduleDetails: 'Cykl pierwotny: 3 dawki 5w1 (w 2., 4., 6.–7. m.ż., od ukończenia 5. m.ż.) + dawka uzupełniająca (16.–18. m.ż.). Osobne iniekcje WZW B.',
+    interchangeabilityWarning: 'Szczepionka 5w1 NIE zastępuje komponentu WZW B. Nie można pominąć dawek HBV w 2. i 6.–7. miesiącu życia bez weryfikacji schematu!',
     chplCrossReference: 'ChPL Pentaxim pkt 4.2 / ChPL Infanrix-IPV+Hib pkt 4.2'
   },
   {

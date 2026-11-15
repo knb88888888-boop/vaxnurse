@@ -762,9 +762,9 @@ test('A2: Zbudowane chunki Vite dzielą ciężki moduł PSO poza główny bundle
 test('A3: Pliki kliniczne mają nienaruszoną sumę SHA-256 i spójne dane', () => {
   const expectedHashes = {
     'src/data/childVaccinesData.ts':
-      '49961908E24C9E0CF73B890BAEB6ADCFA763BDB20328B086852714ED67F77F12',
+      '21EC030466A1A9E4C16172A37B4D4DADBDF5F14ED151C1DCFD0BF03CF4A6F548',
     'src/data/pso2027CompleteData.ts':
-      '33DEB1E2760BCE83455843CAB7C329D3D5BC44E963AA19221E4A6C509B85D8F0',
+      'E8EED2DAF1C5BE324C4B93DE5F38332FB37B952962F845AF36A3CBFBA23206FC',
     'src/data/vaccinesCatalog.ts':
       '2031042099EA24CC5FEEE2A6F11DA00109358FCDDC0ECC965349B42A44457BCB',
     'src/data/chplStage1AuditSheets.ts':

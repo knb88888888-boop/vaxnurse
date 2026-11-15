@@ -49,6 +49,23 @@ import {
   getPso2027CompletenessSummary,
   searchPso2027Records,
 } from '../../data/pso2027CompleteData';
+import { CHILD_VACCINES_CATALOG } from '../../data/childVaccinesData';
+import { VACCINES_CATALOG } from '../../data/vaccinesCatalog';
+import { auditChildVaccinesCatalogSummary } from '../../utils/childVaccineAudit';
+import type { ChildVaccineItem } from '../../types/childVaccines';
+
+const CHILD_PROCEDURE_MAP = new Map<string, ChildVaccineItem>(
+  CHILD_VACCINES_CATALOG.map((item) => [item.id, item]),
+);
+
+const CATALOG_CHPL_SUMMARY = auditChildVaccinesCatalogSummary(CHILD_VACCINES_CATALOG, VACCINES_CATALOG);
+
+const CHPL_SHORT_STATUS_LABELS: Record<ChildVaccineItem['chplVerificationStatus'], string> = {
+  verified_chpl: 'ChPL: zweryfikowane',
+  requires_source_clarification: 'ChPL: wymaga wyjaśnienia',
+  pending_chpl_verification: 'ChPL: oczekuje na audyt',
+  no_trade_product_linked: 'ChPL: brak powiązanego preparatu',
+};
 
 const STATUS_LABELS: Record<PsoRecordVerificationStatus, string> = {
   verified: 'Zweryfikowano w akt.pdf',
@@ -156,22 +173,40 @@ const RelatedProcedureChips: React.FC<{
   return (
     <div className="pso-related-records-row">
       <span className="pso-related-label">Powiązane rekordy katalogu:</span>
-      {recordIds.map((id) =>
-        onOpenCatalogRecord ? (
+      {recordIds.map((id) => {
+        const proc = CHILD_PROCEDURE_MAP.get(id);
+        const chplTag = proc ? CHPL_SHORT_STATUS_LABELS[proc.chplVerificationStatus] : 'ChPL: oczekuje na audyt';
+        const isWarn = proc?.chplVerificationStatus === 'requires_source_clarification';
+        const chipTitle = proc
+          ? `Rekord katalogu procedur ${id} (${proc.disease}) — PSO: zweryfikowany; Audyt ChPL: ${chplTag}`
+          : `Rekord katalogu procedur ${id}`;
+        const chipClass = `pso-related-chip${onOpenCatalogRecord ? ' pso-related-chip--interactive' : ''}${
+          isWarn ? ' pso-related-chip--chpl-warn' : ''
+        }`;
+
+        return onOpenCatalogRecord ? (
           <button
             key={id}
             type="button"
-            className="pso-related-chip pso-related-chip--interactive"
+            className={chipClass}
+            title={chipTitle}
             onClick={() => onOpenCatalogRecord(id)}
           >
-            {id}
+            <span>{id}</span>
+            <span className={`pso-related-chpl-tag${isWarn ? ' pso-related-chpl-tag--warn' : ''}`}>
+              {chplTag}
+            </span>
           </button>
         ) : (
-          <span key={id} className="pso-related-chip">
-            {id}
+          <span key={id} className={chipClass} title={chipTitle}>
+            <span>{id}</span>
+            <span className={`pso-related-chpl-tag${isWarn ? ' pso-related-chpl-tag--warn' : ''}`}>
+              {chplTag}
+            </span>
           </span>
-        ),
-      )}
+        );
+      })}
+      <span className="pso-related-chpl-note">(status PSO ≠ weryfikacja ChPL preparatu)</span>
     </div>
   );
 };
@@ -203,7 +238,7 @@ export const PsoPartISectionsView: React.FC<{
             [
               ['all', 'Wszystkie sekcje I.A–I.E'],
               ['IA', 'I.A / I.A.1 / I.A.2 (Populacja ogólna i 5w1/6w1)'],
-              ['IB', 'I.B (Grupy podwyższonego ryzyka, str. 12–15)'],
+              ['IB', 'I.B (Grupy podwyższonego ryzyka, str. 13–14)'],
               ['IC', 'I.C (Poekspozycyjne, str. 15)'],
               ['ID', 'I.D (Wścieklizna — zasady i matryca, str. 16–17)'],
               ['IE', 'I.E (Tężec — matryca poekspozycyjna, str. 18)'],
@@ -261,7 +296,7 @@ export const PsoPartISectionsView: React.FC<{
             <h4 id="pso-ib-heading" className="pso-block-title">
               I.B — Szczepienia obowiązkowe osób narażonych w sposób szczególny na zakażenie
             </h4>
-            <PsoSourceLinkBadge subsection="Część I.B" pages={[12, 13, 14, 15]} verificationStatus="verified" />
+            <PsoSourceLinkBadge subsection="Część I.B" pages={[13, 14]} verificationStatus="verified" />
           </div>
           <div className="pso-cards-vertical-list">
             {PSO_PART_IB_RISK_BLOCKS.map((block) => (
@@ -446,21 +481,37 @@ export const PsoPartISectionsView: React.FC<{
 
 type PartIISubsectionFilter = 'all' | 'IIA' | 'IIB' | 'IIC' | 'IID' | 'IIE' | 'IIFG' | 'IIH' | 'III_TRAVEL';
 
+const deriveRowsVerificationStatus = (
+  rows: PsoPartIIRecommendedRow[],
+  fallback: PsoRecordVerificationStatus = 'verified',
+): PsoRecordVerificationStatus => {
+  if (rows.length === 0) return fallback;
+  if (rows.some((r) => r.verificationStatus === 'conflicting')) return 'conflicting';
+  if (rows.some((r) => r.verificationStatus === 'partially_verified')) return 'partially_verified';
+  if (rows.some((r) => r.verificationStatus === 'not_verified')) return 'not_verified';
+  return 'verified';
+};
+
 const PartIIRowsCardList: React.FC<{
   heading: string;
   headingId: string;
   pages: number[];
   subsectionLabel: string;
   rows: PsoPartIIRecommendedRow[];
+  verificationStatus?: PsoRecordVerificationStatus;
   introNote?: string;
   onOpenCatalogRecord?: (recordId: string) => void;
-}> = ({ heading, headingId, pages, subsectionLabel, rows, introNote, onOpenCatalogRecord }) => (
+}> = ({ heading, headingId, pages, subsectionLabel, rows, verificationStatus, introNote, onOpenCatalogRecord }) => (
   <section className="pso-block-card" aria-labelledby={headingId}>
     <div className="pso-block-header">
       <h4 id={headingId} className="pso-block-title">
         {heading}
       </h4>
-      <PsoSourceLinkBadge subsection={subsectionLabel} pages={pages} verificationStatus="verified" />
+      <PsoSourceLinkBadge
+        subsection={subsectionLabel}
+        pages={pages}
+        verificationStatus={verificationStatus ?? deriveRowsVerificationStatus(rows)}
+      />
     </div>
     {introNote && <div className="legal-notice-banner">{introNote}</div>}
     {rows.length === 0 ? (
@@ -484,6 +535,11 @@ const PartIIRowsCardList: React.FC<{
             {row.notes && (
               <p className="pso-official-note">
                 <strong>Uwagi PSO:</strong> {row.notes}
+              </p>
+            )}
+            {row.auditNote && (
+              <p className="pso-audit-note">
+                <strong>Nota audytowa:</strong> {row.auditNote}
               </p>
             )}
             <RelatedProcedureChips
@@ -666,19 +722,19 @@ export const PsoPartIISectionsView: React.FC<{
       {(subSection === 'all' || subSection === 'IIFG') && (
         <>
           <PartIIRowsCardList
-            heading="II.F — Szczepienia zalecane poekspozycyjne (str. 32)"
+            heading="II.F — Szczepienia zalecane poekspozycyjne (str. 32–33)"
             headingId="pso-iif-heading"
             subsectionLabel="Część II.F"
-            pages={[32]}
+            pages={[32, 33]}
             rows={filteredIIF}
             onOpenCatalogRecord={onOpenCatalogRecord}
           />
           <section className="pso-block-card" aria-labelledby="pso-iig-heading">
             <div className="pso-block-header">
               <h4 id="pso-iig-heading" className="pso-block-title">
-                II.G — Swoiste zapobieganie WZW typu B u osób po ekspozycji na zakażenie HBV (str. 33–34)
+                II.G — Swoiste zapobieganie WZW typu B u osób po ekspozycji na zakażenie HBV (str. 34)
               </h4>
-              <PsoSourceLinkBadge subsection="Część II.G" pages={[33, 34]} verificationStatus="verified" />
+              <PsoSourceLinkBadge subsection="Część II.G" pages={34} verificationStatus="verified" />
             </div>
             <div
               className="pso-matrix-scroll"
@@ -688,7 +744,7 @@ export const PsoPartIISectionsView: React.FC<{
             >
               <table className="pso-data-table">
                 <caption className="sr-only">
-                  Część II.G PSO 2027 — swoista profilaktyka HBV zależnie od statusu osoby eksponowanej i źródła (str. 33–34)
+                  Część II.G PSO 2027 — swoista profilaktyka HBV zależnie od statusu osoby eksponowanej i źródła (str. 34)
                 </caption>
                 <thead>
                   <tr>
@@ -1065,10 +1121,25 @@ export const Pso2027SearchAndCompletenessPanel: React.FC<{
             <span className="pso-metric-value">{summary.verified}</span>
             <span className="pso-metric-label">Zweryfikowanych w akt.pdf</span>
           </div>
+          <div className="pso-metric-tile">
+            <span className="pso-metric-value">{summary.partially_verified}</span>
+            <span className="pso-metric-label">Częściowo zweryfikowanych</span>
+          </div>
           <div className="pso-metric-tile pso-metric-tile--warn">
             <span className="pso-metric-value">{summary.conflicting}</span>
             <span className="pso-metric-label">Rozbieżności redakcyjnych PDF</span>
           </div>
+        </div>
+
+        <div className="legal-notice-banner" role="note" style={{ marginTop: '0.85rem' }}>
+          <strong>Rozdzielenie weryfikacji PSO 2027 i ChPL preparatów:</strong>{' '}
+          Kompletność treści komunikatu GIS ({summary.verified} podsekcji zweryfikowanych literalnie z{' '}
+          <code>akt.pdf</code> + {summary.conflicting} jawnie oznaczona rozbieżność redakcyjna VII.C) nie oznacza
+          weryfikacji Charakterystyk Produktów Leczniczych. W katalogu procedur dziecięcych (
+          {CATALOG_CHPL_SUMMARY.totalProcedures} procedur):{' '}
+          <strong>verified_full = {CATALOG_CHPL_SUMMARY.verifiedFull}</strong>,{' '}
+          <strong>wymaga wyjaśnienia ChPL = {CATALOG_CHPL_SUMMARY.analyzedWithDiscrepancy}</strong>,{' '}
+          <strong>oczekuje na audyt ChPL = {CATALOG_CHPL_SUMMARY.pendingContentAudit}</strong>.
         </div>
       </div>
 

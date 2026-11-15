@@ -86,4 +86,35 @@ test.describe('E2E — MASTER 15: Kompletność 7 części PSO 2027, dostępnoś
 
     monitor.assertClean();
   });
+
+  test('MASTER 16: weryfikacja stron I.B/II.F/II.G, rozdziału PSO vs ChPL oraz przejścia z chipa do procedur', async ({
+    page,
+  }) => {
+    const monitor = attachRuntimeMonitor(page);
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto('/');
+
+    await page.getByRole('button', { name: /Szczepienia dzieci/i }).first().click();
+
+    await page.getByRole('tab', { name: /Część I pełna/i }).click();
+    await expect(page.getByRole('button', { name: /I\.B \(Grupy podwyższonego ryzyka, str\. 13–14\)/i })).toBeVisible();
+
+    await page.getByRole('tab', { name: /^Część II \(/i }).click();
+    await expect(
+      page.getByRole('heading', { name: /II\.F — Szczepienia zalecane poekspozycyjne \(str\. 32–33\)/i }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /II\.G — Swoiste zapobieganie WZW typu B.*\(str\. 34\)/i }),
+    ).toBeVisible();
+
+    await page.getByRole('tab', { name: /Kompletność i wyszukiwarka PSO/i }).click();
+    await expect(page.getByText(/Rozdzielenie weryfikacji PSO 2027 i ChPL preparatów:/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Przeszukuj wszystkie 7 części PSO 2027 \(119 wyników\)/i })).toBeVisible();
+
+    const firstProcBtn = page.getByRole('button', { name: /pso-rec-covid-pediatric/i }).first();
+    await firstProcBtn.click();
+    await expect(page.getByRole('tab', { name: /Procedury i etapy wiekowe/i })).toHaveAttribute('aria-selected', 'true');
+
+    monitor.assertClean();
+  });
 });

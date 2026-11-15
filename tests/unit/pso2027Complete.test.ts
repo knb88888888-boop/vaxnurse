@@ -159,4 +159,93 @@ describe('MASTER 15 — Kompletne 7-częściowe odwzorowanie PSO 2027 (Dz. Urz. 
     const vaxigrip = VACCINES_CATALOG.find((v) => v.id === 'vac-vaxigrip-tetra');
     expect(vaxigrip?.atcCode).toBe('J07BB02');
   });
+
+  it('8. Audyt MASTER 16 — 119 rekordów i 35 podsekcji bez duplikatów, poprawne strony 1–48 i spójne linki do CHILD_VACCINES_CATALOG', () => {
+    expect(PSO_2027_STRUCTURED_RECORDS).toHaveLength(119);
+    expect(PSO_2027_COMPLETENESS_REGISTRY).toHaveLength(35);
+
+    const recordIds = PSO_2027_STRUCTURED_RECORDS.map((r) => r.id);
+    expect(new Set(recordIds).size).toBe(119);
+
+    const subsectionCodes = PSO_2027_COMPLETENESS_REGISTRY.map((e) => e.subsectionCode);
+    expect(new Set(subsectionCodes).size).toBe(35);
+
+    const summary = getPso2027CompletenessSummary();
+    expect(summary.verified).toBe(34);
+    expect(summary.partially_verified).toBe(0);
+    expect(summary.conflicting).toBe(1);
+    expect(summary.not_verified).toBe(0);
+
+    const catalogIds = new Set(CHILD_VACCINES_CATALOG.map((c) => c.id));
+    for (const rec of PSO_2027_STRUCTURED_RECORDS) {
+      expect(rec.title.trim().length, `Pusty tytuł rekordu ${rec.id}`).toBeGreaterThan(0);
+      expect(rec.description.trim().length, `Pusty opis rekordu ${rec.id}`).toBeGreaterThan(0);
+      expect(rec.sourceReference.trim().length, `Brak sourceReference dla ${rec.id}`).toBeGreaterThan(0);
+      const pages = Array.isArray(rec.sourcePage) ? rec.sourcePage : [rec.sourcePage];
+      expect(pages.length, `Brak sourcePage dla ${rec.id}`).toBeGreaterThan(0);
+      for (const page of pages) {
+        expect(Number.isInteger(page) && page >= 1 && page <= 48, `Błędna strona ${page} w ${rec.id}`).toBe(true);
+      }
+      for (const linkedId of rec.relatedRecords) {
+        expect(catalogIds.has(linkedId), `Nieznany relatedRecord ${linkedId} w ${rec.id}`).toBe(true);
+      }
+    }
+  });
+
+  it('9. Audyt Części II (II.A, II.B, II.D, II.E, II.F) — usunięto syntetyczne dopiski z pustych kolumn Uwagi i przywrócono pełne listy z akt.pdf', () => {
+    const iiaRegistry = PSO_2027_COMPLETENESS_REGISTRY.find((e) => e.subsectionCode === 'II.A')!;
+    expect(iiaRegistry.verificationStatus).toBe('verified');
+    expect(iiaRegistry.sourcePages).toEqual([19, 20, 21]);
+    expect(iiaRegistry.discrepancyOrCaveat).toContain('verified_full');
+
+    const iiaMap = new Map(PSO_PART_IIA_PEDIATRIC_RECOMMENDED.map((r) => [r.id, r]));
+    expect(iiaMap.get('pso-iia-tbe')?.notes).toBe('');
+    expect(iiaMap.get('pso-iia-hav')?.notes).toBe('');
+    expect(iiaMap.get('pso-iia-hpv')?.notes).toBe('');
+    expect(iiaMap.get('pso-iia-vzv')?.notes).toBe('');
+    expect(iiaMap.get('pso-iia-influenza')?.recommendations).toContain('domów pomocy społecznej');
+    expect(iiaMap.get('pso-iia-influenza')?.recommendations).toContain('asplenią wrodzoną');
+    expect(iiaMap.get('pso-iia-meningococci')?.recommendations).toContain('atypowego zespołu hemolityczno-mocznicowego');
+
+    const iibMap = new Map(PSO_PART_IIB_ADULTS_RECOMMENDED.map((r) => [r.id, r]));
+    expect(iibMap.get('pso-iib-tbe')?.notes).toBe('');
+    expect(iibMap.get('pso-iib-hav')?.notes).toBe('');
+    expect(iibMap.get('pso-iib-hpv')?.notes).toBe('');
+    expect(iibMap.get('pso-iib-zoster')?.notes).toBe('');
+    expect(iibMap.get('pso-iib-influenza')?.recommendations).toContain('domów pomocy społecznej');
+    expect(iibMap.get('pso-iib-influenza')?.notes).toContain('wysokodawkową albo standardową');
+
+    expect(PSO_PART_IID_HEALTHCARE_WORKERS.every((r) => r.notes === '')).toBe(true);
+    expect(PSO_PART_IIE_OTHER_WORKERS.every((r) => r.notes === '')).toBe(true);
+
+    const iifMap = new Map(PSO_PART_IIF_POST_EXPOSURE.map((r) => [r.id, r]));
+    expect(iifMap.get('pso-iif-measles')?.sourcePages).toEqual([32]);
+    expect(iifMap.get('pso-iif-varicella')?.sourcePages).toEqual([32]);
+    expect(iifMap.get('pso-iif-hav')?.sourcePages).toEqual([32, 33]);
+    expect(iifMap.get('pso-iif-hbv')?.sourcePages).toEqual([33]);
+  });
+
+  it('10. Rozstrzygnięcie konfliktu VII.C oraz utrzymanie rozdziału statusów ChPL/RPL w katalogu dziecięcym', () => {
+    const viiC = PSO_PART_VII_TABLES.find((t) => t.subsectionCode === 'VII.C')!;
+    expect(viiC.rows).toHaveLength(13);
+    const menRow = viiC.rows.find((r) => r.id === 'viic-meningo')!;
+    expect(menRow.cells).toHaveLength(2);
+    expect(menRow.cells[0]).toMatchObject({ id: 'c-men-empty', colSpan: 2, text: '', tone: 'conditional' });
+    expect(menRow.cells[1]).toMatchObject({
+      id: 'c-men-65',
+      colSpan: 1,
+      text: 'MenB – 2 dawki / MenACWY – 1 dawka',
+    });
+    expect(menRow.rowNote).toContain('str. 23–24');
+
+    const clarificationCount = CHILD_VACCINES_CATALOG.filter(
+      (c) => c.chplVerificationStatus === 'requires_source_clarification',
+    ).length;
+    const pendingCount = CHILD_VACCINES_CATALOG.filter(
+      (c) => c.chplVerificationStatus === 'pending_chpl_verification',
+    ).length;
+    expect(clarificationCount).toBe(12);
+    expect(pendingCount).toBe(31);
+    expect(clarificationCount + pendingCount).toBe(43);
+  });
 });

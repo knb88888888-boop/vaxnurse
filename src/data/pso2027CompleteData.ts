@@ -430,7 +430,7 @@ export const PSO_PART_IIA_PEDIATRIC_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     populationScope: 'children_and_adolescents',
     subjectLabel: 'GRYPIE',
     recommendations:
-      '1. W związku z przesłankami epidemiologicznymi – szczepienie zalecane osobom od ukończenia 6. miesiąca życia (zdrowym dzieciom 6. m.ż.–18. r.ż., ze szczególnym uwzględnieniem 6.–60. m.ż.; strategia kokonowa wokół niemowląt <6. m.ż., starszych lub przewlekle chorych; pacjenci ZOL, ZPO, DPS i placówek opieki całodobowej). 2. W związku z przesłankami klinicznymi i indywidualnymi: po transplantacji narządów; przewlekle chorym dzieciom od ukończenia 6. m.ż.; w stanach obniżonej odporności; dzieciom z grup ryzyka od ukończenia 6. m.ż. do 18. r.ż. (w tym HIV, schorzenia immunologiczno-hematologiczne, leczeni przewlekle salicylanami); z wadami wrodzonymi serca, niewydolnością serca, nadciśnieniem płucnym.',
+      '1. W związku z przesłankami epidemiologicznymi – szczepienie zalecane osobom od ukończenia 6. miesiąca życia, w szczególności: 1) zdrowym dzieciom w wieku od ukończenia 6. miesiąca życia do ukończenia 18. roku życia (ze szczególnym uwzględnieniem dzieci w wieku od ukończenia 6. do ukończenia 60. miesiąca życia); 2) osobom mającym bliski kontakt zawodowy lub rodzinny z dziećmi w wieku do ukończenia 6. miesiąca życia oraz z osobami w wieku podeszłym lub przewlekle chorymi (w ramach realizacji strategii kokonowej szczepień); 3) pacjentom opieki długoterminowej (ZOL, ZPO), pensjonariuszom domów pomocy społecznej oraz innych placówek zapewniających całodobową opiekę osobom niepełnosprawnym lub przewlekle chorym. 2. W związku z przesłankami klinicznymi i indywidualnymi szczepienie jest zalecane: 1) osobom po transplantacji narządów; 2) przewlekle chorym dzieciom (od ukończenia 6. miesiąca życia), szczególnie chorującym na przewlekłe choroby układu oddechowego, w tym astmę oskrzelową, przewlekłe choroby układu sercowo-naczyniowego, przewlekłe choroby nerek, nawracający zespół nerczycowy, przewlekłe choroby wątroby, choroby metaboliczne, w tym cukrzycę, choroby neurologiczne i neurorozwojowe; 3) osobom w stanach obniżonej odporności (w tym pacjentom po przeszczepie tkanek) i chorym na nowotwory układu krwiotwórczego; 4) dzieciom z grup ryzyka od ukończenia 6. miesiąca życia do ukończenia 18. roku życia, szczególnie zakażonym ludzkim wirusem niedoboru odporności (HIV), ze schorzeniami immunologiczno-hematologicznymi, w tym małopłytkowością idiopatyczną, ostrą białaczką, chłoniakiem, sferocytozą wrodzoną, asplenią wrodzoną, dysfunkcją śledziony, po splenektomii, z pierwotnymi niedoborami odporności, po leczeniu immunosupresyjnym, po przeszczepieniu szpiku, przed przeszczepieniem lub po przeszczepieniu narządów wewnętrznych, leczonych przewlekle salicylanami; 5) dzieciom z wadami wrodzonymi serca zwłaszcza sinicznymi, z niewydolnością serca, z nadciśnieniem płucnym.',
     notes: 'Szczepionki są ważne tylko jeden sezon epidemiczny ze względu na zmiany ich składu według zaleceń Światowej Organizacji Zdrowia.',
     relatedRecords: ['pso-rec-influenza-1'],
     verificationStatus: 'verified',
@@ -443,7 +443,7 @@ export const PSO_PART_IIA_PEDIATRIC_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     populationScope: 'children_and_adolescents',
     subjectLabel: 'Inwazyjnym zakażeniom NEISSERIA MENINGITIDIS',
     recommendations:
-      '1) niemowlętom od ukończenia 6. tygodnia życia lub 8. tygodnia życia w zależności od rodzaju szczepionki; 2) dzieciom narażonym na ryzyko inwazyjnej choroby meningokokowej w wyniku bliskich kontaktów z chorymi lub materiałem zakaźnym oraz w zbiorowiskach (m.in. żłobki, przedszkola, domy studenckie, internaty); 3) dzieciom z wrodzonymi niedoborami odporności (asplenia, HIV, nowotwór złośliwy, choroba reumatyczna, przewlekła choroba nerek/wątroby, niedobór dopełniacza w tym leczonym ekulizumabem z powodu PNH lub aHUS, przed/po HSCT, immunosupresja); 4) dzieciom od ukończenia 2. miesiąca życia z grup ryzyka zaburzeń odporności oraz szczególnie narażonym nastolatkom.',
+      'Szczepienie zalecane: 1) niemowlętom od ukończenia 6. tygodnia życia lub 8. tygodnia życia w zależności od rodzaju szczepionki; 2) dzieciom narażonym na ryzyko inwazyjnej choroby meningokokowej w wyniku bliskich kontaktów z chorymi lub materiałem zakaźnym, osobom przebywającym w zbiorowiskach (m.in. żłobkach, przedszkolach, domach studenckich, internatach); 3) dzieciom z wrodzonymi niedoborami odporności: z anatomiczną lub czynnościową asplenią, zakażonym wirusem HIV, nowotworem złośliwym, chorobą reumatyczną, przewlekłą chorobą nerek i wątroby, niedoborem składowych układu dopełniacza, w tym leczonym ekulizumabem z powodu napadowej nocnej hemoglobinurii lub atypowego zespołu hemolityczno-mocznicowego, przed i po przeszczepieniu szpiku oraz osobom leczonym immunosupresyjnie; 4) dzieciom w wieku od ukończenia 2. miesiąca życia z grup ryzyka zaburzeń odporności oraz szczególnie narażonym na zachorowanie nastolatkom.',
     notes:
       'Szczepienie może być wykonane: 1) szczepionką białkową przeciw serogrupie B; 2) szczepionką skoniugowaną, 4-walentną przeciw serogrupom A, C, W, Y. Szczepienie nie jest elementem postępowania poekspozycyjnego.',
     relatedRecords: ['pso-rec-menb-1', 'pso-rec-menacwy-1'],
@@ -458,7 +458,7 @@ export const PSO_PART_IIA_PEDIATRIC_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     subjectLabel: 'KLESZCZOWEMU ZAPALENIU MÓZGU (KZM)',
     recommendations:
       'Szczepienie zalecane osobom szczególnie często podejmującym aktywność fizyczną poza pomieszczeniami (np. rodzinom z małymi dziećmi) i innym osobom podejmującym aktywność na świeżym powietrzu, w szczególności turystom i uczestnikom obozów i kolonii.',
-    notes: 'Stosuje się zgodnie z ChPL preparatu pediatrycznego.',
+    notes: '',
     relatedRecords: ['pso-rec-kzm-1'],
     verificationStatus: 'verified',
   },
@@ -471,7 +471,7 @@ export const PSO_PART_IIA_PEDIATRIC_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     subjectLabel: 'WIRUSOWEMU ZAPALENIU WĄTROBY typu A',
     recommendations:
       'Szczepienie zalecane osobom: 1) dzieciom w wieku przedszkolnym, szkolnym oraz młodzieży, które nie chorowały na wirusowe zapalenie wątroby typu A; 2) w zależności od sytuacji epidemiologicznej, osobom z grup ryzyka, w których obserwuje się zwiększoną liczbę zachorowań.',
-    notes: 'Stosuje się w schemacie 2-dawkowym zgodnie z ChPL.',
+    notes: '',
     relatedRecords: ['pso-rec-hava-1'],
     verificationStatus: 'verified',
   },
@@ -483,8 +483,8 @@ export const PSO_PART_IIA_PEDIATRIC_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     populationScope: 'children_and_adolescents',
     subjectLabel: 'Zakażeniom LUDZKIMI WIRUSAMI BRODAWCZAKA (HPV)',
     recommendations:
-      'Szczepienie po ukończeniu 9. roku życia do ukończenia 14. roku życia w schemacie dwudawkowym; szczepienie musi być rozpoczęte do ukończenia 14. roku życia i może być nieodpłatnie zakończone po ukończeniu 14. roku życia (z zachowaniem dwudawkowego schematu w odstępie 6–12 mies.). Szczepienie osób w 15.–18. r.ż. oraz u dorosłych wykonuje się w schemacie trzydawkowym (warunki całkowitej lub częściowej refundacji określają przepisy odrębne).',
-    notes: 'Program powszechny obejmuje dzieci i młodzież po ukończeniu 9. do ukończenia 14. r.ż.; starsze roczniki podlegają zasadom refundacji z odrębnych przepisów.',
+      'Szczepienie po ukończeniu 9. roku życia do ukończenia 14. roku życia, w schemacie dwudawkowym; szczepienie musi być rozpoczęte do ukończenia 14. roku życia i mogą być nieodpłatnie zakończone po ukończeniu 14. roku życia (z zachowaniem dwudawkowego schematu w odstępie 6–12 mies.), Szczepienie osób w 15.–18. r.ż. oraz u dorosłych, wykonuje się w schemacie trzydawkowym (warunki całkowitej lub częściowej refundacji określają przepisy odrębne).',
+    notes: '',
     relatedRecords: ['pso-rec-hpv-9', 'pso-rec-hpv-catchup'],
     verificationStatus: 'verified',
   },
@@ -497,9 +497,10 @@ export const PSO_PART_IIA_PEDIATRIC_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     subjectLabel: 'OSPIE WIETRZNEJ',
     recommendations:
       'Szczepienie zalecane osobom, które nie chorowały na OSPĘ WIETRZNĄ i nie zostały wcześniej zaszczepione w ramach szczepień obowiązkowych albo zalecanych.',
-    notes: 'Szczegóły dawkowania: patrz Część III.J PSO (str. 41).',
+    notes: '',
     relatedRecords: ['pso-rec-vzv-1', 'pso-risk-vzv-special'],
     verificationStatus: 'verified',
+    auditNote: 'W tabeli II.A (str. 21) kolumna „Uwagi” pozostaje pusta; zasady dla grup ryzyka VZV znajdują się w Części III.J (str. 41).',
   },
 ];
 
@@ -524,9 +525,9 @@ export const PSO_PART_IIB_ADULTS_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     populationScope: 'adults',
     subjectLabel: 'GRYPIE',
     recommendations:
-      '1. W związku z przesłankami epidemiologicznymi – dorosłym, w szczególności: 1) osobom >50. r.ż. (zwłaszcza od ukończenia 65. r.ż.); 2) kontaktowi zawodowemu/rodzinnemu z dziećmi do 6. m.ż., osobami w wieku podeszłym lub przewlekle chorymi (strategia kokonowa); 3) studentom/uczniom kierunków medycznych, pracownikom ochrony zdrowia, szkół, handlu, transportu, służb mundurowych; 4) pensjonariuszom ZOL/ZPO/DPS, opieki paliatywnej, długoterminowej, rehabilitacji, lecznictwa psychiatrycznego, uzależnień i uzdrowisk; 5) pracownikom ferm drobiu oraz zwierząt futerkowych. 2. W związku z przesłankami klinicznymi i indywidualnymi: po transplantacji narządów; przewlekle chorym dorosłym (układ oddechowy, POChP, krążenie, choroba wieńcowa/zawał, nerki, zespół nerczycowy, wątroba, cukrzyca/metaboliczne, neurologiczne/neurorozwojowe); w stanach obniżonej odporności (w tym przeszczep tkanek, nowotwory układu krwiotwórczego); kobietom w ciąży lub planującym ciążę.',
+      '1. W związku z przesłankami epidemiologicznymi – szczepienie zalecane osobom dorosłym, w szczególności: 1) osobom w wieku powyżej 50. roku życia (ze szczególnym uwzględnieniem osób od ukończenia 65. roku życia); 2) osobom mającym bliski kontakt zawodowy lub rodzinny z dziećmi w wieku do ukończenia 6. miesiąca życia oraz z osobami w wieku podeszłym lub przewlekle chorymi (w ramach realizacji strategii kokonowej szczepień); 3) uczniom i studentom szkół i uczelni medycznych lub innych szkół i uczelni prowadzących kształcenie na kierunkach medycznych, pracownikom ochrony zdrowia (personel medyczny, niezależnie od posiadanej specjalizacji oraz personel administracyjny), pracownikom szkół, handlu, transportu, funkcjonariuszom publicznym w szczególności: policji, wojska, straży granicznej, straży pożarnej, służby więziennej i innych służb mundurowych; 4) pensjonariuszom domów spokojnej starości, domów pomocy społecznej oraz innych placówek zapewniających całodobową opiekę osobom niepełnosprawnym, przewlekle chorym lub osobom w podeszłym wieku, w szczególności przebywającym w zakładach opiekuńczo-leczniczych, pielęgnacyjno-opiekuńczych, podmiotach udzielających świadczeń opieki zdrowotnej z zakresu opieki paliatywnej i hospicyjnej, opieki długoterminowej, rehabilitacji leczniczej, opieki psychiatrycznej i leczenia uzależnień oraz lecznictwa uzdrowiskowego; 5) pracownikom ferm drobiu oraz zwierząt futerkowych. 2. W związku z przesłankami klinicznymi i indywidualnymi szczepienie zalecane: 1) osobom po transplantacji narządów; 2) przewlekle chorym osobom dorosłym, szczególnie chorującym na niewydolność układu oddechowego, astmę oskrzelową, przewlekłą obturacyjną chorobę płuc, niewydolność układu krążenia, chorobę wieńcową (zwłaszcza po przebytym zawale serca), niewydolność nerek, nawracający zespół nerczycowy, choroby wątroby, choroby metaboliczne, w tym cukrzycę, choroby neurologiczne i neurorozwojowe; 3) osobom w stanach obniżonej odporności (w tym pacjentom po przeszczepie tkanek) i chorym na nowotwory układu krwiotwórczego; 4) kobietom w ciąży lub planującym ciążę.',
     notes:
-      'Szczepionki są ważne tylko jeden sezon epidemiczny ze względu na zmiany ich składu według zaleceń WHO. W przypadku osób dorosłych w wieku 60 lat i starszych szczepienie może być realizowane szczepionką wysokodawkową albo standardową. Kobiety w ciąży: patrz cz. II.C.',
+      'Szczepionki są ważne tylko jeden sezon epidemiczny ze względu na zmiany ich składu według zaleceń Światowej Organizacji Zdrowia. W przypadku osób dorosłych w wieku 60 lat i starszych szczepienie może być realizowane szczepionką wysokodawkową albo standardową. Patrz cz. II. C PSO „Szczepienia zalecane dla kobiet w ciąży”.',
     relatedRecords: ['pso-rec-influenza-1'],
     verificationStatus: 'verified',
   },
@@ -540,7 +541,7 @@ export const PSO_PART_IIB_ADULTS_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     recommendations:
       'Szczepienie zalecane: 1) osobom od 18. roku życia ze zwiększonym ryzykiem zachorowania na chorobę wywoływaną przez RSV; 2) wszystkim osobom, które ukończyły 50. rok życia niezależnie od występowania dodatkowych czynników ryzyka; 3) kobietom w ciąży w celu biernej ochrony noworodków i niemowląt do 6. miesiąca życia przed chorobami dolnych dróg oddechowych wywołanymi przez RSV.',
     notes:
-      'Szczepienie jednodawkowe. Ze względu na brak danych, nie opracowano wytycznych dotyczących podawania kolejnych dawek szczepionki. Kobiety w ciąży: patrz cz. II.C PSO.',
+      'Szczepienie jednodawkowe. Ze względu na brak danych, nie opracowano wytycznych dotyczących podawania kolejnych dawek szczepionki. Patrz cz. II. C PSO „Szczepienia zalecane dla kobiet w ciąży”.',
     relatedRecords: [],
     verificationStatus: 'verified',
   },
@@ -552,7 +553,7 @@ export const PSO_PART_IIB_ADULTS_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     populationScope: 'adults',
     subjectLabel: 'Inwazyjnym zakażeniom NEISSERIA MENINGITIDIS',
     recommendations:
-      '1) osobom dorosłym z wrodzonymi niedoborami odporności: z anatomiczną lub czynnościową asplenią, zakażonym wirusem HIV, nowotworem złośliwym, chorobą reumatyczną, przewlekłą chorobą nerek i wątroby, leczonym ekulizumabem z powodu napadowej nocnej hemoglobinurii lub atypowego zespołu hemolityczno-mocznicowego, po przeszczepieniu szpiku oraz osobom leczonym immunosupresyjnie; 2) osobom dorosłym, w szczególności powyżej 65. roku życia.',
+      'Szczepienie zalecane: 1) osobom dorosłym z wrodzonymi niedoborami odporności: z anatomiczną lub czynnościową asplenią, zakażonym wirusem HIV, nowotworem złośliwym, chorobą reumatyczną, przewlekłą chorobą nerek i wątroby, leczonym ekulizumabem z powodu napadowej nocnej hemoglobinurii lub atypowego zespołu hemolityczno-mocznicowego, po przeszczepieniu szpiku oraz osobom leczonym immunosupresyjnie; 2) osobom dorosłym, w szczególności powyżej 65. roku życia.',
     notes:
       'Szczepienie może być wykonane: 1) szczepionką białkową przeciw serogrupie B; 2) szczepionką skoniugowaną, 4-walentną przeciw serogrupom A, C, W, Y.',
     relatedRecords: ['pso-rec-menb-1', 'pso-rec-menacwy-1'],
@@ -568,9 +569,9 @@ export const PSO_PART_IIB_ADULTS_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     populationScope: 'adults',
     subjectLabel: 'Inwazyjnym zakażeniom STREPTOCOCCUS PNEUMONIAE',
     recommendations:
-      '1) osobom dorosłym powyżej 50. roku życia (ze szczególnym uwzględnieniem osób od ukończenia 65. roku życia); 2) dorosłym z przewlekłą chorobą serca, płuc, wątroby (w tym z marskością), nerek, zespołem nerczycowym, cukrzycą; 3) z wyciekiem płynu mózgowo-rdzeniowego, implantem ślimakowym; 4) z anatomiczną lub czynnościową asplenią (sferocytoza, hemoglobinopatie, asplenia wrodzona lub nabyta); 5) z zaburzeniami odporności (wrodzony/nabyty niedobór, HIV, białaczka, choroba Hodgkina, uogólniona choroba nowotworowa związana z leczeniem immunosupresyjnym, w tym przewlekłą steroidoterapią i radioterapią, szpiczak mnogi); 6) osobom uzależnionym od alkoholu, palącym papierosy.',
+      'Szczepienie zalecane: 1) osobom dorosłym powyżej 50. roku życia (ze szczególnym uwzględnieniem osób od ukończenia 65. roku życia); 2) osobom dorosłym z przewlekłą chorobą serca, przewlekłą chorobą płuc, przewlekłą chorobą wątroby, w tym z marskością wątroby, przewlekłą chorobą nerek i zespołem nerczycowym, z cukrzycą; 3) osobom dorosłym z wyciekiem płynu mózgowo-rdzeniowego, implantem ślimakowym; 4) osobom dorosłym z anatomiczną lub czynnościową asplenią: sferocytozą i innymi hemoglobinopatiami, z wrodzoną lub nabytą asplenią; 5) osobom dorosłym z zaburzeniami odporności: wrodzonym lub nabytym niedoborem odporności, zakażeniem HIV, białaczką, chorobą Hodgkina, uogólnioną chorobą nowotworową związaną z leczeniem immunosupresyjnym, w tym przewlekłą steroidoterapią i radioterapią, szpiczakiem mnogim; 6) osobom uzależnionym od alkoholu, palącym papierosy.',
     notes:
-      '1) Osoby dorosłe z grup ryzyka: 1 dawka PCV13 + 1 dawka PPSV23 w odstępie przynajmniej 8 tygodni; alternatywnie 1 dawka PCV20/PCV21. 2) Osoby w wieku 50 lat i starsze: 1 dawka PCV13 + 1 dawka PPSV23 w odstępie przynajmniej 1. roku; alternatywnie 1 dawka PCV20/PCV21. Patrz cz. III PSO.',
+      'W przypadku szczepień u osób dorosłych z grup ryzyka oraz u osób starszych: 1) szczepienia osób dorosłych z grup ryzyka są realizowane w schemacie 1 dawka szczepionki skoniugowanej PCV13 oraz 1 dawka szczepionki polisacharydowej PPSV23, w odstępie przynajmniej 8 tygodni; alternatywnie można podać 1 dawkę szczepionki skoniugowanej PCV20/PCV21; 2) szczepienia u osób w wieku 50 lat i starszych są realizowane w schemacie 1 dawka szczepionki skoniugowanej PCV13 oraz 1 dawka szczepionki polisacharydowej PPSV23, w odstępie przynajmniej 1. roku; alternatywnie można podać 1 dawkę szczepionki skoniugowanej PCV20/PCV21. Patrz cz. III PSO „Informacje uzupełniające – zasady szczepień przeciw wybranym chorobom zakaźnym”.',
     relatedRecords: ['pso-pcv-1', 'pso-risk-preterm-pcv'],
     verificationStatus: 'verified',
   },
@@ -594,8 +595,8 @@ export const PSO_PART_IIB_ADULTS_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     populationScope: 'adults',
     subjectLabel: 'KLESZCZOWEMU ZAPALENIU MÓZGU (KZM)',
     recommendations:
-      'Szczepienie zalecane osobom przebywającym na terenach o nasilonym występowaniu tej choroby: 1) zatrudnionym przy eksploatacji lasu, stacjonującemu wojsku, funkcjonariuszom straży pożarnej i granicznej, rolnikom, młodzieży odbywającej staże i praktyki zawodowe; 2) biegaczom, spacerowiczom, grzybiarzom, właścicielom psów, myśliwym, rodzinom z małymi dziećmi, turystom oraz uczestnikom obozów i kolonii.',
-    notes: 'Schemat podstawowy 3 dawki, dawka przypominająca co 3–5 lat zgodnie z ChPL.',
+      'Szczepienie zalecane osobom przebywającym na terenach o nasilonym występowaniu tej choroby, w szczególności: 1) osobom zatrudnionym przy eksploatacji lasu, stacjonującemu wojsku, funkcjonariuszom straży pożarnej i granicznej, rolnikom, młodzieży odbywającej staże i praktyki zawodowe; 2) osobom szczególnie często podejmującym aktywność fizyczną poza pomieszczeniami (np. biegacze, spacerowicze, grzybiarze, właściciele psów, myśliwi, rodziny z małymi dziećmi) i innym osobom podejmującym aktywność na świeżym powietrzu, w szczególności turystom i uczestnikom obozów i kolonii.',
+    notes: '',
     relatedRecords: ['pso-rec-kzm-1'],
     verificationStatus: 'verified',
   },
@@ -607,9 +608,9 @@ export const PSO_PART_IIB_ADULTS_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     populationScope: 'adults',
     subjectLabel: 'WIRUSOWEMU ZAPALENIU WĄTROBY typu B',
     recommendations:
-      '1) osobom dotychczas niezaszczepionym narażonym w trybie życia lub zajęciach na zakażenia przez uszkodzenie ciągłości tkanek lub kontakt seksualny; 2) przewlekle chorym o wysokim ryzyku zakażenia nieszczepionym w ramach obowiązkowych; 3) przewlekle chorym z chorobami z niedoborem odporności dotychczas niezaszczepionym (w tym leczonym immunosupresyjnie, chorym z cukrzycą i niewydolnością nerek); 4) chorym przygotowywanym do zabiegów operacyjnych dotychczas niezaszczepionym; 5) osobom dorosłym, zwłaszcza w wieku starszym dotychczas niezaszczepionym; 6) osobom dotychczas nieszczepionym chorującym na nowotwory i inne choroby przewlekłe, u których planowane jest leczenie immunosupresyjne.',
+      'Szczepienie zalecane: 1) osobom dotychczas niezaszczepionym, które ze względu na tryb życia lub wykonywane zajęcia są narażone na zakażenia związane z uszkodzeniem ciągłości tkanek lub przez kontakt seksualny; 2) przewlekle chorym o wysokim ryzyku zakażenia nieszczepionym w ramach szczepień obowiązkowych; 3) przewlekle chorym o wysokim ryzyku zakażenia: z chorobami przebiegającymi z niedoborem odporności dotychczas niezaszczepionym, w tym leczonych immunosupresyjnie, chorym z cukrzycą i niewydolnością nerek; 4) chorym przygotowywanym do zabiegów operacyjnych dotychczas niezaszczepionym; 5) osobom dorosłym, zwłaszcza w wieku starszym dotychczas niezaszczepionym; 6) osobom dotychczas nieszczepionym chorującym na nowotwory i inne choroby przewlekłe, u których planowane jest leczenie immunosupresyjne;',
     notes:
-      'Dawki przypominające u osób chorych z obniżoną odpornością należy podawać – zgodnie z zaleceniami lekarza. Patrz cz. III.C PSO.',
+      'Dawki przypominające u osób chorych z obniżoną odpornością należy podawać – zgodnie z zaleceniami lekarza. Patrz cz. III PSO „Informacje uzupełniające – zasady szczepień przeciw wybranym chorobom zakaźnym”.',
     relatedRecords: ['pso-hepb-unvaccinated-primary', 'pso-hepb-dialysis-primary', 'pso-hepb-dialysis-booster'],
     verificationStatus: 'verified',
   },
@@ -621,8 +622,8 @@ export const PSO_PART_IIB_ADULTS_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     populationScope: 'adults',
     subjectLabel: 'WIRUSOWEMU ZAPALENIU WĄTROBY typu A',
     recommendations:
-      '1) osobom zatrudnionym przy produkcji i dystrybucji żywności, usuwaniu odpadów komunalnych i płynnych nieczystości oraz konserwacji urządzeń służących temu celowi; 2) w zależności od sytuacji epidemiologicznej osobom z grup ryzyka; 3) pracownikom medycznym, w szczególności oddziałów zakaźnych, gastroenterologicznych, pediatrycznych.',
-    notes: '2 dawki dla osób wcześniej nieszczepionych zgodnie z ChPL.',
+      'Szczepienie zalecane: 1) osobom zatrudnionym przy produkcji i dystrybucji żywności, usuwaniu odpadów komunalnych i płynnych nieczystości oraz przy konserwacji urządzeń służących temu celowi; 2) w zależności od sytuacji epidemiologicznej, osobom z grup ryzyka, w których obserwuje się zwiększoną liczbę zachorowań; 3) pracownikom medycznym, w szczególności oddziałów zakaźnych, gastroenterologicznych, pediatrycznych.',
+    notes: '',
     relatedRecords: ['pso-rec-hava-1'],
     verificationStatus: 'verified',
   },
@@ -634,9 +635,9 @@ export const PSO_PART_IIB_ADULTS_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     populationScope: 'adults',
     subjectLabel: 'ODRZE, ŚWINCE, RÓŻYCZCE',
     recommendations:
-      'Osobom nieuodpornionym, nieszczepionym wcześniej, które nie chorowały, w szczególności: 1) dorosłym, zwłaszcza w wieku rozrodczym, pracującym w środowiskach dziecięcych (przedszkola, szkoły, szpitale, przychodnie); 2) uczniom i studentom szkół i uczelni medycznych/kierunków medycznych; 3) pracownikom ochrony zdrowia.',
+      'Szczepienie zalecane osobom nieuodpornionym, nieszczepionym wcześniej, które nie chorowały, w szczególności: 1) dorosłym, zwłaszcza w wieku rozrodczym, pracującym w środowiskach dziecięcych (przedszkola, szkoły, szpitale, przychodnie); 2) uczniom i studentom szkół i uczelni medycznych lub innych szkół i uczelni prowadzących kształcenie na kierunkach medycznych; 3) pracownikom ochrony zdrowia.',
     notes:
-      'Podawane w wywiadzie przebycie zachorowania nie jest przeciwwskazaniem do szczepienia. Szczepienie można przeprowadzić po ustąpieniu ostrych objawów i poprawie stanu ogólnego. Nie należy szczepić 4 tygodnie przed planowaną ciążą i w okresie ciąży. Patrz cz. III.L PSO.',
+      'Podawane w wywiadzie przebycie zachorowań na ODRĘ, ŚWINKĘ lub RÓŻYCZKĘ nie jest przeciwwskazaniem do szczepienia. Szczepienie można przeprowadzić po ustąpieniu ostrych objawów i poprawie stanu ogólnego pacjenta. Nie należy szczepić 4 tygodnie przed planowaną ciążą i w okresie ciąży. Patrz cz. III PSO „Informacje uzupełniające – zasady szczepień przeciw wybranym chorobom zakaźnym”.',
     relatedRecords: ['pso-mmr-1', 'pso-mmr-boost-9'],
     verificationStatus: 'verified',
   },
@@ -648,9 +649,9 @@ export const PSO_PART_IIB_ADULTS_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     populationScope: 'adults',
     subjectLabel: 'BŁONICY, TĘŻCOWI, KRZTUŚCOWI',
     recommendations:
-      'Pojedyncza dawka przypominająca co 10 lat szczepionką Tdap albo Tdap-IPV, w szczególności w związku z przesłankami epidemiologicznymi: 1) personelowi medycznemu, w szczególności mającemu kontakt z noworodkami i niemowlętami; 2) osobom w podeszłym wieku narażonym na zakażenie ze względu na wykonywane zajęcia; 3) osobom z otoczenia noworodków i niemowląt do ukończenia 12. miesiąca życia; 4) kobietom w ciąży.',
+      'Szczepienie zalecane osobom dorosłym, pojedyncza dawka przypominająca co 10 lat szczepionką Tdap albo Tdap-IPV, w szczególności w związku z przesłankami epidemiologicznymi: 1) personelowi medycznemu, w szczególności mającemu kontakt z noworodkami i niemowlętami; 2) osobom w podeszłym wieku, które ze względu na wykonywane zajęcia są narażone na zakażenie; 3) osobom z otoczenia noworodków i niemowląt do ukończenia 12. miesiąca życia; 4) kobietom w ciąży.',
     notes:
-      'Wykonywane szczepionką błoniczo-tężcowo-krztuścową ze zmniejszoną zawartością komponentu błoniczego i krztuścowego (Tdap lub Tdap-IPV). Patrz cz. I.C, II.C i III PSO.',
+      'Szczepienie przeciw BŁONICY, TĘŻCOWI, KRZTUŚCOWI wykonywane jest szczepionką błoniczo-tężcowo-krztuścową ze zmniejszoną zawartością komponentu błoniczego i krztuścowego (Tdap lub Tdap-IPV). Patrz cz. I. C PSO „Szczepienia poekspozycyjne” i cz. III. PSO „Informacje uzupełniające – zasady szczepień przeciw wybranym chorobom zakaźnym”. Patrz cz. II. C PSO „Szczepienia zalecane dla kobiet w ciąży”.',
     relatedRecords: ['pso-dtap-boost-14'],
     verificationStatus: 'verified',
   },
@@ -662,7 +663,8 @@ export const PSO_PART_IIB_ADULTS_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     populationScope: 'adults',
     subjectLabel: 'BŁONICY, TĘŻCOWI',
     recommendations: 'Szczepienie zalecane osobom dorosłym, pojedyncza dawka przypominająca co 10 lat szczepionką Td.',
-    notes: 'Wykonywane szczepionką błoniczo-tężcową ze zmniejszoną zawartością komponentu błoniczego.',
+    notes:
+      'Szczepienie przeciw błonicy i tężcowi wykonywane jest szczepionką błoniczo-tężcową ze zmniejszoną zawartością komponentu błoniczego.',
     relatedRecords: ['pso-dt-boost-19'],
     verificationStatus: 'verified',
   },
@@ -674,9 +676,11 @@ export const PSO_PART_IIB_ADULTS_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     populationScope: 'adults',
     subjectLabel: 'Zakażeniom LUDZKIMI WIRUSAMI BRODAWCZAKA (HPV)',
     recommendations: 'Szczepienie zalecane osobom dorosłym w celu uodpornienia przeciw chorobom wywołanym przez HPV.',
-    notes: 'U dorosłych schemat 3-dawkowy (wg II.A str. 21 oraz VII.C str. 48: 19–49 lat 3 dawki, 50+ po konsultacji z lekarzem).',
+    notes: '',
     relatedRecords: ['pso-rec-hpv-catchup'],
     verificationStatus: 'verified',
+    auditNote:
+      'W tabeli II.B (str. 26) kolumna „Uwagi” pozostaje pusta; schemat dawkowania u dorosłych wskazano w Części II.A (str. 21) oraz VII.C (str. 48).',
   },
   {
     id: 'pso-iib-polio',
@@ -688,7 +692,7 @@ export const PSO_PART_IIB_ADULTS_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     recommendations:
       'Szczepienie zalecane osobom powyżej 19. roku życia nieszczepionym przeciw OSTREMU NAGMINNEMU PORAŻENIU DZIECIĘCEMU (POLIOMYELITIS) w ramach szczepień obowiązkowych.',
     notes:
-      'W zależności od sytuacji epidemiologicznej wykonywane jest szczepionką inaktywowaną IPV poliwalentną (zawierającą 1, 2, 3 typ wirusa). Patrz cz. III.F PSO.',
+      'W zależności od sytuacji epidemiologicznej szczepienie wykonywane jest szczepionką inaktywowaną IPV poliwalentną (zawierającą 1, 2, 3 typ wirusa). Patrz cz. III PSO „Informacje uzupełniające – zasady szczepień przeciw wybranym chorobom zakaźnym”.',
     relatedRecords: ['pso-ipv-1', 'pso-ipv-boost-6'],
     verificationStatus: 'verified',
   },
@@ -700,8 +704,8 @@ export const PSO_PART_IIB_ADULTS_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     populationScope: 'adults',
     subjectLabel: 'OSPIE WIETRZNEJ',
     recommendations:
-      'Osobom, które nie chorowały na OSPĘ WIETRZNĄ i nie zostały wcześniej zaszczepione w ramach szczepień obowiązkowych albo zalecanych, w szczególności: 1) kobietom planującym zajście w ciążę; 2) uczniom i studentom szkół i uczelni medycznych lub kierunków medycznych; 3) pracownikom ochrony zdrowia.',
-    notes: 'Patrz cz. III.J PSO (2 dawki).',
+      'Szczepienie zalecane osobom, które nie chorowały na OSPĘ WIETRZNĄ i nie zostały wcześniej zaszczepione w ramach szczepień obowiązkowych albo zalecanych, w szczególności: 1) kobietom planującym zajście w ciążę; 2) uczniom i studentom szkół i uczelni medycznych lub innych szkół i uczelni prowadzących kształcenie na kierunkach medycznych; 3) pracownikom ochrony zdrowia.',
+    notes: 'Patrz cz. III PSO „Informacje uzupełniające – zasady szczepień przeciw wybranym chorobom zakaźnym”.',
     relatedRecords: ['pso-rec-vzv-1', 'pso-risk-vzv-special'],
     verificationStatus: 'verified',
   },
@@ -713,10 +717,12 @@ export const PSO_PART_IIB_ADULTS_RECOMMENDED: PsoPartIIRecommendedRow[] = [
     populationScope: 'adults',
     subjectLabel: 'PÓŁPAŚCOWI',
     recommendations:
-      'Osobom dorosłym, które przebyły pierwotne zakażenie wirusem OSPY WIETRZNEJ (VZV) oraz w szczególności: 1) z wrodzonym lub nabytym niedoborem odporności (immunosupresja jatrogenna, HIV, białaczka, chłoniak Hodgkina, szpiczak mnogi, przeszczepienie narządu miąższowego lub HSCT); 2) z przewlekłymi chorobami serca; 3) z przewlekłymi chorobami wątroby; 4) z przewlekłymi chorobami płuc; 5) z przewlekłymi chorobami nerek; 6) z chorobami autoimmunizacyjnymi (łuszczyca, łuszczycowe zapalenie stawów, NChZJ/nieswoiste zapalenie jelit, RZS, SM, toczeń układowy, ZZSK); 7) z cukrzycą; 8) z depresją; 9) wszystkim osobom, które ukończyły 50. rok życia niezależnie od występowania dodatkowych czynników ryzyka.',
-    notes: 'Patrz cz. III.K PSO (2 dawki w odstępie 2–6 mies., skrócenie do 1 mies. w niedoborach odporności).',
+      'Szczepienie zalecane osobom dorosłym, które przebyły pierwotne zakażenie wirusem OSPY WIETRZNEJ (VZV) oraz w szczególności: 1) z wrodzonym lub nabytym niedoborem odporności, takim jak: immunosupresja jatrogenna, zakażenie wirusem HIV, choroba nowotworowa (białaczka, chłoniak Hodgkina, szpiczak mnogi), przeszczepienie narządu miąższowego lub macierzystych komórek krwiotwórczych (HSCT); 2) z przewlekłymi chorobami serca; 3) z przewlekłymi chorobami wątroby; 4) z przewlekłymi chorobami płuc; 5) z przewlekłymi chorobami nerek; 6) z chorobami autoimmunizacyjnymi (łuszczyca, łuszczycowe zapalenie stawów, nieswoiste zapalenie jelit, reumatoidalne zapalenie stawów, stwardnienie rozsiane, toczeń układowy, zesztywniające zapalenie stawów kręgosłupa); 7) z cukrzycą; 8) z depresją; 9) wszystkim osobom, które ukończyły 50. rok życia niezależnie od występowania dodatkowych czynników ryzyka.',
+    notes: '',
     relatedRecords: [],
     verificationStatus: 'verified',
+    auditNote:
+      'W tabeli II.B (str. 27) kolumna „Uwagi” pozostaje pusta; zasady dawkowania przeciw półpaścowi znajdują się w Części III.K (str. 42).',
   },
   {
     id: 'pso-iib-mpox',
@@ -742,7 +748,7 @@ export const PSO_PART_IIC_PREGNANCY: PsoPartIIRecommendedRow[] = [
     subjectLabel: 'COVID-19',
     recommendations: 'Można podawać przez cały okres ciąży.',
     notes:
-      'Szczepienie obejmuje podanie 1 dawki szczepionki mRNA i powinno być powtarzane w każdej kolejnej ciąży w okresie zwiększonej zapadalności na COVID-19. Można podawać jednocześnie z innymi aktualnie stosowanymi szczepionkami (w dwa różne miejsca).',
+      'Szczepienie obejmuje podanie 1 dawki szczepionki. Szczepienie powinno być powtarzane w każdej kolejnej ciąży w okresie zwiększonej zapadalności na COVID-19. Do szczepień kobiet w ciąży przeciw COVID-19 wykorzystywana jest szczepionka mRNA. Szczepionkę przeciw COVID-19 można podawać jednocześnie z innymi aktualnie stosowanymi szczepionkami. W sytuacji jednoczasowego wykonania szczepienia różnymi szczepionkami, należy je podać w dwa różne miejsca.',
     relatedRecords: [],
     verificationStatus: 'verified',
   },
@@ -755,7 +761,7 @@ export const PSO_PART_IIC_PREGNANCY: PsoPartIIRecommendedRow[] = [
     subjectLabel: 'GRYPIE',
     recommendations: 'Można podawać przez cały okres ciąży.',
     notes:
-      '1 dawka szczepionki; powinno być powtarzane w każdej kolejnej ciąży w okresie zwiększonej zapadalności na grypę. Można podawać jednocześnie z innymi aktualnie stosowanymi szczepionkami (w dwa różne miejsca).',
+      'Szczepienie obejmuje podanie 1 dawki szczepionki. Szczepienie powinno być powtarzane w każdej kolejnej ciąży w okresie zwiększonej zapadalności na grypę. Można podawać jednocześnie z innymi aktualnie stosowanymi szczepionkami. W sytuacji jednoczasowego wykonania szczepienia różnymi szczepionkami, należy je podać w dwa różne miejsca.',
     relatedRecords: ['pso-rec-influenza-1'],
     verificationStatus: 'verified',
   },
@@ -768,7 +774,7 @@ export const PSO_PART_IIC_PREGNANCY: PsoPartIIRecommendedRow[] = [
     subjectLabel: 'Zakażeniom SYNCYTIALNYM WIRUSEM ODDECHOWYM (RSV)',
     recommendations: 'Można podawać od 24. do 36. tygodnia ciąży.',
     notes:
-      'Szczepienie jednodawkowe, podawane między 24. a 36. tygodniem ciąży, optymalnie od 32. do 36. tygodnia ciąży (najwyższa efektywność przy terminie porodu IX–IV). Brak wytycznych co do kolejnych dawek w kolejnych ciążach. Można podawać jednocześnie ze szczepionką przeciw GRYPIE lub COVID-19. Zaleca się zachowanie 2-tygodniowego odstępu między Tdap a RSV (dopuszcza się jednoczasowo w indywidualnych przypadkach decyzją lekarza, w dwa różne miejsca).',
+      'Szczepienie jednodawkowe, podawane między 24. a 36. tygodniem ciąży, optymalnie od 32. do 36. tygodnia ciąży. Ze względu na brak danych, nie opracowano wytycznych dotyczących podawania kolejnych dawek szczepionki. Efektywność szczepień przeciw RSV jest najwyższa, gdy termin porodu przypada od września do kwietnia ze względu na sezonowość zachorowań. Ze względu na brak danych, nie opracowano wytycznych dotyczących podawania kolejnych dawek szczepionki w następnych ciążach. Szczepionkę przeciw SYNCYTIALNEMU WIRUSOWI ODDECHOWEMU (RSV) można podawać jednocześnie ze szczepionką przeciw GRYPIE lub COVID-19. Zaleca się zachowanie 2-tygodniowego odstępu pomiędzy podaniem szczepionki przeciw BŁONICY, TĘŻCOWI, KRZTUŚCOWI a podaniem szczepionki przeciw RSV. Dopuszcza się w indywidualnych przypadkach podanie tych szczepionek podczas tej samej wizyty. Decyzję w tym zakresie podejmuje lekarz. W sytuacji jednoczasowego wykonania szczepienia różnymi szczepionkami, należy je podać w dwa różne miejsca.',
     relatedRecords: [],
     verificationStatus: 'verified',
   },
@@ -782,7 +788,7 @@ export const PSO_PART_IIC_PREGNANCY: PsoPartIIRecommendedRow[] = [
     recommendations:
       'Można podawać od ukończenia 27. do 36. tygodnia ciąży, w uzasadnionych przypadkach zagrożenia przedwczesnym porodem – po ukończeniu 20. tygodnia ciąży.',
     notes:
-      'Szczepienie obejmuje podanie 1 dawki szczepionki Tdap i powinno być powtarzane w każdej kolejnej ciąży. Zgodnie z ChPL szczepionki RSV zalecane jest zachowanie co najmniej 2-tygodniowego odstępu między Tdap a RSV (w indywidualnych przypadkach jednoczasowo decyzją lekarza, w dwa różne miejsca).',
+      'Szczepienie obejmuje podanie 1 dawki szczepionki. Szczepienie powinno być powtarzane w każdej kolejnej ciąży. Zgodnie z Charakterystyką Produktu Leczniczego szczepionki przeciw RSV, zalecane jest zachowanie co najmniej 2-tygodniowego odstępu pomiędzy podaniem szczepionki przeciw BŁONICY, TĘŻCOWI, KRZTUŚCOWI, a podaniem szczepionki przeciw RSV. Dopuszcza się w indywidualnych przypadkach podanie tych szczepionek jednoczasowo. Decyzję w tym zakresie podejmuje lekarz. W sytuacji jednoczasowego wykonania szczepienia różnymi szczepionkami, należy je podać w dwa różne miejsca. Szczepienie przeciw BŁONICY, TĘŻCOWI, KRZTUŚCOWI wykonuje się szczepionką błoniczo-tężcowo-krztuścową ze zmniejszoną zawartością komponentu krztuścowego (Tdap).',
     relatedRecords: ['pso-dtap-boost-14'],
     verificationStatus: 'verified',
   },
@@ -797,7 +803,7 @@ export const PSO_PART_IID_HEALTHCARE_WORKERS: PsoPartIIRecommendedRow[] = [
     populationScope: 'healthcare_workers',
     subjectLabel: 'COVID-19',
     recommendations: 'Szczepienie zalecane zgodnie z komunikatami Ministra Zdrowia.',
-    notes: 'Dla osób wykonujących zawód medyczny.',
+    notes: '',
     relatedRecords: [],
     verificationStatus: 'verified',
   },
@@ -810,7 +816,7 @@ export const PSO_PART_IID_HEALTHCARE_WORKERS: PsoPartIIRecommendedRow[] = [
     subjectLabel: 'GRYPIE',
     recommendations:
       'Szczepionki są ważne jeden sezon ze względu na zmiany ich składu według zaleceń Światowej Organizacji Zdrowia.',
-    notes: 'Coroczne szczepienie personelu medycznego.',
+    notes: '',
     relatedRecords: ['pso-rec-influenza-1'],
     verificationStatus: 'verified',
   },
@@ -822,7 +828,7 @@ export const PSO_PART_IID_HEALTHCARE_WORKERS: PsoPartIIRecommendedRow[] = [
     populationScope: 'healthcare_workers',
     subjectLabel: 'BŁONICY, TĘŻCOWI, KRZTUŚCOWI',
     recommendations: 'Szczepienie przypominające – 1 dawka co 10 lat.',
-    notes: 'Szczególnie personel mający kontakt z noworodkami i niemowlętami (cz. II.B).',
+    notes: '',
     relatedRecords: ['pso-dtap-boost-14'],
     verificationStatus: 'verified',
   },
@@ -835,7 +841,7 @@ export const PSO_PART_IID_HEALTHCARE_WORKERS: PsoPartIIRecommendedRow[] = [
     subjectLabel: 'Inwazyjnym zakażeniom STREPTOCOCCUS PNEUMONIAE',
     recommendations:
       'Szczepienie zalecane dla osób wykonujących zawód medyczny w szpitalnych oddziałach pediatrycznych, chorób wewnętrznych oraz geriatrycznych.',
-    notes: 'Zgodnie z PSO cz. II.D str. 29.',
+    notes: '',
     relatedRecords: ['pso-pcv-1'],
     verificationStatus: 'verified',
   },
@@ -847,8 +853,8 @@ export const PSO_PART_IID_HEALTHCARE_WORKERS: PsoPartIIRecommendedRow[] = [
     populationScope: 'healthcare_workers',
     subjectLabel: 'Inwazyjnym zakażeniom NEISSERIA MENINGITIDIS',
     recommendations:
-      'Szczepienie przeciw serogrupie B oraz 4-walentną szczepionką przeciw serogrupom A, C, W, Y zalecane w ramach profilaktyki przedekspozycyjnej osobom wykonującym zawód medyczny mającym intencjonalny kontakt z chorymi z IChM lub meningokokami (SOR, OIT, laboratorium) oraz w ramach profilaktyki poekspozycyjnej po bliskim kontakcie z chorym na IChM.',
-    notes: 'Szczepienie nie zastępuje chemioprofilaktyki poekspozycyjnej.',
+      'Szczepienie przeciw serogrupie B oraz 4-walentną szczepionką przeciw serogrupom A, C, W, Y zalecane w ramach profilaktyki przedekspozycyjnej osobom wykonującym zawód medyczny, które mają intencjonalny kontakt z chorymi z inwazyjną chorobą meningokokową lub meningokokami (pracownicy SOR, OIT, pracownicy laboratorium). Szczepienie zalecane w ramach profilaktyki poekspozycyjnej osobom wykonującym zawód medyczny, które miały bliski kontakt z chorym na inwazyjną chorobę meningokokową. Szczepienie nie zastępuje chemioprofilaktyki poekspozycyjnej.',
+    notes: '',
     relatedRecords: ['pso-rec-menb-1', 'pso-rec-menacwy-1'],
     verificationStatus: 'verified',
   },
@@ -860,8 +866,8 @@ export const PSO_PART_IID_HEALTHCARE_WORKERS: PsoPartIIRecommendedRow[] = [
     populationScope: 'healthcare_workers',
     subjectLabel: 'WIRUSOWEMU ZAPALENIU WĄTROBY typu A',
     recommendations:
-      'Zalecane w profilaktyce przedekspozycyjnej przy intencjonalnym kontakcie z chorymi z WZW A lub wirusem HAV (poradnie i oddziały zakaźne, laboratorium) oraz poekspozycyjnie po bliskim kontakcie z chorym na WZW typu A.',
-    notes: 'Część II.D str. 29.',
+      'Szczepienie zalecane w ramach profilaktyki przedekspozycyjnej osobom wykonującym zawód medyczny, które mają intencjonalny kontakt z chorymi z WZW typu A lub wirusem HAV (pracownicy poradni i oddziałów zakaźnych, pracownicy laboratorium). Szczepienie zalecane w ramach profilaktyki poekspozycyjnej osobom wykonującym zawód medyczny, które miały bliski kontakt z chorym na WZW typu A.',
+    notes: '',
     relatedRecords: ['pso-rec-hava-1'],
     verificationStatus: 'verified',
   },
@@ -873,8 +879,8 @@ export const PSO_PART_IID_HEALTHCARE_WORKERS: PsoPartIIRecommendedRow[] = [
     populationScope: 'healthcare_workers',
     subjectLabel: 'ODRZE, ŚWINCE, RÓŻYCZCE',
     recommendations:
-      'Osobom wykonującym zawód medyczny, które nie mają udokumentowanego uodpornienia przeciw odrze (udokumentowane 2 dawki szczepienia LUB swoiste IgG w surowicy LUB potwierdzone laboratoryjnie zachorowanie na odrę). Zaleca się ocenę stanu uodpornienia pracowników ochrony zdrowia, w szczególności urodzonych przed 1984 r. ze względu na termin wprowadzenia schematu dwudawkowego do PSO.',
-    notes: 'Część II.D str. 29.',
+      'Szczepienie zalecane osobom wykonującym zawód medyczny, które nie mają udokumentowanego uodpornienia przeciw odrze (tj. udokumentowane szczepienie 2-dawkami przeciw odrze lub obecność swoistych przeciwciał IgG przeciw wirusowi odry w surowicy lub potwierdzone laboratoryjnie zachorowanie na odrę). Zaleca się ocenę stanu uodpornienia pracowników ochrony zdrowia przeciw odrze, w szczególności urodzonych przed 1984 r. ze względu na termin wprowadzenia dwudawkowego schematu szczepień do PSO.',
+    notes: '',
     relatedRecords: ['pso-mmr-1'],
     verificationStatus: 'verified',
   },
@@ -886,8 +892,8 @@ export const PSO_PART_IID_HEALTHCARE_WORKERS: PsoPartIIRecommendedRow[] = [
     populationScope: 'healthcare_workers',
     subjectLabel: 'OSPIE WIETRZNEJ',
     recommendations:
-      'Osobom wykonującym zawód medyczny, które nie chorowały na ospę wietrzną lub nie otrzymały pełnego schematu (2 dawki), szczególnie pracownikom oddziałów, gdzie zachorowanie personelu stanowi szczególne zagrożenie dla pacjentów. Dowody odporności: 1) udokumentowany pełny cykl szczepienia; 2) wykrycie swoistych przeciwciał IgG przeciw VZV; 3) zachorowanie potwierdzone laboratoryjnie; 4) zachorowanie na ospę wietrzną lub półpasiec rozpoznane przez lekarza.',
-    notes: 'Część II.D str. 29–30.',
+      'Szczepienie zalecane osobom wykonującym zawód medyczny, które nie chorowały na ospę wietrzną lub nie otrzymały pełnego schematu szczepień (2 dawki) przeciw ospie wietrznej. Zaleca się ocenę stanu uodpornienia pracowników ochrony zdrowia przeciw ospie wietrznej, w szczególności pracowników oddziałów, na których zachorowanie personelu na ospę wietrzną może być szczególnym zagrożeniem dla pacjentów. Dowody odporności przeciw ospie wietrznej to: 1) udokumentowany pełny cykl szczepienia; 2) wykrycie swoistych przeciwciał IgG przeciw wirusowi ospy wietrznej w surowicy; 3) zachorowanie na ospę wietrzną potwierdzone laboratoryjnie; 4) zachorowanie na ospę wietrzną lub półpasiec rozpoznane przez lekarza.',
+    notes: '',
     relatedRecords: ['pso-rec-vzv-1'],
     verificationStatus: 'verified',
   },
@@ -899,8 +905,8 @@ export const PSO_PART_IID_HEALTHCARE_WORKERS: PsoPartIIRecommendedRow[] = [
     populationScope: 'healthcare_workers',
     subjectLabel: 'DUROWI BRZUSZNEMU',
     recommendations:
-      'Zalecane w ramach profilaktyki przedekspozycyjnej osobom wykonującym zawód medyczny mającym intencjonalny kontakt z chorymi na dur brzuszny lub pałeczką Salmonella Typhi (poradnie i oddziały zakaźne, pracownicy laboratorium).',
-    notes: 'Część II.D str. 30.',
+      'Szczepienie zalecane w ramach profilaktyki przedekspozycyjnej osobom wykonującym zawód medyczny, które mają intencjonalny kontakt z chorymi na dur brzuszny lub pałeczką Salmonella Typhi (pracownicy poradni i oddziałów zakaźnych, pracownicy laboratorium).',
+    notes: '',
     relatedRecords: [],
     verificationStatus: 'verified',
   },
@@ -912,8 +918,8 @@ export const PSO_PART_IID_HEALTHCARE_WORKERS: PsoPartIIRecommendedRow[] = [
     populationScope: 'healthcare_workers',
     subjectLabel: 'MPOX',
     recommendations:
-      'Zalecane w ramach profilaktyki przedekspozycyjnej osobom wykonującym zawód medyczny mającym intencjonalny kontakt z chorymi na Mpox lub wirusem Mpox (poradnie i oddziały zakaźne, pracownicy laboratorium).',
-    notes: 'Część II.D str. 30.',
+      'Szczepienie zalecane w ramach profilaktyki przedekspozycyjnej osobom wykonującym zawód medyczny, które mają intencjonalny kontakt z chorymi na Mpox lub wirusem Mpox (pracownicy poradni i oddziałów zakaźnych, pracownicy laboratorium).',
+    notes: '',
     relatedRecords: [],
     verificationStatus: 'verified',
   },
@@ -935,8 +941,8 @@ export const PSO_PART_IIE_OTHER_WORKERS: PsoPartIIRecommendedRow[] = [
     populationScope: 'occupational_groups',
     subjectLabel: 'Pracownicy sektora edukacji i opieki społecznej',
     recommendations:
-      'Szczepienia przeciw: COVID-19; GRYPIE; KRZTUŚCOWI, TĘŻCOWI, BŁONICY; ODRZE, ŚWINCE, RÓŻYCZCE; OSPIE WIETRZNEJ; PNEUMOKOKOM; MENINGOKOKOM.',
-    notes: 'Finansowanie w całości przez pracodawcę w zakresie przepisów rozporządzeń wskazanych we wprowadzeniu II.E.',
+      '– szczepienie przeciw COVID-19, – szczepienie przeciw GRYPIE, – szczepienie przeciw KRZTUŚCOWI, TĘŻCOWI, BŁONICY, – szczepienie przeciw ODRZE, ŚWINCE, RÓŻYCZCE, – szczepienie przeciw OSPIE WIETRZNEJ, – szczepienie przeciw PNEUMOKOKOM, – szczepienie przeciw MENINGOKOKOM.',
+    notes: '',
     relatedRecords: [],
     verificationStatus: 'verified',
   },
@@ -948,8 +954,8 @@ export const PSO_PART_IIE_OTHER_WORKERS: PsoPartIIRecommendedRow[] = [
     populationScope: 'occupational_groups',
     subjectLabel: 'Pracownicy sektora turystycznego',
     recommendations:
-      'Szczepienia przeciw: COVID-19; GRYPIE; KRZTUŚCOWI, TĘŻCOWI i BŁONICY; ODRZE, ŚWINCE, RÓŻYCZCE; WZW typu A; szczepienia wskazane w międzynarodowych przepisach zdrowotnych lub zalecane w regionach endemicznych.',
-    notes: 'Część II.E str. 30.',
+      '– szczepienie przeciw COVID-19, – szczepienie przeciw GRYPIE, – szczepienie przeciw KRZTUŚCOWI, TĘŻCOWI i BŁONICY, – szczepienie przeciw ODRZE, ŚWINCE, RÓŻYCZCE, – szczepienie przeciw WZW typu A, – szczepienia wskazane w międzynarodowych przepisach zdrowotnych lub zalecane w regionach endemicznych.',
+    notes: '',
     relatedRecords: [],
     verificationStatus: 'verified',
   },
@@ -960,8 +966,8 @@ export const PSO_PART_IIE_OTHER_WORKERS: PsoPartIIRecommendedRow[] = [
     vaccinationType: 'zalecane',
     populationScope: 'occupational_groups',
     subjectLabel: 'Pracownicy sektora gastronomicznego',
-    recommendations: 'Szczepienia przeciw: COVID-19; WZW typu A; GRYPIE.',
-    notes: 'Część II.E str. 30–31.',
+    recommendations: '– szczepienie przeciw COVID-19, – szczepienie przeciw WZW typu A, – szczepienie przeciw GRYPIE.',
+    notes: '',
     relatedRecords: [],
     verificationStatus: 'verified',
   },
@@ -973,8 +979,8 @@ export const PSO_PART_IIE_OTHER_WORKERS: PsoPartIIRecommendedRow[] = [
     populationScope: 'occupational_groups',
     subjectLabel: 'Pracownicy sektora komunalnego',
     recommendations:
-      'Szczepienia przeciw: COVID-19; TĘŻCOWI, BŁONICY i KRZTUŚCOWI, POLIOMYELITIS; WZW typu A; DUROWI BRZUSZNEMU; GRYPIE.',
-    notes: 'Część II.E str. 31.',
+      '– szczepienie przeciw COVID-19, – szczepienie przeciw TĘŻCOWI, BŁONICY i KRZTUŚCOWI, POLIOMYELITIS, – szczepienie przeciw WZW typu A, – szczepienie przeciw DUROWI BRZUSZNEMU, – szczepienie przeciw GRYPIE.',
+    notes: '',
     relatedRecords: [],
     verificationStatus: 'verified',
   },
@@ -986,8 +992,8 @@ export const PSO_PART_IIE_OTHER_WORKERS: PsoPartIIRecommendedRow[] = [
     populationScope: 'occupational_groups',
     subjectLabel: 'Pracownicy sektora rolnego i leśnego',
     recommendations:
-      'Szczepienia przeciw: TĘŻCOWI, BŁONICY, KRZTUŚCOWI; KLESZCZOWEMU ZAPALENIU MÓZGU; WŚCIEKLIŹNIE; WZW typu A (dotyczy sektora rolnego); GRYPIE; COVID-19.',
-    notes: 'Część II.E str. 31.',
+      '– szczepienie przeciw TĘŻCOWI, BŁONICY, KRZTUŚCOWI, – szczepienie przeciw KLESZCZOWEMU ZAPALENIU MÓZGU, – szczepienie przeciw WŚCIEKLIŹNIE, – szczepienie przeciw WZW typu A (dotyczy sektora rolnego), – szczepienie przeciw GRYPIE, – szczepienie przeciw COVID-19.',
+    notes: '',
     relatedRecords: [],
     verificationStatus: 'verified',
   },
@@ -999,8 +1005,8 @@ export const PSO_PART_IIE_OTHER_WORKERS: PsoPartIIRecommendedRow[] = [
     populationScope: 'occupational_groups',
     subjectLabel: 'Pracownicy sektora transportu i budownictwa',
     recommendations:
-      'Szczepienia przeciw: TĘŻCOWI (skojarzone ze szczepieniem przeciw BŁONICY i KRZTUŚCOWI); KLESZCZOWEMU ZAPALENIU MÓZGU; GRYPIE.',
-    notes: 'Część II.E str. 31.',
+      '– szczepienie przeciw TĘŻCOWI (skojarzone ze szczepieniem przeciw BŁONICY i KRZTUŚCOWI), – szczepienie przeciw KLESZCZOWEMU ZAPALENIU MÓZGU, – szczepienie przeciw GRYPIE.',
+    notes: '',
     relatedRecords: [],
     verificationStatus: 'verified',
   },
@@ -1012,8 +1018,8 @@ export const PSO_PART_IIE_OTHER_WORKERS: PsoPartIIRecommendedRow[] = [
     populationScope: 'occupational_groups',
     subjectLabel: 'Służby mundurowe',
     recommendations:
-      'Szczepienia przeciw: COVID-19; GRYPIE; TĘŻCOWI, BŁONICY, KRZTUŚCOWI, POLIO; ODRZE, ŚWINCE, RÓŻYCZCE; WZW typu A; WZW typu B; KLESZCZOWEMU ZAPALENIU MÓZGU; inwazyjnym zakażeniom NEISSERIA MENINGITIDIS.',
-    notes: 'Część II.E str. 31.',
+      '– szczepienie przeciw COVID-19, – szczepienie przeciw GRYPIE, – szczepienie przeciw TĘŻCOWI, BŁONICY, KRZTUŚCOWI, POLIO, – szczepienie przeciw ODRZE, ŚWINCE, RÓŻYCZCE, – szczepienie przeciw WZW typu A, – szczepienie przeciw WZW typu B, – szczepienie przeciw KLESZCZOWEMU ZAPALENIU MÓZGU, – szczepienia przeciw inwazyjnym zakażeniom NEISSERIA MENINGITIDIS.',
+    notes: '',
     relatedRecords: [],
     verificationStatus: 'verified',
   },
@@ -1025,7 +1031,7 @@ export const PSO_PART_IIE_OTHER_WORKERS: PsoPartIIRecommendedRow[] = [
     populationScope: 'occupational_groups',
     subjectLabel: 'Żołnierze czynnej służby wojskowej',
     recommendations: 'Zgodnie z Kalendarzem szczepień ochronnych dla żołnierzy czynnej służby wojskowej.',
-    notes: 'Część II.E str. 31.',
+    notes: '',
     relatedRecords: [],
     verificationStatus: 'verified',
   },
@@ -1040,23 +1046,23 @@ export const PSO_PART_IIF_POST_EXPOSURE: PsoPartIIRecommendedRow[] = [
     populationScope: 'post_exposure',
     subjectLabel: 'ODRZE',
     recommendations:
-      'Dla osób nieszczepionych lub niemających udokumentowanego szczepienia lub przechorowania odry w środowisku o niskim odsetku zaszczepionych oraz dla osób z udokumentowanym szczepieniem 1 dawką po lub przy narażeniu na styczność z osobą chorą lub podejrzaną o odrę.',
+      'Szczepienie zalecane dla osób nieszczepionych lub niemających udokumentowanego szczepienia lub przechorowania odry, które przebywają w środowisku o niskim odsetku osób zaszczepionych oraz dla osób z udokumentowanym szczepieniem jedną dawką, które były lub mogą być narażone na styczność z osobą chorą lub podejrzaną o zachorowanie na ODRĘ.',
     notes:
-      'Szczepionka MMR w ciągu 72 godzin od kontaktu (1 dawka; u nieszczepionych 2. dawka po >=4 tygodniach). Przy przeciwwskazaniach (dzieci <9. m.ż., kobiety ciężarne, niedobór odporności): gammaglobulina / immunoglobulina jak najszybciej, nie później niż 6 dni od ekspozycji.',
+      'Szczepienia są wykonywane szczepionką przeciw odrze, śwince i różyczce, w ciągu 72 godzin od kontaktu z osobą chorą lub podejrzaną o zachorowanie na ODRĘ. Szczepienie poekspozycyjne jest wykonywane w schemacie 1-dawkowym. U osób dotychczas nieszczepionych jest zalecane podanie drugiej dawki po upływie co najmniej 4 tygodni. W przypadku osób z przeciwwskazaniami do szczepień (dzieci poniżej 9. miesiąca życia, kobiety ciężarne, pacjenci z niedoborem odporności) możliwe jest zastosowanie profilaktyki biernej w formie preparatów gammaglobulin lub immunoglobulin. Immunoglobulina powinna być podana jak najszybciej, nie później niż 6 dni od ekspozycji.',
     relatedRecords: ['pso-mmr-1'],
     verificationStatus: 'verified',
   },
   {
     id: 'pso-iif-varicella',
     sourceSubsection: 'II.F',
-    sourcePages: [32, 33],
+    sourcePages: [32],
     vaccinationType: 'zalecane',
     populationScope: 'post_exposure',
     subjectLabel: 'OSPIE WIETRZNEJ',
     recommendations:
-      'Dla osób po bliskiej styczności z osobą chorą na ospę wietrzną, które dotychczas nie chorowały na ospę wietrzną i/lub półpasiec, bez udokumentowanego szczepienia ani potwierdzenia laboratoryjnego swoistych przeciwciał.',
+      'Szczepienie zalecane dla osób, które miały bliską styczność z osobą chorą na OSPĘ WIETRZNĄ, a które dotychczas nie chorowały na OSPĘ WIETRZNĄ i/lub półpasiec, osobom bez udokumentowanego szczepienia na OSPĘ WIETRZNĄ, bądź osobom, które nie posiadają laboratoryjnego potwierdzenia obecności swoistych przeciwciał przeciw OSPIE WIETRZNEJ.',
     notes:
-      'Szczepionka VZV w schemacie 1-dawkowym do 72 h od kontaktu, nie później niż do 5 dni po ostatnim kontakcie (u dotychczas nieszczepionych 2. dawka po co najmniej 6 tygodniach). Przy przeciwwskazaniach (noworodki, ciężarne, niedobór odporności): swoista immunoglobulina do 96 godzin od kontaktu.',
+      'Szczepienie poekspozycyjne jest wykonywane szczepionką przeciw OSPIE WIETRZNEJ, w schemacie 1-dawkowym. Zaleca się wykonanie szczepienia do 72 godzin od kontaktu z osobą chorą na OSPĘ WIETRZNĄ, jednak nie później niż do 5 dni po ostatnim kontakcie. U osób dotychczas nieszczepionych jest zalecane podanie drugiej dawki po upływie co najmniej 6 tygodni. W przypadku osób z przeciwwskazaniami do szczepień (noworodki, kobiety ciężarne, pacjenci z niedoborem odporności) możliwe jest zastosowanie immunoprofilaktyki biernej w formie swoistej immunoglobuliny, podanej do 96 godzin od kontaktu z osobą chorą na OSPĘ WIETRZNEJ.',
     relatedRecords: ['pso-rec-vzv-1', 'pso-risk-vzv-special'],
     verificationStatus: 'verified',
   },
@@ -1067,9 +1073,10 @@ export const PSO_PART_IIF_POST_EXPOSURE: PsoPartIIRecommendedRow[] = [
     vaccinationType: 'zalecane',
     populationScope: 'post_exposure',
     subjectLabel: 'WIRUSOWEMU ZAPALENIU WĄTROBY typu A',
-    recommendations: 'Osobom, które miały bliską styczność z osobą chorą na WIRUSOWE ZAPALENIE WĄTROBY typu A.',
+    recommendations:
+      'Szczepienie zalecane osobom, które miały bliską styczność z osobą chorą na WIRUSOWE ZAPALENIE WĄTROBY typu A.',
     notes:
-      'Szczepionka przeciw WZW A w schemacie 1-dawkowym w ciągu 14 dni od kontaktu (dawka uzupełniająca po >=6 miesiącach; inaktywowane szczepionki różnych producentów można stosować zamiennie). Przy przeciwwskazaniach (niemowlęta, przewlekłe choroby wątroby, immunosupresja): immunoglobulina jak najszybciej, maksymalnie do 14 dni od ekspozycji.',
+      'Szczepienie poekspozycyjne jest wykonywane szczepionką przeciw WIRUSOWEMU ZAPALENIU WĄTROBY typu A, w schemacie 1-dawkowym. Zaleca się wykonanie szczepienia w ciągu 14 dni od kontaktu z osobą chorą na WIRUSOWE ZAPALENIE WĄTROBY typu A. Zalecane jest podanie dawki uzupełniającej po upływie co najmniej 6 miesięcy, w celu zapewnienia długotrwałej odporności. Inaktywowane szczepionki przeciw WZW typu A różnych producentów można stosować zamiennie. W przypadku osób z przeciwwskazaniami do szczepień (niemowlęta, osoby z przewlekłymi chorobami wątroby, w immunosupresji i z przeciwwskazaniami do szczepień ochronnych) jest możliwe zastosowanie profilaktyki biernej w formie preparatów immunoglobulin. Immunoglobulinę należy podać jak najszybciej po kontakcie, maksymalnie do 14 dni od ekspozycji.',
     relatedRecords: ['pso-rec-hava-1'],
     verificationStatus: 'verified',
   },
@@ -1081,11 +1088,12 @@ export const PSO_PART_IIF_POST_EXPOSURE: PsoPartIIRecommendedRow[] = [
     populationScope: 'post_exposure',
     subjectLabel: 'WIRUSOWEMU ZAPALENIU WĄTROBY typu B',
     recommendations:
-      'Osobom, które miały kontakt z materiałem potencjalnie zakaźnym (np. krwią, płynami ustrojowymi) i u których istnieje ryzyko zakażenia HBV.',
+      'Szczepienie zalecane osobom, które miały kontakt z materiałem potencjalnie zakaźnym (np. krwią, płynami ustrojowymi) i u których istnieje ryzyko zakażenia HBV.',
     notes:
-      'W zależności od uodpornienia i statusu HBsAg źródła: tylko szczepienie, tylko immunoglobulina HBIG, lub szczepienie + immunoglobulina. Seria szczepień powinna zostać rozpoczęta jak najszybciej, optymalnie w ciągu 12–24 godzin, do maksymalnie 7 dni po ekspozycji. Szczegółowa macierz postępowania: Część II.G (str. 34).',
+      'W zależności od stanu uodpornienia osoby narażonej oraz obecności antygenu powierzchniowego HBsAg u źródła narażenia, profilaktyka poekspozycyjna może obejmować: – tylko szczepienie, – tylko podanie immunoglobuliny, – szczepienie i podanie immunoglobuliny. Seria szczepień powinna zostać rozpoczęta jak najszybciej, optymalnie w ciągu 12–24 godzin, do maksymalnie 7 dni po ekspozycji.',
     relatedRecords: ['pso-hepb-unvaccinated-primary'],
     verificationStatus: 'verified',
+    auditNote: 'Szczegółowa macierz postępowania poekspozycyjnego HBV znajduje się w Części II.G (str. 34).',
   },
 ];
 
@@ -1998,10 +2006,11 @@ export const PSO_2027_COMPLETENESS_REGISTRY: PsoSubsectionCompletenessEntry[] = 
     sourcePages: [19, 20, 21],
     populationScope: 'children_and_adolescents',
     recordCount: PSO_PART_IIA_PEDIATRIC_RECOMMENDED.length,
-    verificationStatus: 'partially_verified',
+    verificationStatus: 'verified',
     summaryNote:
-      'Treść PSO II.A zweryfikowana w 100% ze str. 19–21; powiązane rekordy ChPL/finansowania pozostają w niezależnej weryfikacji katalogowej.',
-    discrepancyOrCaveat: 'Rozdzielenie statusu PSO (zweryfikowane) od niezależnego audytu ChPL/RPL preparatów.',
+      'Treść wszystkich 7 wierszy PSO II.A zweryfikowana w 100% ze str. 19–21 akt.pdf (usunięto dopiski spoza źródła i przywrócono pełne listy wskazań). Powiązane procedury w CHILD_VACCINES_CATALOG i preparaty w VACCINES_CATALOG podlegają odrębnej weryfikacji ChPL/RPL (status ChPL pozostaje niezależny od statusu PSO).',
+    discrepancyOrCaveat:
+      'Zgodność treści PSO II.A ≠ weryfikacja ChPL preparatów: powiązane rekordy katalogowe mają status ChPL pending_chpl_verification (0 verified_full w katalogu).',
   },
   {
     subsectionCode: 'II.B',
@@ -2288,7 +2297,7 @@ export const PSO_2027_STRUCTURED_RECORDS: PsoStructuredRecord[] = [
     vaccinationType: row.vaccinationType,
     title: `${row.sourceSubsection}: ${row.subjectLabel}`,
     description: `${row.recommendations} ${row.notes}`.trim(),
-    schedule: row.notes,
+    schedule: row.notes || undefined,
     relatedRecords: row.relatedRecords,
     sourceReference: `${PSO_2027_SOURCE_META.journalCitation}, Część ${row.sourceSubsection}, str. ${row.sourcePages.join('–')}`,
     verificationStatus: row.verificationStatus,

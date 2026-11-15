@@ -79,4 +79,31 @@ describe('MASTER 15 — Integracja UI 7 części PSO 2027 w widokach VaxNurse', 
     const iibRegion = adultIibHeading.closest('section')!;
     expect(within(iibRegion).getByText(/Półpaścowi/i)).toBeInTheDocument();
   });
+
+  it('MASTER 16: poprawne zakresy stron I.B/II.F/II.G, brak syntetycznych Uwagi PSO oraz jawne rozdzielenie statusu ChPL', async () => {
+    const user = userEvent.setup();
+    render(
+      <ChildVaccinationsView
+        module={getMod('child-vaccinations')}
+        onBackToDashboard={vi.fn()}
+        onNavigateToModule={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('tab', { name: /Część I pełna/i }));
+    expect(screen.getByRole('button', { name: /I\.B \(Grupy podwyższonego ryzyka, str\. 13–14\)/i })).toBeInTheDocument();
+    expect(screen.queryByText(/str\. 12–15/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: /^Część II \(/i }));
+    expect(screen.getByRole('heading', { name: /II\.F — Szczepienia zalecane poekspozycyjne \(str\. 32–33\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /II\.G — Swoiste zapobieganie WZW typu B.*\(str\. 34\)/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Stosuje się zgodnie z ChPL preparatu pediatrycznego/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Stosuje się w schemacie 2-dawkowym zgodnie z ChPL/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/status PSO ≠ weryfikacja ChPL preparatu/i).length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole('tab', { name: /Kompletność i wyszukiwarka PSO/i }));
+    expect(screen.getByText(/Rozdzielenie weryfikacji PSO 2027 i ChPL preparatów:/i)).toBeInTheDocument();
+    expect(screen.getByText(/verified_full = 0/i)).toBeInTheDocument();
+    expect(screen.getByText(/wymaga wyjaśnienia ChPL = 12/i)).toBeInTheDocument();
+  });
 });

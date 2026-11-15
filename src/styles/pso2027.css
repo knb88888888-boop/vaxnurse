@@ -360,7 +360,11 @@
 }
 
 .pso-related-chip {
-  display: inline-block;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
   padding: 0.14rem 0.45rem;
   border-radius: 5px;
   background-color: #e2e8f0;
@@ -385,6 +389,50 @@
 .pso-related-chip--interactive:focus-visible {
   outline: 2px solid #0369a1;
   outline-offset: 2px;
+}
+
+.pso-related-chip--chpl-warn {
+  border-color: #fcd34d;
+  background-color: #fffbeb;
+  color: #78350f;
+}
+
+.pso-related-chip--chpl-warn.pso-related-chip--interactive:hover {
+  background-color: #fef3c7;
+}
+
+.pso-related-chpl-tag {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.67rem;
+  font-weight: 600;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+  background-color: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.pso-related-chpl-tag--warn {
+  background-color: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
+.pso-related-chpl-note {
+  font-size: 0.72rem;
+  color: #475569;
+}
+
+.pso-audit-note {
+  margin: 0.35rem 0 0.5rem 0;
+  padding: 0.45rem 0.65rem;
+  border-radius: 6px;
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  font-size: 0.82rem;
+  color: #78350f;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .pso-matrix-scroll {
