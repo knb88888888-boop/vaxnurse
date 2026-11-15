@@ -1833,7 +1833,8 @@ export const PSO_PART_VII_TABLES: PsoPartVIIScheduleTable[] = [
             colSpan: 2,
             text: '',
             tone: 'conditional',
-            ariaAgeRange: '19–49 lat i 50–64 lat (pusta komórka w oficjalnej tabeli str. 48)',
+            ariaAgeRange:
+              '19–49 lat i 50–64 lat (puste komórki w oficjalnej tabeli str. 48; zalecenia dla grup ryzyka zawiera Część II.B str. 23–24)',
           },
           {
             id: 'c-men-65',
@@ -1844,7 +1845,7 @@ export const PSO_PART_VII_TABLES: PsoPartVIIScheduleTable[] = [
           },
         ],
         rowNote:
-          'Uwaga audytowa: w tabeli PDF (str. 48) opis „MenB – 2 dawki / MenACWY – 1 dawka” umieszczono w kolumnie „65 lat i powyżej”, podczas gdy przedziały 19–64 lat pozostawiono puste (tło #d9d9d9). W Części II.B (str. 23–24) zalecenie dotyczy dorosłych z grup ryzyka oraz „w szczególności powyżej 65. r.ż.”.',
+          'Uwaga: część II.B PSO (str. 23–24) wymienia również dorosłych z określonymi grupami ryzyka. Puste komórki w skróconym kalendarzu VII.C dla wieku 19–49 i 50–64 lata nie wykluczają zaleceń określonych w części II.B. Nie należy na podstawie pustych komórek wnioskować o braku wskazań ani dopisywać niepodanych tam schematów dawkowania.',
       },
       {
         id: 'viic-pneumo',
@@ -1918,7 +1919,7 @@ export const PSO_PART_VII_TABLES: PsoPartVIIScheduleTable[] = [
     footnotes: [],
     verificationStatus: 'conflicting',
     structuralAuditNote:
-      'Dosłowne odwzorowanie tabeli VII.C (str. 48 akt.pdf): w wierszu „Meningokokom” komórki 19–49 i 50–64 lat są w PDF puste (#d9d9d9), mimo że Część II.B (str. 23–24) wymienia dorosłych z grup ryzyka niezależnie od ukończenia 65. r.ż. Różnicę zachowano jawnie jako status conflicting zamiast ręcznie zgadywać układu kolumn.',
+      'Dosłowne odwzorowanie tabeli VII.C (str. 48 akt.pdf): w wierszu „Meningokokom” komórki 19–49 i 50–64 lat są w PDF puste (#d9d9d9), mimo że Część II.B (str. 23–24) wymienia dorosłych z grup ryzyka niezależnie od ukończenia 65. r.ż. Puste komórki w skróconym kalendarzu VII.C nie wykluczają zaleceń określonych w części II.B — nie należy na ich podstawie wnioskować o braku wskazań ani dopisywać niepodanych tam schematów dawkowania. Różnicę zachowano jawnie jako status conflicting zamiast ręcznie zgadywać układ kolumn.',
   },
 ];
 

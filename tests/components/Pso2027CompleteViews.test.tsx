@@ -106,4 +106,53 @@ describe('MASTER 15 — Integracja UI 7 części PSO 2027 w widokach VaxNurse', 
     expect(screen.getByText(/verified_full = 0/i)).toBeInTheDocument();
     expect(screen.getByText(/wymaga wyjaśnienia ChPL = 12/i)).toBeInTheDocument();
   });
+
+  it('MASTER 17: Tabela VII.C w widoku renderuje notę wyjaśniającą w boksie ostrzegawczym oraz tooltip dla pustej komórki meningokoków', async () => {
+    const user = userEvent.setup();
+    render(
+      <ChildVaccinationsView
+        module={getMod('child-vaccinations')}
+        onBackToDashboard={vi.fn()}
+        onNavigateToModule={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('tab', { name: /Skrócone kalendarze \(Część VII\)/i }));
+
+    // Weryfikacja boksu noty
+    const noteBoxes = screen.getAllByRole('note');
+    expect(noteBoxes.length).toBeGreaterThan(0);
+    const menNote = noteBoxes.find((box) => box.textContent?.includes('część II.B PSO (str. 23–24)'));
+    expect(menNote).toBeDefined();
+    expect(menNote).toHaveTextContent(
+      'Puste komórki w skróconym kalendarzu VII.C dla wieku 19–49 i 50–64 lata nie wykluczają zaleceń określonych w części II.B',
+    );
+
+    // Weryfikacja tooltipu / title dla c-men-empty oraz opisu sr-only nieoznaczającego braku wskazań
+    const emptyMeningoCell = screen.getByTitle(
+      /Pusta komórka w oficjalnym kalendarzu VII\.C \(str\. 48\)\. Wskazania dla grup ryzyka w wieku 19–64 lat określa Część II\.B/i,
+    );
+    expect(emptyMeningoCell).toBeInTheDocument();
+    expect(emptyMeningoCell).toHaveTextContent(/Pusta komórka w oficjalnej tabeli/i);
+  });
+
+  it('MASTER 17 (AdultView): Moduł Szczepienia dorosłych również prezentuje pustą komórkę VII.C z notą o Części II.B bez dopisywania dawek', () => {
+    render(
+      <OperationalModuleView
+        module={getMod('adult-vaccinations')}
+        onBackToDashboard={vi.fn()}
+        onNavigateToModule={vi.fn()}
+      />,
+    );
+
+    const menNote = screen
+      .getAllByRole('note')
+      .find((box) => box.textContent?.includes('część II.B PSO (str. 23–24)'));
+    expect(menNote).toBeDefined();
+    expect(
+      screen.getByTitle(
+        /Pusta komórka w oficjalnym kalendarzu VII\.C \(str\. 48\)\. Wskazania dla grup ryzyka w wieku 19–64 lat określa Część II\.B/i,
+      ),
+    ).toBeInTheDocument();
+  });
 });

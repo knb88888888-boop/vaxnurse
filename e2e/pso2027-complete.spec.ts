@@ -117,4 +117,31 @@ test.describe('E2E — MASTER 15: Kompletność 7 części PSO 2027, dostępnoś
 
     monitor.assertClean();
   });
+
+  test('MASTER 17: Wyjaśnienie konfliktu VII.C w UI — widoczny boks ostrzegawczy i atrybuty komórki c-men-empty bez naruszeń a11y', async ({
+    page,
+  }) => {
+    const monitor = attachRuntimeMonitor(page);
+    const axeErrors: string[] = [];
+
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto('/');
+
+    await page.getByRole('button', { name: /Szczepienia dzieci/i }).first().click();
+    await page.getByRole('tab', { name: /Skrócone kalendarze \(Część VII\)/i }).click();
+
+    // Weryfikacja boksu noty wyjaśniającej
+    const menNoteBox = page.locator('.pso-row-note-box').filter({ hasText: /część II\.B PSO \(str\. 23–24\)/i });
+    await expect(menNoteBox).toBeVisible();
+    await expect(menNoteBox).toContainText('Puste komórki w skróconym kalendarzu VII.C dla wieku 19–49 i 50–64 lata nie wykluczają zaleceń');
+
+    // Weryfikacja pustej komórki z title
+    const emptyCell = page.locator('td[title*="Pusta komórka w oficjalnym kalendarzu VII.C"]');
+    await expect(emptyCell).toHaveAttribute('title', /Wskazania dla grup ryzyka w wieku 19–64 lat określa Część II\.B/i);
+
+    const res = await runAxeAudit(page, 'VII.C Meningo Note A11y', axeErrors);
+    expect(res.wcagViolationsCount, axeErrors.join('\n')).toBe(0);
+
+    monitor.assertClean();
+  });
 });

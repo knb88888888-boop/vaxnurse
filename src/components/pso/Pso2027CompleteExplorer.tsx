@@ -995,7 +995,12 @@ const renderSinglePartVIITable = (
             <tr key={row.id}>
               <th scope="row" className="pso-vii-row-header">
                 <div>{row.vaccineAgainst}</div>
-                {row.rowNote && <div className="pso-footnote-muted">{row.rowNote}</div>}
+                {row.rowNote && (
+                  <div className="pso-row-note-box" role="note">
+                    <AlertTriangle size={14} aria-hidden="true" className="pso-note-icon" />
+                    <span>{row.rowNote}</span>
+                  </div>
+                )}
                 {row.relatedRecords.length > 0 && (
                   <RelatedProcedureChips
                     recordIds={row.relatedRecords}
@@ -1008,6 +1013,11 @@ const renderSinglePartVIITable = (
                   key={cell.id}
                   colSpan={cell.colSpan}
                   className={`pso-vii-cell pso-vii-cell--${cell.tone}`}
+                  title={
+                    cell.id === 'c-men-empty'
+                      ? 'Pusta komórka w oficjalnym kalendarzu VII.C (str. 48). Wskazania dla grup ryzyka w wieku 19–64 lat określa Część II.B (str. 23–24); brak wpisu w skróconym kalendarzu nie oznacza braku wskazań.'
+                      : undefined
+                  }
                 >
                   {cell.text ? (
                     <span>{cell.text}</span>
@@ -1016,7 +1026,12 @@ const renderSinglePartVIITable = (
                       <span aria-hidden="true" className="pso-vii-empty-dash">
                         –
                       </span>
-                      <span className="sr-only">Brak dawki w przedziale: {cell.ariaAgeRange}</span>
+                      <span className="sr-only">
+                        {cell.id === 'c-men-empty'
+                          ? 'Pusta komórka w oficjalnej tabeli (brak wpisu w przedziale, sprawdź Część II.B):'
+                          : 'Brak wpisu dawki w przedziale:'}{' '}
+                        {cell.ariaAgeRange}
+                      </span>
                     </>
                   )}
                 </td>

@@ -32,6 +32,13 @@ import {
   getPso2027CompletenessSummary,
   searchPso2027Records,
 } from '../../src/data/pso2027CompleteData';
+import {
+  PSO_2027_RECORD_EVIDENCE_MANIFEST,
+  PSO_2027_EVIDENCE_LEDGER_SUMMARY,
+  getPsoRecordEvidence,
+  getPsoEvidenceByPart,
+  getPsoEvidenceBySubsection,
+} from '../../src/data/pso2027EvidenceManifest';
 import { VACCINES_CATALOG } from '../../src/data/vaccinesCatalog';
 import { STAGE1_CHPL_AUDIT_BUNDLE } from '../../src/data/chplStage1AuditSheets';
 import { auditChildVaccinesCatalogSummary } from '../../src/utils/childVaccineAudit';
@@ -247,5 +254,82 @@ describe('MASTER 15 — Kompletne 7-częściowe odwzorowanie PSO 2027 (Dz. Urz. 
     expect(clarificationCount).toBe(12);
     expect(pendingCount).toBe(31);
     expect(clarificationCount + pendingCount).toBe(43);
+  });
+
+  it('11. MASTER 17: Stały rejestr dowodowy (Evidence Manifest) pokrywa 100% z 119 rekordów z prawidłowymi stronami 1–48 i lokalizatorami', () => {
+    expect(PSO_2027_RECORD_EVIDENCE_MANIFEST).toHaveLength(119);
+    expect(PSO_2027_EVIDENCE_LEDGER_SUMMARY.totalRecords).toBe(119);
+    expect(PSO_2027_EVIDENCE_LEDGER_SUMMARY.totalSubsections).toBe(35);
+    expect(PSO_2027_EVIDENCE_LEDGER_SUMMARY.verifiedCount).toBe(118);
+    expect(PSO_2027_EVIDENCE_LEDGER_SUMMARY.conflictingCount).toBe(1);
+    expect(PSO_2027_EVIDENCE_LEDGER_SUMMARY.partiallyVerifiedCount).toBe(0);
+    expect(PSO_2027_EVIDENCE_LEDGER_SUMMARY.notVerifiedCount).toBe(0);
+    expect(PSO_2027_EVIDENCE_LEDGER_SUMMARY.totalPages).toBe(48);
+
+    const structuredIds = PSO_2027_STRUCTURED_RECORDS.map((r) => r.id);
+    const manifestIds = PSO_2027_RECORD_EVIDENCE_MANIFEST.map((m) => m.id);
+    expect(manifestIds).toEqual(structuredIds);
+
+    for (const item of PSO_2027_RECORD_EVIDENCE_MANIFEST) {
+      const rec = PSO_2027_STRUCTURED_RECORDS.find((r) => r.id === item.recordId)!;
+      expect(rec, `Brak rekordu źródłowego dla ${item.recordId}`).toBeDefined();
+      expect(item.id).toBe(rec.id);
+      expect(item.recordTitle).toBe(rec.title);
+      expect(item.sourcePart).toBe(rec.sourcePart);
+      expect(item.sourceSubsection).toBe(rec.sourceSubsection);
+      expect(item.sourcePage).toEqual(rec.sourcePage);
+      expect(item.verificationStatus).toBe(rec.verificationStatus);
+      expect(item.exactPdfLocator.trim().length, `Brak exactPdfLocator dla ${item.id}`).toBeGreaterThan(0);
+      expect(item.literalExcerptOrAnchor.trim().length, `Brak literalExcerptOrAnchor dla ${item.id}`).toBeGreaterThan(0);
+      expect(item.targetRecordFields.length, `Brak targetRecordFields dla ${item.id}`).toBeGreaterThan(0);
+      expect(item.fieldSourceMappings.length, `Brak fieldSourceMappings dla ${item.id}`).toBeGreaterThanOrEqual(3);
+
+      const pages = Array.isArray(item.sourcePage) ? item.sourcePage : [item.sourcePage];
+      for (const p of pages) {
+        expect(p >= 1 && p <= 48, `Strona poza zakresem 1..48 w ${item.id}: ${p}`).toBe(true);
+      }
+    }
+
+    // Helper functions
+    const scopeItem = getPsoRecordEvidence('rec-ia-scope');
+    expect(scopeItem).toBeDefined();
+    expect(scopeItem?.sourceSubsection).toBe('I.A');
+
+    const viicItem = getPsoRecordEvidence('pso-vii-c');
+    expect(viicItem).toBeDefined();
+    expect(viicItem?.verificationStatus).toBe('conflicting');
+    expect(viicItem?.caveat).toMatch(/status conflicting/i);
+
+    const partIItems = getPsoEvidenceByPart('I');
+    expect(partIItems).toHaveLength(12);
+
+    const partIIAItems = getPsoEvidenceBySubsection('II.A');
+    expect(partIIAItems).toHaveLength(7);
+  });
+
+  it('12. MASTER 17: VII.C Meningokoki — zachowanie pustych komórek 19–64, nota wyjaśniająca i kontrast z pneumokokami', () => {
+    const viiC = PSO_PART_VII_TABLES.find((t) => t.subsectionCode === 'VII.C')!;
+    const menRow = viiC.rows.find((r) => r.id === 'viic-meningo')!;
+    
+    // Treść noty
+    expect(menRow.rowNote).toBe(
+      'Uwaga: część II.B PSO (str. 23–24) wymienia również dorosłych z określonymi grupami ryzyka. Puste komórki w skróconym kalendarzu VII.C dla wieku 19–49 i 50–64 lata nie wykluczają zaleceń określonych w części II.B. Nie należy na podstawie pustych komórek wnioskować o braku wskazań ani dopisywać niepodanych tam schematów dawkowania.',
+    );
+
+    // Pusta komórka 19–64 lat (colSpan 2)
+    const emptyCell = menRow.cells.find((c) => c.id === 'c-men-empty')!;
+    expect(emptyCell.text).toBe('');
+    expect(emptyCell.colSpan).toBe(2);
+    expect(emptyCell.ariaAgeRange).toContain('puste komórki w oficjalnej tabeli str. 48; zalecenia dla grup ryzyka zawiera Część II.B str. 23–24');
+
+    // Kolumna 65+ zawiera urzędowy wpis
+    const cell65 = menRow.cells.find((c) => c.id === 'c-men-65')!;
+    expect(cell65.text).toBe('MenB – 2 dawki / MenACWY – 1 dawka');
+    expect(cell65.colSpan).toBe(1);
+
+    // Kontrast z wierszem Pneumokoków (gdzie 19–49 lat ma wyraźny wpis 'zalecane w grupach ryzyka')
+    const pneumoRow = viiC.rows.find((r) => r.id === 'viic-pneumo')!;
+    const pneumoYoungCell = pneumoRow.cells[0];
+    expect(pneumoYoungCell.text).toContain('zalecane w grupach ryzyka');
   });
 });
