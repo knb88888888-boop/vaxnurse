@@ -1,0 +1,5 @@
+# Preserve exact line endings for clinical data integrity verification
+src/data/childVaccinesData.ts text eol=crlf
+src/data/pso2027CompleteData.ts text eol=lf
+src/data/vaccinesCatalog.ts text eol=lf
+src/data/chplStage1AuditSheets.ts text eol=lf
