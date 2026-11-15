@@ -9,6 +9,7 @@ import {
   ThermometerSnowflake,
   AlertTriangle,
   BookOpen,
+  HeartHandshake,
   Settings,
   ShieldCheck
 } from 'lucide-react';
@@ -154,6 +155,21 @@ export const APP_MODULES: ModuleDefinition[] = [
       'Wyszukiwarka oficjalnych dokumentów i komunikatów',
       'Filtrowanie według kategorii i instytucji publikującej',
       'Bezpośrednie odnośniki do portali państwowych i rejestru RPL'
+    ]
+  },
+  {
+    id: 'about-project',
+    label: 'O projekcie',
+    description:
+      'Misja VaxNurse, historia powstania, inicjator P.M. oraz inspiracja M.M., wartości, architektura i zasady bezpłatnej dostępności bez reklam.',
+    category: 'system',
+    icon: HeartHandshake,
+    purposeNote:
+      'Autorska prezentacja projektu stworzonego z szacunku do codziennej pracy pielęgniarek i pielęgniarzy oraz przejrzysty opis działania lokalnego.',
+    keyFeatures: [
+      'O projekcie i autorach: P.M. (inicjator) oraz M.M. (inspiracja pielęgniarska)',
+      'Zawsze bezpłatnie. Bez reklam. — przejrzyste zasady dostępności',
+      'Architektura modułów VaxNurse, wartości oraz zasady prywatności i trybu lokalnego'
     ]
   },
   {

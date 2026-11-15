@@ -43,6 +43,12 @@ const LazyChildVaccinationsView = React.lazy(() =>
   }))
 );
 
+const LazyAboutProjectView = React.lazy(() =>
+  import('./components/about/AboutProjectView').then(mod => ({
+    default: mod.AboutProjectView
+  }))
+);
+
 const getBrowserStorage = (): Storage | null => {
   try {
     return typeof window !== 'undefined' ? window.localStorage : null;
@@ -151,6 +157,12 @@ export const App: React.FC = () => {
                 onBackToDashboard={() => handleSelectModule('dashboard')}
                 onNavigateToModule={id => handleSelectModule(id)}
                 onSelectVaccineProduct={handleSelectVaccineProduct}
+              />
+            ) : activeModuleId === 'about-project' ? (
+              <LazyAboutProjectView
+                module={currentModule}
+                onBackToDashboard={() => handleSelectModule('dashboard')}
+                onNavigateToModule={id => handleSelectModule(id)}
               />
             ) : activeModuleId === 'settings' ? (
               <LazySettingsView

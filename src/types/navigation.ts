@@ -11,6 +11,7 @@ export type ModuleId =
   | 'cold-chain'
   | 'special-situations'
   | 'knowledge-base'
+  | 'about-project'
   | 'settings';
 
 export interface ModuleDefinition {

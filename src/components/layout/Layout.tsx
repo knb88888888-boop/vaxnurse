@@ -55,6 +55,32 @@ export const Layout: React.FC<LayoutProps> = ({
         <main className="app-content-area" id="main-content">
           {children}
         </main>
+
+        <footer className="app-footer">
+          <div className="app-footer-inner">
+            <p className="app-footer-note">
+              VaxNurse — bezpłatne, wolne od reklam narzędzie pomocnicze dla pracy punktu szczepień.
+            </p>
+            <div className="app-footer-actions">
+              <button
+                type="button"
+                className={`app-footer-link-btn ${activeModuleId === 'about-project' ? 'active' : ''}`}
+                onClick={() => onSelectModule('about-project')}
+                aria-current={activeModuleId === 'about-project' ? 'page' : undefined}
+              >
+                O projekcie i autorach
+              </button>
+              <button
+                type="button"
+                className={`app-footer-link-btn ${activeModuleId === 'settings' ? 'active' : ''}`}
+                onClick={() => onSelectModule('settings')}
+                aria-current={activeModuleId === 'settings' ? 'page' : undefined}
+              >
+                Ustawienia i prywatność
+              </button>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );
