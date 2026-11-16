@@ -204,7 +204,8 @@ textarea:focus-visible {
 }
 
 .global-search-dropdown {
-  background: var(--bg-surface);
+  background: #ffffff;
+  background-color: #ffffff;
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
@@ -229,10 +230,12 @@ textarea:focus-visible {
 
 .global-search-scope-note {
   padding: 8px 14px;
-  background: var(--bg-surface-subtle);
+  background-color: #f1f5f9;
   border-bottom: 1px solid var(--border-light);
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: #334155;
+  position: relative;
+  z-index: 1;
 }
 
 .global-search-hint {

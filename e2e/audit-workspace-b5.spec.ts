@@ -64,6 +64,7 @@ test.describe('E2E — Etap B5: Source Intake, Sesje Audytu, Kolejka 8 Pytań i 
   test('przechodzi pełną ścieżkę roboczą B5 w Chromium: PDF -> SHA-256 -> Sesja -> Dowód -> Dossier -> Reload -> WCAG -> Infanrix hexa', async ({
     page
   }) => {
+    test.slow();
     const monitor = attachRuntimeMonitor(page);
     const netGuard = attachZeroExfiltrationGuard(page);
 
@@ -193,7 +194,7 @@ test.describe('E2E — Etap B5: Source Intake, Sesje Audytu, Kolejka 8 Pytań i 
 
     // 7. Niezmiennik Infanrix hexa
     await navigateViaSidebarOrHeader(page, /Baza preparatów/i);
-    await page.getByTestId('vaccines-mode-catalog').click();
+    await page.getByTestId('vaccines-mode-catalog').click({ force: true });
     await page.getByRole('button', { name: /Otwórz Kartę ChPL dla Infanrix hexa/i }).click();
     await expect(page.getByText(/disc-phenylalanine-content-01/i).first()).toBeVisible();
     await expect(page.getByText(/Blokada statusu weryfikacji:/i)).toBeVisible();

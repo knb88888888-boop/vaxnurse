@@ -792,7 +792,12 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
             </div>
           </div>
 
-          <div className="qualifications-table-wrapper">
+          <div
+            className="qualifications-table-wrapper"
+            tabIndex={0}
+            role="region"
+            aria-label="Tabela uprawnień personelu kwalifikującego i wykonującego szczepienia (Część VI PSO 2027)"
+          >
             <table className="qualifications-matrix-table">
               <thead>
                 <tr>
@@ -1150,7 +1155,12 @@ export const ChildVaccinationsView: React.FC<ChildVaccinationsViewProps> = ({
             <p className="ipv-mapping-desc">
               W standardowym kalendarzu (I.A.1) pierwsza dawka IPV wypada w 4. m.ż., dlatego w 2. m.ż. nie figuruje odrębna procedura IPV. Przy wyborze szczepionki 6w1 (Wariant A.2) pierwsza dawka IPV jest podawana już w 2. m.ż. w składzie 1. dawki 6w1:
             </p>
-            <div className="ipv-mapping-table-wrapper">
+            <div
+              className="ipv-mapping-table-wrapper"
+              tabIndex={0}
+              role="region"
+              aria-label="Tabela mapowania dawek IPV w Wariancie A.2"
+            >
               <table className="ipv-mapping-table">
                 <thead>
                   <tr>

@@ -135,7 +135,17 @@
   font-weight: 600;
   text-decoration: none;
   max-width: 100%;
+  box-sizing: border-box;
+  white-space: normal;
+  word-break: break-word;
   overflow-wrap: anywhere;
+}
+
+.pso-pdf-anchor-link span {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 .pso-pdf-anchor-link:hover {
@@ -207,6 +217,9 @@
   white-space: normal;
   text-align: left;
   max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  word-break: break-word;
   overflow-wrap: anywhere;
   transition: all 0.15s ease;
 }
@@ -694,12 +707,46 @@
   .pso-block-card,
   .pso-separate-law-panel,
   .pso-footnotes-panel {
-    padding: 0.85rem;
+    padding: 10px;
+    box-sizing: border-box;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .pso-block-header,
+  .pso-item-panel-header,
+  .pso-subvariant-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .pso-source-meta-bar {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pso-pdf-anchor-link {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .pso-subfilter-pills {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pso-subfilter-pills .subtab-btn {
+    width: 100%;
+    box-sizing: border-box;
+    white-space: normal;
+    word-break: break-word;
   }
 
   .pso-two-col-grid,
   .pso-search-filters-grid,
   .pso-summary-metrics-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
