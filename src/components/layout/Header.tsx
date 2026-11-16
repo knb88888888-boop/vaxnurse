@@ -146,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({
         role="region"
         aria-label="Wyniki wyszukiwania modułów i sekcji VaxNurse"
       >
-        <div className="global-search-scope-note">
+        <div className="global-search-scope-note" aria-hidden="true">
           Zakres wyszukiwania: moduły aplikacji, skróty i Biblioteka Wiedzy (nie zawiera danych pacjentów)
         </div>
 
