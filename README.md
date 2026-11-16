@@ -32,7 +32,7 @@ VaxNurse powstał, aby uporządkować w jednym, spokojnym wizualnie i czytelnym 
 ## Najważniejsze funkcjonalności i moduły
 
 1. **Pulpit operacyjny i globalna wyszukiwarka** — szybki dostęp do modułów, ostatnio odwiedzanych sekcji oraz wyszukiwania po katalogu funkcji i Bibliotece Wiedzy.
-2. **Szczepienia dzieci (PSO 2027)** — ustrukturyzowana prezentacja wszystkich siedmiu części Programu Szczepień Ochronnych na 2027 rok (Dziennik Urzędowy MZ z 30.10.2026 r., poz. 77), w tym rozbicie na procedury i jawne oznaczenie statusów weryfikacji z dokumentacją ChPL (m.in. 12 pozycji wymagających wyjaśnienia źródłowego oraz 31 oczekujących na pełną weryfikację ChPL; w tabeli VII.C zachowane jest jawne oznaczenie konfliktu dla meningokoków).
+2. **Szczepienia dzieci (PSO 2027)** — ustrukturyzowana prezentacja wszystkich siedmiu części Programu Szczepień Ochronnych na 2027 rok (Dziennik Urzędowy MZ z 30.10.2026 r., poz. 77), w tym rozbicie na procedury i jawne oznaczenie statusów weryfikacji z dokumentacją ChPL (m.in. 12 pozycji o statusie `requires_source_clarification` oraz 31 pozycji `pending_chpl_verification` przy `verified_full = 0`; w tabeli VII.C zachowane jest jawne oznaczenie konfliktu dla meningokoków).
 3. **Baza preparatów i Stanowisko audytu ChPL** — katalog produktów leczniczych w strukturze druku ChPL (punkty 1–10 EMA QRD), mechanizm wykrywania rozbieżności źródłowych (np. `vac-infanrix-hexa` z zarejestrowaną rozbieżnością fenyloalaniny `0,0289 µg` vs `0,0298 µg` i blokadą automatycznego zatwierdzenia), skorygowany kod ATC dla `VaxigripTetra` (`J07BB02`), lokalny podgląd PDF (`pdfjs-dist`) z weryfikacją SHA-256 oraz rejestr dowodów.
 4. **Kalendarz szczepień i Szczepienia dorosłych** — uporządkowany przegląd etapów wiekowych oraz szczepień zalecanych dla dorosłych i wybranych grup ryzyka.
 5. **Kalkulator odstępów szczepień** — narzędzie pomocnicze do wyliczania dat i odstępów między dawkami zgodnie z wybranym wariantem referencyjnym.
@@ -47,9 +47,19 @@ VaxNurse powstał, aby uporządkować w jednym, spokojnym wizualnie i czytelnym 
 ## Autorzy i inspiracja
 
 - **P.M. — inicjator i twórca projektu VaxNurse**  
-  Osoba odpowiedzialna za pomysł, rozwój koncepcji, organizację informacji i tworzenie narzędzia wspierającego codzienną pracę osób wykonujących zawód pielęgniarki i pielęgniarza.
+  Osoba odpowiedzialna za pomysł, rozwój koncepcji, organizację informacji i tworzenie narzędzia wspierającego codzienną pracę osób wykonujących zawód pielęgniarki i pielęgniarza (według dokumentacji projektowej).
 - **M.M. — pielęgniarka, ważna inspiracja projektu**  
-  Jej doświadczenie zawodowe i perspektywa pracy pielęgniarskiej stanowią ważny punkt odniesienia dla idei projektu (rola inspirująca i kierunkowa — bez pełnienia funkcji formalnej współautorki merytorycznej ani osoby zatwierdzającej treści kliniczne).
+  Jej doświadczenie zawodowe i perspektywa pracy pielęgniarskiej stanowią ważny punkt odniesienia dla idei projektu (rola inspirująca i kierunkowa — bez pełnienia funkcji formalnej współautorki merytorycznej, bez orzekania o współautorstwie prawnym czy współwłasności prawnej).
+
+---
+
+## Prawa autorskie i status prawny repozytorium
+
+- **Publiczna widoczność kodu:** Repozytorium jest publicznie dostępne na platformie GitHub, co zapewnia transparentność weryfikacji źródeł medycznych, otwarty audyt techniczny oraz realizację misji edukacyjno-informacyjnej.
+- **Brak standardowej licencji otwartoźródłowej (No License):** Do repozytorium celowo nie dołączono standardowej licencji Open Source (np. MIT, Apache 2.0, GPL). Kod źródłowy nie stanowi domeny publicznej (public domain).
+- **Domyślna ochrona prawa autorskiego (All Rights Reserved):** Zgodnie z powszechnym prawem autorskim oraz oficjalnymi wytycznymi GitHub dotyczącymi repozytoriów bez licencji (*Licensing a repository*), do całości oryginalnego kodu i opracowań twórczych zastosowanie ma domyślna ochrona prawnoautorska — wszelkie prawa są zastrzeżone przez twórcę projektu.
+- **Uprawnienia użytkowników GitHub w ramach GitHub Terms of Service:** Zgodnie z oficjalnym Regulaminem GitHub (GitHub Terms of Service, sekcja D.4 / User-Generated Content), każdy użytkownik serwisu posiada uprawnienie do wyświetlania publicznego kodu w przeglądarce oraz do utworzenia forka (rozgałęzienia) publicznego repozytorium w ramach platformy GitHub w celach zapoznania się z kodem i prowadzenia własnych niezależnych prób badawczych.
+- **Brak zgody na komercyjną redystrybucję:** Uprawnienia wynikające z GitHub Terms of Service ograniczają się do funkcjonalności platformy GitHub i nie obejmują automatycznego prawa do komercyjnej redystrybucji, sublicencjonowania, zamykania kodu w płatnych pakietach komercyjnych ani publikacji aplikacji pod własną marką bez uprzedniej pisemnej zgody autora.
 
 ---
 
