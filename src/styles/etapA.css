@@ -232,10 +232,10 @@ textarea:focus-visible {
   padding: 8px 14px;
   background-color: #f1f5f9;
   border-bottom: 1px solid var(--border-light);
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
   font-size: 0.75rem;
   color: #334155;
-  position: relative;
-  z-index: 1;
 }
 
 .global-search-hint {
