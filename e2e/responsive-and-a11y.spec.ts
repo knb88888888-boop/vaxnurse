@@ -125,7 +125,12 @@ test.describe('E2E — Responsywność 6 viewportów i rzeczywisty audyt WCAG / 
     const relevantIncomplete = headerSearchResults.incomplete.filter(
       (inc) =>
         !inc.nodes.every((n) =>
-          n.any.some((a) => a.messageKey === 'elmPartiallyObscuring')
+          n.any.some(
+            (a) =>
+              a.message?.includes('partially overlaps other elements') ||
+              ((a.data as Record<string, unknown> | undefined)?.messageKey ===
+                'elmPartiallyObscuring')
+          )
         )
     );
     expect(
