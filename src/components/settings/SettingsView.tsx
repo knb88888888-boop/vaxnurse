@@ -14,7 +14,8 @@ import {
   AlertTriangle,
   FileText,
   RotateCcw,
-  X
+  X,
+  Palette
 } from 'lucide-react';
 import type { ModuleDefinition } from '../../types/navigation';
 import type { VaxNurseBackupPayload, BackupSummary } from '../../types/backup';
@@ -36,6 +37,18 @@ import {
   type UiDensity,
   type UiFontSize
 } from '../../utils/preferences';
+import {
+  THEME_BY_ID,
+  THEME_DEFINITIONS,
+  loadThemePreference,
+  resetThemePreference,
+  resolveTheme,
+  saveThemePreference,
+  applyThemeToDocument,
+  subscribeToThemeChange,
+  type UiThemeId,
+  type UiThemePreference
+} from '../../utils/theme';
 
 interface SettingsViewProps {
   module: ModuleDefinition;
@@ -58,6 +71,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   );
   const [fontSize, setFontSize] = useState<UiFontSize>(
     initialPrefResult.preferences.fontSize
+  );
+  const [themePref, setThemePref] = useState<UiThemePreference>(() =>
+    loadThemePreference()
+  );
+  const [resolvedTheme, setResolvedTheme] = useState<UiThemeId>(() =>
+    resolveTheme(loadThemePreference())
   );
   const [preferencesFeedback, setPreferencesFeedback] = useState<{
     type: 'success' | 'error' | 'info';
@@ -86,8 +105,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   useEffect(() => {
     isMountedRef.current = true;
+    const unsubscribeTheme = subscribeToThemeChange(detail => {
+      if (!isMountedRef.current) return;
+      setThemePref(detail.preference);
+      setResolvedTheme(detail.resolvedTheme);
+    });
     return () => {
       isMountedRef.current = false;
+      unsubscribeTheme();
     };
   }, []);
 
@@ -132,13 +157,43 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     persistAndApplyPreferences(density, nextFontSize);
   };
 
+  const handleThemeChange = (nextPref: UiThemePreference) => {
+    const applied = applyThemeToDocument(nextPref);
+    setThemePref(applied.preference);
+    setResolvedTheme(applied.resolvedTheme);
+
+    const storage = typeof localStorage !== 'undefined' ? localStorage : null;
+    const saved = saveThemePreference(storage, applied.preference);
+    if (!saved.success) {
+      setPreferencesFeedback({
+        type: 'error',
+        message:
+          saved.error ||
+          'Zastosowano motyw w bieżącej sesji, ale nie udało się zapisać go w pamięci przeglądarki.'
+      });
+      return;
+    }
+
+    const activeName = THEME_BY_ID[applied.resolvedTheme].name;
+    setPreferencesFeedback({
+      type: 'success',
+      message:
+        applied.preference === 'auto'
+          ? `Włączono tryb automatyczny Dzień / Noc (aktualnie: ${activeName}).`
+          : `Zastosowano szatę graficzną: ${activeName}.`
+    });
+  };
+
   const handleResetPreferences = () => {
     const storage =
       typeof localStorage !== 'undefined' ? localStorage : null;
     const resetResult = resetPreferences(storage);
     const applied = applyPreferencesToDocument(resetResult.preferences);
+    const resetTheme = resetThemePreference(storage);
     setDensity(applied.density);
     setFontSize(applied.fontSize);
+    setThemePref(resetTheme.preference);
+    setResolvedTheme(resetTheme.resolvedTheme);
 
     if (!resetResult.success) {
       setPreferencesFeedback({
@@ -153,7 +208,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setPreferencesFeedback({
       type: 'info',
       message:
-        'Przywrócono domyślne preferencje widoku (Komfortowa, Standardowy rozmiar tekstu).'
+        'Przywrócono domyślne preferencje widoku (Komfortowa, Standardowy rozmiar tekstu, motyw Surgical Daylight).'
     });
   };
 
@@ -638,6 +693,155 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
           )}
+        </div>
+
+        {/* Theme Studio — Szata graficzna i tryb kolorystyczny */}
+        <div className="content-panel full-width theme-studio-panel">
+          <div className="theme-studio-header-row">
+            <div className="panel-title-with-icon">
+              <Palette size={21} className="panel-title-icon" />
+              <div>
+                <h2 className="panel-heading">Szata graficzna i motyw interfejsu</h2>
+                <span className="panel-subheading">
+                  4 kliniczne motywy kolorystyczne z pełnym kontrastem WCAG 2.2 AA i szybkim przełącznikiem w nagłówku
+                </span>
+              </div>
+            </div>
+            <span className="theme-studio-active-pill">
+              <Eye size={14} aria-hidden="true" />
+              <span>
+                Aktywna:{' '}
+                {themePref === 'auto'
+                  ? `Auto (${THEME_BY_ID[resolvedTheme].name})`
+                  : THEME_BY_ID[resolvedTheme].name}
+              </span>
+            </span>
+          </div>
+
+          <div
+            className="theme-studio-grid"
+            role="group"
+            aria-label="Wybór motywu kolorystycznego aplikacji"
+          >
+            {THEME_DEFINITIONS.map(theme => {
+              const isSelected = themePref === theme.id;
+              return (
+                <button
+                  key={theme.id}
+                  type="button"
+                  className={`theme-studio-card ${isSelected ? 'active' : ''}`}
+                  aria-pressed={isSelected}
+                  onClick={() => handleThemeChange(theme.id)}
+                >
+                  <div
+                    className="theme-studio-mockup"
+                    style={{ backgroundColor: theme.swatches.bg }}
+                    aria-hidden="true"
+                  >
+                    <div
+                      className="theme-studio-mock-sidebar"
+                      style={{ backgroundColor: theme.swatches.sidebar }}
+                    >
+                      <span
+                        className="theme-studio-mock-pill"
+                        style={{ backgroundColor: theme.swatches.accent }}
+                      />
+                      <span
+                        className="theme-studio-mock-bar"
+                        style={{ backgroundColor: theme.swatches.text }}
+                      />
+                      <span
+                        className="theme-studio-mock-bar"
+                        style={{ backgroundColor: theme.swatches.text }}
+                      />
+                    </div>
+                    <div className="theme-studio-mock-main">
+                      <div
+                        className="theme-studio-mock-topbar"
+                        style={{ backgroundColor: theme.swatches.surface }}
+                      >
+                        <span
+                          className="theme-studio-mock-dot"
+                          style={{ backgroundColor: theme.swatches.accent }}
+                        />
+                        <span
+                          className="theme-studio-mock-dot"
+                          style={{ backgroundColor: theme.swatches.norm }}
+                        />
+                      </div>
+                      <div className="theme-studio-mock-cards">
+                        <div
+                          className="theme-studio-mock-card"
+                          style={{ backgroundColor: theme.swatches.surface }}
+                        >
+                          <span
+                            className="theme-studio-mock-line"
+                            style={{ backgroundColor: theme.swatches.text, width: '78%' }}
+                          />
+                          <span
+                            className="theme-studio-mock-line"
+                            style={{ backgroundColor: theme.swatches.accent, width: '48%' }}
+                          />
+                        </div>
+                        <div
+                          className="theme-studio-mock-card"
+                          style={{ backgroundColor: theme.swatches.surface }}
+                        >
+                          <span
+                            className="theme-studio-mock-line"
+                            style={{ backgroundColor: theme.swatches.norm, width: '65%' }}
+                          />
+                          <span
+                            className="theme-studio-mock-line"
+                            style={{ backgroundColor: theme.swatches.text, width: '55%', opacity: 0.4 }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="theme-studio-card-head">
+                    <div>
+                      <h3 className="theme-studio-card-title">{theme.name}</h3>
+                      <span className="theme-studio-card-badge">{theme.badge}</span>
+                    </div>
+                    {isSelected && (
+                      <CheckCircle2
+                        size={18}
+                        className="theme-studio-selected-icon"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </div>
+
+                  <p className="theme-studio-card-desc">{theme.description}</p>
+                  <span className="theme-studio-card-footer">{theme.clinicalContext}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            className={`theme-studio-auto-banner ${themePref === 'auto' ? 'active' : ''}`}
+            aria-pressed={themePref === 'auto'}
+            onClick={() => handleThemeChange('auto')}
+          >
+            <div className="theme-studio-auto-info">
+              <div className="theme-studio-auto-icon-box" aria-hidden="true">
+                <Monitor size={18} />
+              </div>
+              <div>
+                <strong>Tryb automatyczny Dzień / Noc (Auto)</strong>
+                <span>
+                  Automatycznie dopasowuje szatę między jasnym Surgical Daylight a ciemnym Aether Obsidian zgodnie z ustawieniem systemu operacyjnego.
+                </span>
+              </div>
+            </div>
+            <span className="theme-auto-pill">
+              {themePref === 'auto' ? 'Aktywny' : 'Wybierz tryb Auto'}
+            </span>
+          </button>
         </div>
 
         {/* Appearance & Ergonomics */}

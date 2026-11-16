@@ -1,107 +1,273 @@
 :root {
-  /* Color Palette - Medical Professional */
-  --bg-app: #f8fafc;
-  --bg-surface: #ffffff;
-  --bg-surface-elevated: #ffffff;
-  --bg-surface-subtle: #f1f5f9;
-  --bg-surface-active: #e2e8f0;
-
-  /* Primary Brand: Deep Navy */
-  --navy-950: #0a0f1d;
-  --navy-900: #0f172a;
-  --navy-800: #1e293b;
-  --navy-700: #334155;
-  --navy-600: #475569;
-
-  /* Accent 1: Medical Blue */
-  --blue-800: #0c4a6e;
-  --blue-700: #075985;
-  --blue-600: #0369a1;
-  --blue-500: #0ea5e9;
-  --blue-300: #7dd3fc;
-  --blue-200: #bae6fd;
-  --blue-100: #e0f2fe;
-  --blue-50: #f0f9ff;
-
-  /* Accent 2: Delicate Violet / Indigo */
-  --violet-700: #4f46e5;
-  --violet-600: #6366f1;
-  --violet-500: #818cf8;
-  --violet-100: #e0e7ff;
-  --violet-50: #eef2ff;
-
-  /* Status Colors */
-  --emerald-700: #047857;
-  --emerald-600: #059669;
-  --emerald-500: #10b981;
-  --emerald-100: #d1fae5;
-  --emerald-50: #ecfdf5;
-
-  --amber-900: #78350f;
-  --amber-800: #92400e;
-  --amber-700: #b45309;
-  --amber-600: #d97706;
-  --amber-200: #fde68a;
-  --amber-100: #fef3c7;
-  --amber-50: #fffbeb;
-
-  --rose-700: #be123c;
-  --rose-600: #e11d48;
-  --rose-300: #fda4af;
-  --rose-200: #fecdd3;
-  --rose-100: #ffe4e6;
-  --rose-50: #fff1f2;
-
-  /* Slate & Semantic Aliases */
-  --slate-900: #0f172a;
-  --slate-700: #334155;
-  --slate-600: #475569;
-  --slate-400: #94a3b8;
-  --slate-300: #cbd5e1;
-  --slate-200: #e2e8f0;
-  --slate-100: #f1f5f9;
-  --slate-50: #f8fafc;
-
-  /* Text Hierarchy */
-  --text-main: #0f172a;
-  --text-primary: var(--text-main);
-  --text-muted: #475569;
-  --text-secondary: var(--text-muted);
-  --text-tertiary: #57657a;
-  --text-inverse: #ffffff;
-
-  /* Borders & Surfaces */
-  --surface-primary: var(--bg-surface);
-  --surface-secondary: var(--bg-surface-subtle);
-  --border-light: #e2e8f0;
-  --border-color: var(--border-light);
-  --border-subtle: #f1f5f9;
-  --border-focus: #0369a1;
-
-  /* Elevation & Shadows */
-  --shadow-xs: 0 1px 2px 0 rgb(15 23 42 / 0.05);
-  --shadow-sm: 0 1px 3px 0 rgb(15 23 42 / 0.08), 0 1px 2px -1px rgb(15 23 42 / 0.08);
-  --shadow-md: 0 4px 6px -1px rgb(15 23 42 / 0.08), 0 2px 4px -2px rgb(15 23 42 / 0.06);
-  --shadow-lg: 0 10px 15px -3px rgb(15 23 42 / 0.08), 0 4px 6px -4px rgb(15 23 42 / 0.04);
-  --shadow-card-hover: 0 12px 20px -3px rgb(15 23 42 / 0.1), 0 4px 8px -4px rgb(15 23 42 / 0.06);
+  /* ==========================================================================
+     VAXNURSE DESIGN TOKENS — BASE LAYOUT, RADII, TYPOGRAPHY & DEFAULT PALETTE
+     Theme overrides live in ./themes.css via html[data-theme="..."]
+     ========================================================================== */
 
   /* Radii */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 18px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
   --radius-full: 9999px;
 
   /* Spacing & Sizing */
   --sidebar-width: 315px;
-  --sidebar-width-collapsed: 72px;
+  --sidebar-width-collapsed: 76px;
   --header-height: 70px;
 
-  /* Transitions */
+  /* Motion & Transitions */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 220ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-smooth: 320ms cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* Fonts (offline system sans-serif stack — zero external requests) */
-  --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Fonts (offline local system stacks — zero external requests) */
+  --font-family:
+    'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* ==========================================================================
+     DEFAULT THEME: SURGICAL DAYLIGHT (Light Clinical Flagship)
+     ========================================================================== */
+
+  /* Core Canvas & Surface Hierarchy */
+  --bg-app: #f1f5f9;
+  --bg-app-tint: #e8f0f8;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #ffffff;
+  --bg-surface-subtle: #f7f9fc;
+  --bg-surface-active: #e2e8f0;
+  --bg-surface-hover: #f1f5f9;
+  --bg-inset: #f4f7fb;
+
+  /* Header & Footer */
+  --bg-header: #ffffff;
+  --header-border: #dce5ef;
+  --bg-footer: #f8fafc;
+  --footer-border: #e2e8f0;
+
+  /* Sidebar Architectural Chrome (Deep Obsidian Clinical Navigation in Daylight) */
+  --sidebar-bg: #0b1120;
+  --sidebar-bg-elevated: #131c31;
+  --sidebar-border: #1e293b;
+  --sidebar-text: #e2e8f0;
+  --sidebar-text-strong: #ffffff;
+  --sidebar-text-muted: #94a3b8;
+  --sidebar-item-hover: #17233b;
+  --sidebar-item-active-bg: #0369a1;
+  --sidebar-item-active-text: #ffffff;
+  --sidebar-item-active-border: #38bdf8;
+  --sidebar-badge-bg: #1e293b;
+  --sidebar-badge-text: #7dd3fc;
+  --sidebar-footer-bg: #0f172a;
+  --sidebar-footer-border: #1e293b;
+
+  /* Primary Brand & Interactive Actions (High WCAG 2.2 AA Contrast) */
+  --brand-solid-bg: #0369a1;
+  --brand-solid-hover: #075985;
+  --brand-accent-bright: #0284c7;
+  --brand-ink: #0369a1;
+  --brand-ink-strong: #0c4a6e;
+  --brand-tint-bg: #f0f9ff;
+  --brand-tint-bg-hover: #e0f2fe;
+  --brand-tint-border: #bae6fd;
+  --brand-tint-text: #075985;
+  --brand-focus-ring: #0369a1;
+  --brand-glow: rgb(2 132 199 / 0.16);
+  --on-solid-text: #ffffff;
+
+  /* Hero Architecture */
+  --hero-bg: #ffffff;
+  --hero-border: #d5e2ee;
+  --hero-plinth-bg: #eef6fc;
+  --hero-plinth-border: #cde4f5;
+  --hero-orb-1: rgb(14 165 233 / 0.14);
+  --hero-orb-2: rgb(16 185 129 / 0.12);
+
+  /* Text Hierarchy */
+  --text-main: #0f172a;
+  --text-strong: #1e293b;
+  --text-primary: var(--text-main);
+  --text-muted: #475569;
+  --text-secondary: var(--text-muted);
+  --text-tertiary: #526075;
+  --text-inverse: #ffffff;
+
+  /* Borders, Inputs & Dividers */
+  --surface-primary: var(--bg-surface);
+  --surface-secondary: var(--bg-surface-subtle);
+  --border-light: #dce5ef;
+  --border-medium: #cbd5e1;
+  --border-strong: #94a3b8;
+  --border-color: var(--border-light);
+  --border-subtle: #edf2f7;
+  --border-focus: #0369a1;
+
+  --input-bg: #ffffff;
+  --input-bg-subtle: #f8fafc;
+  --input-border: #cbd5e1;
+  --input-text: #0f172a;
+  --input-placeholder: #64748b;
+
+  /* Scrollbars & Backdrop */
+  --scrollbar-track: #edf2f7;
+  --scrollbar-thumb: #cbd5e1;
+  --scrollbar-thumb-hover: #94a3b8;
+  --backdrop-overlay: rgb(15 23 42 / 0.52);
+
+  /* Semantic Status Palettes */
+  --st-success-bg: #ecfdf5;
+  --st-success-bg-strong: #d1fae5;
+  --st-success-border: #86efac;
+  --st-success-border-strong: #10b981;
+  --st-success-text: #065f46;
+  --st-success-solid: #047857;
+  --st-success-solid-hover: #065f46;
+
+  --st-green-bg: #f0fdf4;
+  --st-green-bg-strong: #dcfce7;
+  --st-green-border: #86efac;
+  --st-green-text: #166534;
+  --st-green-solid: #15803d;
+
+  --st-info-bg: #f0f9ff;
+  --st-info-bg-strong: #e0f2fe;
+  --st-info-border: #7dd3fc;
+  --st-info-border-soft: #bae6fd;
+  --st-info-text: #075985;
+  --st-info-text-strong: #0c4a6e;
+  --st-info-solid: #0369a1;
+  --st-info-solid-hover: #075985;
+
+  --st-cobalt-bg: #eff6ff;
+  --st-cobalt-bg-strong: #dbeafe;
+  --st-cobalt-border: #93c5fd;
+  --st-cobalt-border-soft: #bfdbfe;
+  --st-cobalt-text: #1e40af;
+  --st-cobalt-text-strong: #1e3a8a;
+  --st-cobalt-solid: #1d4ed8;
+
+  --st-teal-bg: #f0fdfa;
+  --st-teal-bg-strong: #ccfbf1;
+  --st-teal-border: #5eead4;
+  --st-teal-text: #115e59;
+  --st-teal-solid: #0f766e;
+
+  --st-warn-bg: #fffbeb;
+  --st-warn-bg-soft: #fffdf5;
+  --st-warn-bg-strong: #fef3c7;
+  --st-warn-border: #fcd34d;
+  --st-warn-border-soft: #fde68a;
+  --st-warn-text: #78350f;
+  --st-warn-text-mid: #92400e;
+  --st-warn-solid: #b45309;
+
+  --st-orange-bg: #fff7ed;
+  --st-orange-bg-strong: #ffedd5;
+  --st-orange-border: #fdba74;
+  --st-orange-text: #9a3412;
+  --st-orange-text-strong: #7c2d12;
+  --st-orange-solid: #c2410c;
+
+  --st-danger-bg: #fef2f2;
+  --st-danger-bg-strong: #fee2e2;
+  --st-danger-border: #fca5a5;
+  --st-danger-border-soft: #fecaca;
+  --st-danger-text: #991b1b;
+  --st-danger-text-strong: #7f1d1d;
+  --st-danger-solid: #b91c1c;
+
+  --st-rose-bg: #fff1f2;
+  --st-rose-bg-soft: #fffafb;
+  --st-rose-bg-strong: #ffe4e6;
+  --st-rose-border: #fda4af;
+  --st-rose-border-soft: #fecdd3;
+  --st-rose-text: #881337;
+  --st-rose-solid: #be123c;
+
+  --st-violet-bg: #eef2ff;
+  --st-violet-bg-strong: #e0e7ff;
+  --st-violet-border: #a5b4fc;
+  --st-violet-border-soft: #c7d2fe;
+  --st-violet-text: #3730a3;
+  --st-violet-text-strong: #312e81;
+  --st-violet-solid: #4338ca;
+
+  --st-purple-bg: #f5f3ff;
+  --st-purple-bg-strong: #ede9fe;
+  --st-purple-border: #ddd6fe;
+  --st-purple-text: #5b21b6;
+  --st-purple-solid: #6d28d9;
+
+  --st-fuchsia-bg: #fae8ff;
+  --st-fuchsia-border: #e879f9;
+  --st-fuchsia-text: #701a75;
+
+  --st-banner-dark-bg: #0f172a;
+  --st-banner-dark-border: #1e293b;
+  --st-banner-cyan-bg: #164e63;
+  --on-dark-banner-text: #f8fafc;
+  --on-dark-banner-muted: #cbd5e1;
+  --on-dark-banner-accent: #e0f2fe;
+
+  /* Elevation & Shadows */
+  --shadow-xs: 0 1px 2px 0 rgb(15 23 42 / 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(15 23 42 / 0.06), 0 1px 2px -1px rgb(15 23 42 / 0.05);
+  --shadow-md: 0 4px 12px -2px rgb(15 23 42 / 0.08), 0 2px 4px -2px rgb(15 23 42 / 0.04);
+  --shadow-lg: 0 12px 24px -4px rgb(15 23 42 / 0.1), 0 4px 8px -4px rgb(15 23 42 / 0.05);
+  --shadow-card-hover: 0 16px 32px -6px rgb(3 105 161 / 0.14), 0 4px 12px -2px rgb(15 23 42 / 0.06);
+
+  /* Legacy Color Aliases (kept calibrated per theme so any reference adapts automatically) */
+  --navy-950: var(--text-main);
+  --navy-900: var(--text-main);
+  --navy-800: var(--text-strong);
+  --navy-700: var(--text-strong);
+  --navy-600: var(--text-muted);
+
+  --blue-800: var(--st-info-text-strong);
+  --blue-700: var(--st-info-text);
+  --blue-600: var(--brand-ink);
+  --blue-500: var(--brand-accent-bright);
+  --blue-300: var(--st-info-border);
+  --blue-200: var(--st-info-border-soft);
+  --blue-100: var(--st-info-bg-strong);
+  --blue-50: var(--st-info-bg);
+
+  --violet-700: var(--st-violet-text);
+  --violet-600: var(--st-violet-text);
+  --violet-500: var(--st-violet-border);
+  --violet-100: var(--st-violet-bg-strong);
+  --violet-50: var(--st-violet-bg);
+
+  --emerald-700: var(--st-success-text);
+  --emerald-600: var(--st-success-text);
+  --emerald-500: var(--st-success-border-strong);
+  --emerald-100: var(--st-success-bg-strong);
+  --emerald-50: var(--st-success-bg);
+
+  --amber-900: var(--st-warn-text);
+  --amber-800: var(--st-warn-text-mid);
+  --amber-700: var(--st-warn-text);
+  --amber-600: var(--st-warn-text-mid);
+  --amber-200: var(--st-warn-border-soft);
+  --amber-100: var(--st-warn-bg-strong);
+  --amber-50: var(--st-warn-bg);
+
+  --rose-700: var(--st-rose-text);
+  --rose-600: var(--st-rose-text);
+  --rose-300: var(--st-rose-border);
+  --rose-200: var(--st-rose-border-soft);
+  --rose-100: var(--st-rose-bg-strong);
+  --rose-50: var(--st-rose-bg);
+
+  --slate-900: var(--text-main);
+  --slate-700: var(--text-strong);
+  --slate-600: var(--text-muted);
+  --slate-400: var(--text-tertiary);
+  --slate-300: var(--border-medium);
+  --slate-200: var(--border-light);
+  --slate-100: var(--bg-surface-subtle);
+  --slate-50: var(--bg-app);
 }

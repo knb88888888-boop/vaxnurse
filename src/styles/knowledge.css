@@ -11,7 +11,7 @@
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  background-color: #f0fdf4;
+  background-color: var(--st-green-bg);
   border: 1px solid var(--emerald-100);
   border-radius: var(--radius-xl);
   padding: 20px 24px;
@@ -73,7 +73,7 @@
 }
 
 .knowledge-search-bar:focus-within {
-  background-color: #ffffff;
+  background-color: var(--bg-surface);
   border-color: var(--blue-500);
   box-shadow: 0 0 0 3px rgb(2 132 199 / 0.12);
 }
@@ -153,7 +153,7 @@
 }
 
 .category-chip:hover {
-  background-color: #ffffff;
+  background-color: var(--bg-surface);
   border-color: var(--blue-500);
   color: var(--blue-600);
 }
@@ -171,15 +171,15 @@
   font-weight: 700;
   padding: 1px 6px;
   border-radius: var(--radius-full);
-  background-color: #ffffff;
+  background-color: var(--bg-surface);
   border: 1px solid var(--border-light);
   color: var(--text-tertiary);
 }
 
 .category-chip.active .chip-counter {
-  background-color: var(--blue-600);
+  background-color: var(--brand-solid-bg);
   border-color: var(--blue-600);
-  color: #ffffff;
+  color: var(--on-solid-text);
 }
 
 /* Publisher Institution Filter */
@@ -218,7 +218,7 @@
   padding: 6px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-light);
-  background-color: #ffffff;
+  background-color: var(--bg-surface);
   color: var(--navy-900);
   font-size: 0.8125rem;
   font-weight: 500;
@@ -314,7 +314,7 @@
 }
 
 .knowledge-card:hover {
-  border-color: #cbd5e1;
+  border-color: var(--border-medium);
   box-shadow: var(--shadow-card-hover);
   transform: translateY(-2px);
 }
@@ -358,9 +358,9 @@
 }
 
 .badge-law {
-  background-color: #f1f5f9;
+  background-color: var(--bg-surface-subtle);
   color: var(--navy-800);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-light);
 }
 
 .badge-proc {
@@ -387,8 +387,8 @@
   font-weight: 700;
   padding: 3px 9px;
   border-radius: var(--radius-full);
-  background-color: #0f172a;
-  color: #ffffff;
+  background-color: var(--st-banner-dark-bg);
+  color: var(--on-solid-text);
   letter-spacing: 0.02em;
 }
 
@@ -473,7 +473,7 @@
 
 .highlight-act {
   color: var(--blue-700);
-  background-color: #ffffff;
+  background-color: var(--bg-surface);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-light);
@@ -521,8 +521,8 @@
   align-items: center;
   gap: 8px;
   padding: 9px 18px;
-  background-color: var(--blue-600);
-  color: #ffffff;
+  background-color: var(--brand-solid-bg);
+  color: var(--on-solid-text);
   border-radius: var(--radius-md);
   font-size: 0.845rem;
   font-weight: 600;
@@ -532,7 +532,7 @@
 }
 
 .btn-open-official-source:hover {
-  background-color: var(--blue-700);
+  background-color: var(--brand-solid-hover);
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }
@@ -542,7 +542,7 @@
   align-items: center;
   gap: 8px;
   padding: 9px 16px;
-  background-color: #ffffff;
+  background-color: var(--bg-surface);
   color: var(--navy-800);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
@@ -594,8 +594,8 @@
 
 .btn-empty-reset {
   padding: 8px 18px;
-  background-color: var(--blue-600);
-  color: #ffffff;
+  background-color: var(--brand-solid-bg);
+  color: var(--on-solid-text);
   border-radius: var(--radius-md);
   font-size: 0.845rem;
   font-weight: 600;
@@ -604,7 +604,7 @@
 }
 
 .btn-empty-reset:hover {
-  background-color: var(--blue-700);
+  background-color: var(--brand-solid-hover);
 }
 
 /* RESPONSIVE STYLES */

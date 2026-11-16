@@ -12,6 +12,7 @@ import {
   searchVaxNurseNavigation,
   type GlobalSearchResult
 } from '../../utils/globalSearch';
+import { ThemeSwitcherPopover } from './ThemeSwitcherPopover';
 
 interface HeaderProps {
   currentModule: ModuleDefinition;
@@ -313,6 +314,10 @@ export const Header: React.FC<HeaderProps> = ({
             <Calendar size={15} className="header-date-icon" aria-hidden="true" />
             <span className="date-text">{todayFormatted}</span>
           </div>
+
+          <ThemeSwitcherPopover
+            onOpenSettings={() => onNavigateToModule('settings')}
+          />
 
           <button
             type="button"

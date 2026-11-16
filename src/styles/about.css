@@ -63,8 +63,8 @@
 .about-hero-quote {
   margin: 16px 0 0 0;
   padding: 14px 18px;
-  background-color: #ffffff;
-  border-left: 4px solid var(--blue-600);
+  background-color: var(--bg-surface);
+  border-left: 4px solid var(--brand-solid-bg);
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
   color: var(--navy-800);
   font-size: 0.94rem;
@@ -92,8 +92,8 @@
 }
 
 .about-hero-visual {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-light);
+  background-color: var(--hero-plinth-bg);
+  border: 1px solid var(--hero-plinth-border);
   border-radius: var(--radius-lg);
   padding: 20px;
   display: flex;
@@ -104,10 +104,21 @@
   box-shadow: var(--shadow-xs);
 }
 
-.about-hero-visual svg {
+.about-hero-visual-stage {
   width: 100%;
-  max-width: 210px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px 2px;
+}
+
+.about-hero-shield-img {
+  display: block;
+  width: 100%;
+  max-width: 260px;
   height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 22px rgb(2 132 199 / 0.16));
 }
 
 .about-hero-visual-caption {
@@ -206,13 +217,13 @@
 }
 
 .about-monogram-initiator {
-  background-color: var(--blue-800);
-  color: #ffffff;
+  background-color: var(--brand-solid-bg);
+  color: var(--on-solid-text);
 }
 
 .about-monogram-inspiration {
-  background-color: var(--emerald-700);
-  color: #ffffff;
+  background-color: var(--st-success-solid);
+  color: var(--on-solid-text);
 }
 
 .about-author-name {
@@ -571,8 +582,8 @@
 
 /* App Footer inside Main Wrapper */
 .app-footer {
-  border-top: 1px solid var(--border-light);
-  background-color: var(--bg-surface);
+  border-top: 1px solid var(--footer-border);
+  background-color: var(--bg-footer);
   padding: 14px 36px;
   margin-top: auto;
 }

@@ -1,0 +1,451 @@
+/* ============================================================================
+   VAXNURSE MULTI-THEME DESIGN ENGINE
+   4 Calibrated Clinical Themes — Full WCAG 2.2 AA Contrast Compliance
+   ============================================================================ */
+
+/* Theme 1: Surgical Daylight (Explicit alias matching :root defaults) */
+html[data-theme='surgical-daylight'] {
+  color-scheme: light;
+}
+
+/* ============================================================================
+   Theme 2: Nordic Alabaster — Miękka dokumentacja dzienna / Eukaliptus
+   ============================================================================ */
+html[data-theme='nordic-alabaster'] {
+  color-scheme: light;
+
+  --bg-app: #edf2ef;
+  --bg-app-tint: #e1ebe6;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #fcfdfd;
+  --bg-surface-subtle: #f3f7f5;
+  --bg-surface-active: #dce8e2;
+  --bg-surface-hover: #ebf2ee;
+  --bg-inset: #f2f6f4;
+
+  --bg-header: #ffffff;
+  --header-border: #d2dfd9;
+  --bg-footer: #f4f8f6;
+  --footer-border: #d2dfd9;
+
+  /* Editorial light eucalyptus sidebar (distinct signature from Daylight) */
+  --sidebar-bg: #e4eeea;
+  --sidebar-bg-elevated: #d7e5df;
+  --sidebar-border: #c5d6cf;
+  --sidebar-text: #112a24;
+  --sidebar-text-strong: #091c17;
+  --sidebar-text-muted: #39554d;
+  --sidebar-item-hover: #d3e2dc;
+  --sidebar-item-active-bg: #0f766e;
+  --sidebar-item-active-text: #ffffff;
+  --sidebar-item-active-border: #14b8a6;
+  --sidebar-badge-bg: #cce0d9;
+  --sidebar-badge-text: #0f524c;
+  --sidebar-footer-bg: #dbe7e2;
+  --sidebar-footer-border: #c5d6cf;
+
+  /* Teal Clinical Brand */
+  --brand-solid-bg: #0f766e;
+  --brand-solid-hover: #115e59;
+  --brand-accent-bright: #0d9488;
+  --brand-ink: #0f766e;
+  --brand-ink-strong: #115e59;
+  --brand-tint-bg: #f0fdfa;
+  --brand-tint-bg-hover: #ccfbf1;
+  --brand-tint-border: #99f6e4;
+  --brand-tint-text: #115e59;
+  --brand-focus-ring: #0f766e;
+  --brand-glow: rgb(15 118 110 / 0.16);
+
+  --hero-bg: #ffffff;
+  --hero-border: #ccdbd4;
+  --hero-plinth-bg: #eef7f4;
+  --hero-plinth-border: #bde2d8;
+  --hero-orb-1: rgb(20 184 166 / 0.15);
+  --hero-orb-2: rgb(2 132 199 / 0.11);
+
+  --text-main: #0f211c;
+  --text-strong: #1e352e;
+  --text-muted: #3d544d;
+  --text-tertiary: #4c645c;
+
+  --border-light: #d2dfd9;
+  --border-medium: #bccdc5;
+  --border-strong: #7b9389;
+  --border-subtle: #e7efeb;
+  --border-focus: #0f766e;
+
+  --input-bg: #ffffff;
+  --input-bg-subtle: #f5f9f7;
+  --input-border: #bccdc5;
+  --input-text: #0f211c;
+  --input-placeholder: #506960;
+
+  --scrollbar-track: #e6efeb;
+  --scrollbar-thumb: #bdd0c8;
+  --scrollbar-thumb-hover: #8aa59a;
+
+  --shadow-card-hover: 0 16px 32px -6px rgb(15 118 110 / 0.15), 0 4px 12px -2px rgb(15 33 28 / 0.06);
+}
+
+/* ============================================================================
+   Theme 3: Aether Obsidian — OIT Flagship Dark (Głęboki Obsydian & Szmaragd)
+   ============================================================================ */
+html[data-theme='aether-obsidian'] {
+  color-scheme: dark;
+
+  --bg-app: #060b16;
+  --bg-app-tint: #091224;
+  --bg-surface: #0d1526;
+  --bg-surface-elevated: #121d33;
+  --bg-surface-subtle: #111b30;
+  --bg-surface-active: #1a2845;
+  --bg-surface-hover: #142038;
+  --bg-inset: #09101e;
+
+  --bg-header: #080f1d;
+  --header-border: #1c2a44;
+  --bg-footer: #080e1c;
+  --footer-border: #1a2740;
+
+  --sidebar-bg: #040811;
+  --sidebar-bg-elevated: #0a1222;
+  --sidebar-border: #18253e;
+  --sidebar-text: #e2e8f0;
+  --sidebar-text-strong: #ffffff;
+  --sidebar-text-muted: #94a3b8;
+  --sidebar-item-hover: #101b32;
+  --sidebar-item-active-bg: #0369a1;
+  --sidebar-item-active-text: #ffffff;
+  --sidebar-item-active-border: #10b981;
+  --sidebar-badge-bg: #13223b;
+  --sidebar-badge-text: #7dd3fc;
+  --sidebar-footer-bg: #08101f;
+  --sidebar-footer-border: #18253e;
+
+  --brand-solid-bg: #0369a1;
+  --brand-solid-hover: #0284c7;
+  --brand-accent-bright: #38bdf8;
+  --brand-ink: #38bdf8;
+  --brand-ink-strong: #bae6fd;
+  --brand-tint-bg: #0b2038;
+  --brand-tint-bg-hover: #112d4d;
+  --brand-tint-border: #075985;
+  --brand-tint-text: #bae6fd;
+  --brand-focus-ring: #38bdf8;
+  --brand-glow: rgb(56 189 248 / 0.22);
+
+  --hero-bg: #0d1526;
+  --hero-border: #1f3152;
+  --hero-plinth-bg: #091224;
+  --hero-plinth-border: #1b3256;
+  --hero-orb-1: rgb(56 189 248 / 0.2);
+  --hero-orb-2: rgb(16 185 129 / 0.18);
+
+  --text-main: #f1f5f9;
+  --text-strong: #e2e8f0;
+  --text-muted: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --text-inverse: #060b16;
+
+  --border-light: #1e2d48;
+  --border-medium: #2c3f63;
+  --border-strong: #475f8a;
+  --border-subtle: #162238;
+  --border-focus: #38bdf8;
+
+  --input-bg: #09101f;
+  --input-bg-subtle: #0d1629;
+  --input-border: #2a3d61;
+  --input-text: #f1f5f9;
+  --input-placeholder: #94a3b8;
+
+  --scrollbar-track: #080e1c;
+  --scrollbar-thumb: #243656;
+  --scrollbar-thumb-hover: #354f7a;
+  --backdrop-overlay: rgb(2 6 14 / 0.76);
+
+  /* High-Contrast Luminous Dark Semantic Palettes */
+  --st-success-bg: #052e22;
+  --st-success-bg-strong: #064030;
+  --st-success-border: #059669;
+  --st-success-border-strong: #10b981;
+  --st-success-text: #a7f3d0;
+  --st-success-solid: #047857;
+  --st-success-solid-hover: #059669;
+
+  --st-green-bg: #062b19;
+  --st-green-bg-strong: #0a3c24;
+  --st-green-border: #16a34a;
+  --st-green-text: #bbf7d0;
+  --st-green-solid: #15803d;
+
+  --st-info-bg: #08213b;
+  --st-info-bg-strong: #0d2f52;
+  --st-info-border: #0284c7;
+  --st-info-border-soft: #075985;
+  --st-info-text: #bae6fd;
+  --st-info-text-strong: #e0f2fe;
+  --st-info-solid: #0369a1;
+  --st-info-solid-hover: #0284c7;
+
+  --st-cobalt-bg: #0d1e42;
+  --st-cobalt-bg-strong: #142c5c;
+  --st-cobalt-border: #2563eb;
+  --st-cobalt-border-soft: #1d4ed8;
+  --st-cobalt-text: #bfdbfe;
+  --st-cobalt-text-strong: #dbeafe;
+  --st-cobalt-solid: #1d4ed8;
+
+  --st-teal-bg: #06292a;
+  --st-teal-bg-strong: #093b3c;
+  --st-teal-border: #0d9488;
+  --st-teal-text: #99f6e4;
+  --st-teal-solid: #0f766e;
+
+  --st-warn-bg: #2a1805;
+  --st-warn-bg-soft: #211406;
+  --st-warn-bg-strong: #3d2408;
+  --st-warn-border: #d97706;
+  --st-warn-border-soft: #b45309;
+  --st-warn-text: #fde68a;
+  --st-warn-text-mid: #fcd34d;
+  --st-warn-solid: #b45309;
+
+  --st-orange-bg: #2e1306;
+  --st-orange-bg-strong: #431c09;
+  --st-orange-border: #ea580c;
+  --st-orange-text: #fed7aa;
+  --st-orange-text-strong: #ffedd5;
+  --st-orange-solid: #c2410c;
+
+  --st-danger-bg: #310c10;
+  --st-danger-bg-strong: #471217;
+  --st-danger-border: #dc2626;
+  --st-danger-border-soft: #991b1b;
+  --st-danger-text: #fecaca;
+  --st-danger-text-strong: #fee2e2;
+  --st-danger-solid: #b91c1c;
+
+  --st-rose-bg: #310b18;
+  --st-rose-bg-soft: #260a14;
+  --st-rose-bg-strong: #4a1024;
+  --st-rose-border: #e11d48;
+  --st-rose-border-soft: #9f1239;
+  --st-rose-text: #fecdd3;
+  --st-rose-solid: #be123c;
+
+  --st-violet-bg: #1b1946;
+  --st-violet-bg-strong: #25225c;
+  --st-violet-border: #6366f1;
+  --st-violet-border-soft: #4338ca;
+  --st-violet-text: #ddd6fe;
+  --st-violet-text-strong: #ede9fe;
+  --st-violet-solid: #4338ca;
+
+  --st-purple-bg: #221445;
+  --st-purple-bg-strong: #311d61;
+  --st-purple-border: #9333ea;
+  --st-purple-text: #e9d5ff;
+  --st-purple-solid: #6d28d9;
+
+  --st-fuchsia-bg: #31103b;
+  --st-fuchsia-border: #c026d3;
+  --st-fuchsia-text: #f5d0fe;
+
+  --st-banner-dark-bg: #111c33;
+  --st-banner-dark-border: #283d66;
+  --st-banner-cyan-bg: #0f3f52;
+
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+  --shadow-sm: 0 2px 6px 0 rgb(0 0 0 / 0.4), 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 8px 18px -4px rgb(0 0 0 / 0.55), 0 2px 6px -2px rgb(0 0 0 / 0.35);
+  --shadow-lg: 0 18px 34px -6px rgb(0 0 0 / 0.65), 0 4px 10px -2px rgb(0 0 0 / 0.4);
+  --shadow-card-hover: 0 18px 36px -6px rgb(2 132 199 / 0.25), 0 6px 16px -4px rgb(0 0 0 / 0.55);
+}
+
+/* ============================================================================
+   Theme 4: Quantum Indigo — Nocny Dyżur MedTech (Kosmiczny Granat & Indygo)
+   ============================================================================ */
+html[data-theme='quantum-indigo'] {
+  color-scheme: dark;
+
+  --bg-app: #070a1b;
+  --bg-app-tint: #0d1230;
+  --bg-surface: #101533;
+  --bg-surface-elevated: #161d45;
+  --bg-surface-subtle: #141a3d;
+  --bg-surface-active: #202a5c;
+  --bg-surface-hover: #19214d;
+  --bg-inset: #0a0e24;
+
+  --bg-header: #0a0f26;
+  --header-border: #232d61;
+  --bg-footer: #090d22;
+  --footer-border: #212a59;
+
+  --sidebar-bg: #050714;
+  --sidebar-bg-elevated: #0d1230;
+  --sidebar-border: #202957;
+  --sidebar-text: #e2e8f0;
+  --sidebar-text-strong: #ffffff;
+  --sidebar-text-muted: #9da8d4;
+  --sidebar-item-hover: #131b42;
+  --sidebar-item-active-bg: #4338ca;
+  --sidebar-item-active-text: #ffffff;
+  --sidebar-item-active-border: #a78bfa;
+  --sidebar-badge-bg: #1c2454;
+  --sidebar-badge-text: #c7d2fe;
+  --sidebar-footer-bg: #090d24;
+  --sidebar-footer-border: #202957;
+
+  --brand-solid-bg: #4f46e5;
+  --brand-solid-hover: #4338ca;
+  --brand-accent-bright: #818cf8;
+  --brand-ink: #a5b4fc;
+  --brand-ink-strong: #e0e7ff;
+  --brand-tint-bg: #1b1f4f;
+  --brand-tint-bg-hover: #252b69;
+  --brand-tint-border: #4f46e5;
+  --brand-tint-text: #e0e7ff;
+  --brand-focus-ring: #a5b4fc;
+  --brand-glow: rgb(129 140 248 / 0.25);
+
+  --hero-bg: #101533;
+  --hero-border: #283470;
+  --hero-plinth-bg: #0b1029;
+  --hero-plinth-border: #283470;
+  --hero-orb-1: rgb(129 140 248 / 0.24);
+  --hero-orb-2: rgb(56 189 248 / 0.16);
+
+  --text-main: #f1f5f9;
+  --text-strong: #e2e8f0;
+  --text-muted: #cbd5e1;
+  --text-tertiary: #a0acd8;
+  --text-inverse: #070a1b;
+
+  --border-light: #242f63;
+  --border-medium: #334282;
+  --border-strong: #5364ad;
+  --border-subtle: #19214a;
+  --border-focus: #a5b4fc;
+
+  --input-bg: #0a0f26;
+  --input-bg-subtle: #111738;
+  --input-border: #334282;
+  --input-text: #f1f5f9;
+  --input-placeholder: #9da8d4;
+
+  --scrollbar-track: #090d22;
+  --scrollbar-thumb: #2b3873;
+  --scrollbar-thumb-hover: #3e50a1;
+  --backdrop-overlay: rgb(3 4 14 / 0.78);
+
+  --st-success-bg: #062b23;
+  --st-success-bg-strong: #0a4034;
+  --st-success-border: #059669;
+  --st-success-border-strong: #34d399;
+  --st-success-text: #a7f3d0;
+  --st-success-solid: #047857;
+  --st-success-solid-hover: #059669;
+
+  --st-green-bg: #07291c;
+  --st-green-bg-strong: #0c3d29;
+  --st-green-border: #16a34a;
+  --st-green-text: #bbf7d0;
+  --st-green-solid: #15803d;
+
+  --st-info-bg: #0c1f45;
+  --st-info-bg-strong: #132d61;
+  --st-info-border: #38bdf8;
+  --st-info-border-soft: #0284c7;
+  --st-info-text: #bae6fd;
+  --st-info-text-strong: #e0f2fe;
+  --st-info-solid: #0369a1;
+  --st-info-solid-hover: #0284c7;
+
+  --st-cobalt-bg: #11214d;
+  --st-cobalt-bg-strong: #1a2f6b;
+  --st-cobalt-border: #60a5fa;
+  --st-cobalt-border-soft: #2563eb;
+  --st-cobalt-text: #dbeafe;
+  --st-cobalt-text-strong: #eff6ff;
+  --st-cobalt-solid: #1d4ed8;
+
+  --st-teal-bg: #08292e;
+  --st-teal-bg-strong: #0d3c42;
+  --st-teal-border: #14b8a6;
+  --st-teal-text: #99f6e4;
+  --st-teal-solid: #0f766e;
+
+  --st-warn-bg: #291807;
+  --st-warn-bg-soft: #211306;
+  --st-warn-bg-strong: #3d240b;
+  --st-warn-border: #f59e0b;
+  --st-warn-border-soft: #d97706;
+  --st-warn-text: #fde68a;
+  --st-warn-text-mid: #fcd34d;
+  --st-warn-solid: #b45309;
+
+  --st-orange-bg: #2e1309;
+  --st-orange-bg-strong: #451d0e;
+  --st-orange-border: #f97316;
+  --st-orange-text: #fed7aa;
+  --st-orange-text-strong: #ffedd5;
+  --st-orange-solid: #c2410c;
+
+  --st-danger-bg: #310d15;
+  --st-danger-bg-strong: #4a131f;
+  --st-danger-border: #ef4444;
+  --st-danger-border-soft: #b91c1c;
+  --st-danger-text: #fecaca;
+  --st-danger-text-strong: #fee2e2;
+  --st-danger-solid: #b91c1c;
+
+  --st-rose-bg: #320d1f;
+  --st-rose-bg-soft: #260a18;
+  --st-rose-bg-strong: #4c132f;
+  --st-rose-border: #fb7185;
+  --st-rose-border-soft: #be123c;
+  --st-rose-text: #fecdd3;
+  --st-rose-solid: #be123c;
+
+  --st-violet-bg: #1e1d57;
+  --st-violet-bg-strong: #2a2875;
+  --st-violet-border: #818cf8;
+  --st-violet-border-soft: #4f46e5;
+  --st-violet-text: #e0e7ff;
+  --st-violet-text-strong: #eef2ff;
+  --st-violet-solid: #4338ca;
+
+  --st-purple-bg: #271552;
+  --st-purple-bg-strong: #371e73;
+  --st-purple-border: #a855f7;
+  --st-purple-text: #ede9fe;
+  --st-purple-solid: #6d28d9;
+
+  --st-fuchsia-bg: #361245;
+  --st-fuchsia-border: #d946ef;
+  --st-fuchsia-text: #fae8ff;
+
+  --st-banner-dark-bg: #141a3d;
+  --st-banner-dark-border: #334282;
+  --st-banner-cyan-bg: #133f59;
+
+  --shadow-xs: 0 1px 2px 0 rgb(2 4 18 / 0.42);
+  --shadow-sm: 0 2px 6px 0 rgb(2 4 18 / 0.48), 0 1px 2px 0 rgb(2 4 18 / 0.35);
+  --shadow-md: 0 8px 20px -4px rgb(2 4 18 / 0.6), 0 2px 6px -2px rgb(2 4 18 / 0.35);
+  --shadow-lg: 0 18px 36px -6px rgb(2 4 18 / 0.72), 0 4px 10px -2px rgb(2 4 18 / 0.42);
+  --shadow-card-hover: 0 18px 36px -6px rgb(99 102 241 / 0.28), 0 6px 16px -4px rgb(2 4 18 / 0.58);
+}
+
+/* Smooth deliberate cross-fade only on explicit UI transitions, respectful of reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -13,6 +13,7 @@ import { QuickAccess } from './QuickAccess';
 import { ModuleCard } from './ModuleCard';
 import { RecentModules } from './RecentModules';
 import type { RecentVisitRecord } from '../../utils/recentModules';
+import heroShieldImg from '../../assets/vaxnurse-hero-shield.png';
 
 interface DashboardViewProps {
   modules: ModuleDefinition[];
@@ -52,34 +53,53 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="dashboard-container">
       {/* Hero Welcome Header */}
       <section className="dashboard-hero">
-        <div className="hero-content">
-          <div className="hero-pill">
-            <Shield size={14} className="hero-pill-icon" />
-            <span>Narzędzie referencyjne pielęgniarki • Tryb lokalny</span>
+        <div className="dashboard-hero-grid">
+          <div className="hero-content">
+            <div className="hero-pill">
+              <Shield size={14} className="hero-pill-icon" />
+              <span>Narzędzie referencyjne pielęgniarki • Tryb lokalny</span>
+            </div>
+
+            <h1 className="hero-title">
+              Witaj w systemie <span className="highlight-text">VaxNurse</span>
+            </h1>
+
+            <p className="hero-description">
+              Środowisko wspomagające organizację pracy w punkcie szczepień dzieci i dorosłych:
+              referencyjne procedury, odnośniki do PSO 2027, baza ChPL i lokalna kontrola zmian.
+            </p>
+
+            {/* Honest status bar */}
+            <div className="hero-indicators">
+              <div className="indicator-chip chip-success">
+                <CheckCircle size={15} />
+                <span>Narzędzie referencyjne – treści wymagają weryfikacji z ChPL</span>
+              </div>
+              <div className="indicator-chip chip-info">
+                <Activity size={15} />
+                <span>Zakres referencyjny: +2°C .. +8°C (brak połączenia z rejestratorem)</span>
+              </div>
+              <div className="indicator-chip chip-privacy">
+                <Shield size={15} />
+                <span>W tej wersji nie przechowujemy danych pacjentów</span>
+              </div>
+            </div>
           </div>
 
-          <h1 className="hero-title">
-            Witaj w systemie <span className="highlight-text">VaxNurse</span>
-          </h1>
-
-          <p className="hero-description">
-            Środowisko wspomagające organizację pracy w punkcie szczepień dzieci i dorosłych:
-            referencyjne procedury, odnośniki do PSO 2027, baza ChPL i lokalna kontrola zmian.
-          </p>
-
-          {/* Honest status bar */}
-          <div className="hero-indicators">
-            <div className="indicator-chip chip-success">
-              <CheckCircle size={15} />
-              <span>Narzędzie referencyjne – treści wymagają weryfikacji z ChPL</span>
-            </div>
-            <div className="indicator-chip chip-info">
-              <Activity size={15} />
-              <span>Zakres referencyjny: +2°C .. +8°C (brak połączenia z rejestratorem)</span>
-            </div>
-            <div className="indicator-chip chip-privacy">
-              <Shield size={15} />
-              <span>W tej wersji nie przechowujemy danych pacjentów</span>
+          <div className="hero-visual-stage" aria-hidden="true">
+            <div className="hero-visual-orb" />
+            <div className="hero-visual-frame">
+              <img
+                src={heroShieldImg}
+                alt=""
+                className="hero-shield-artwork"
+                width={960}
+                height={399}
+              />
+              <div className="hero-visual-caption-bar">
+                <span className="hero-visual-dot" />
+                <span>PSO 2027 • Kontrola ChPL • Architektura Local-First</span>
+              </div>
             </div>
           </div>
         </div>

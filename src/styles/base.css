@@ -17,6 +17,9 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
 #root {
@@ -39,7 +42,7 @@ button {
 input, select, textarea {
   font-family: inherit;
   font-size: 0.9375rem;
-  color: inherit;
+  color: var(--input-text);
 }
 
 a {
@@ -47,10 +50,14 @@ a {
   text-decoration: none;
 }
 
-/* Custom modern scrollbar */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom modern clinical scrollbar */
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -58,16 +65,16 @@ a {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1;
+  background-color: var(--scrollbar-thumb);
   border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #94a3b8;
+  background-color: var(--scrollbar-thumb-hover);
 }
 
 /* Accessibility focus ring */
 :focus-visible {
-  outline: 2px solid var(--blue-500);
+  outline: 2px solid var(--brand-focus-ring);
   outline-offset: 2px;
 }

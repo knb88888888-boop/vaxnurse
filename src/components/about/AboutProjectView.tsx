@@ -16,6 +16,7 @@ import {
   Users
 } from 'lucide-react';
 import type { ModuleDefinition, ModuleId } from '../../types/navigation';
+import heroShieldImg from '../../assets/vaxnurse-hero-shield.png';
 
 interface AboutProjectViewProps {
   module: ModuleDefinition;
@@ -211,30 +212,15 @@ export const AboutProjectView: React.FC<AboutProjectViewProps> = ({
           </div>
 
           <div className="about-hero-visual">
-            <svg
-              viewBox="0 0 220 150"
-              role="img"
-              aria-label="Schematyczna ilustracja łącząca bezpieczeństwo medyczne, przejrzystość wiedzy i wsparcie pracy pielęgniarskiej"
-            >
-              <rect x="8" y="8" width="204" height="134" rx="16" fill="#f0f9ff" stroke="#bae6fd" />
-              <circle cx="110" cy="64" r="34" fill="#ffffff" stroke="#0369a1" strokeWidth="2.5" />
-              <path
-                d="M110 44v40M90 64h40"
-                stroke="#0369a1"
-                strokeWidth="5"
-                strokeLinecap="round"
+            <div className="about-hero-visual-stage">
+              <img
+                src={heroShieldImg}
+                alt="Trójwymiarowa ilustracja tarczy klinicznej VaxNurse symbolizująca bezpieczne procedury szczepień i weryfikację ChPL"
+                className="about-hero-shield-img"
+                width={960}
+                height={399}
               />
-              <path
-                d="M44 114h132"
-                stroke="#7dd3fc"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeDasharray="5 5"
-              />
-              <circle cx="52" cy="114" r="7" fill="#047857" />
-              <circle cx="110" cy="114" r="7" fill="#075985" />
-              <circle cx="168" cy="114" r="7" fill="#4f46e5" />
-            </svg>
+            </div>
             <p className="about-hero-visual-caption">
               Spokojne, czytelne stanowisko referencyjne porządkujące wiedzę, procedury i odnośniki
               do dokumentów urzędowych w jednym miejscu.
