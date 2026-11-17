@@ -5,7 +5,9 @@ import {
   X,
   Calendar,
   ShieldAlert,
-  ArrowRight
+  ArrowRight,
+  Stethoscope,
+  ExternalLink
 } from 'lucide-react';
 import type { ModuleDefinition, ModuleId } from '../../types/navigation';
 import {
@@ -13,6 +15,7 @@ import {
   type GlobalSearchResult
 } from '../../utils/globalSearch';
 import { ThemeSwitcherPopover } from './ThemeSwitcherPopover';
+import { PCW_PROJECT } from '../../data/sisterProjects';
 
 interface HeaderProps {
   currentModule: ModuleDefinition;
@@ -328,6 +331,19 @@ export const Header: React.FC<HeaderProps> = ({
             <ShieldAlert size={16} className="quick-btn-icon" aria-hidden="true" />
             <span className="quick-btn-text">Sytuacje szczególne</span>
           </button>
+
+          <a
+            href={PCW_PROJECT.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="header-sister-link"
+            title={`${PCW_PROJECT.name} — ${PCW_PROJECT.subtitle}`}
+            aria-label="Otwórz Pielęgniarskie Centrum Wiedzy (PCW) w nowej karcie"
+          >
+            <Stethoscope size={15} aria-hidden="true" />
+            <span className="header-sister-link-text">Pielęgniarki · PCW</span>
+            <ExternalLink size={13} aria-hidden="true" />
+          </a>
         </div>
       </div>
 

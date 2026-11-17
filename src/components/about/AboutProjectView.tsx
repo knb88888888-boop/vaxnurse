@@ -16,6 +16,7 @@ import {
   Users
 } from 'lucide-react';
 import type { ModuleDefinition, ModuleId } from '../../types/navigation';
+import { PcwReferenceBanner } from '../common/PcwReferenceBanner';
 import heroShieldImg from '../../assets/vaxnurse-hero-shield.png';
 
 interface AboutProjectViewProps {
@@ -549,6 +550,9 @@ export const AboutProjectView: React.FC<AboutProjectViewProps> = ({
           </article>
         </div>
       </section>
+
+      {/* Sister Portal: Pielęgniarskie Centrum Wiedzy (PCW) */}
+      <PcwReferenceBanner variant="about" />
 
       {/* Important Clinical Disclaimer */}
       <section className="about-disclaimer-box" aria-labelledby="about-disclaimer-heading">

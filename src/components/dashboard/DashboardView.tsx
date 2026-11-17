@@ -13,6 +13,7 @@ import { QuickAccess } from './QuickAccess';
 import { ModuleCard } from './ModuleCard';
 import { RecentModules } from './RecentModules';
 import type { RecentVisitRecord } from '../../utils/recentModules';
+import { PcwReferenceBanner } from '../common/PcwReferenceBanner';
 import heroShieldImg from '../../assets/vaxnurse-hero-shield.png';
 
 interface DashboardViewProps {
@@ -126,6 +127,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <ExternalLink size={14} />
         </a>
       </div>
+
+      {/* Sister Portal Reference: Pielęgniarskie Centrum Wiedzy (PCW) */}
+      <PcwReferenceBanner variant="dashboard" />
 
       {/* Embedded Search on Dashboard if user focuses here */}
       <div className="dashboard-search-wrapper">

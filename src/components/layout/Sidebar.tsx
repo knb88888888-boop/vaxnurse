@@ -5,10 +5,13 @@ import {
   ChevronRight,
   ShieldCheck,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Stethoscope,
+  ExternalLink
 } from 'lucide-react';
 import type { ModuleDefinition, ModuleId } from '../../types/navigation';
 import { isModulePlaceholder } from '../../utils/globalSearch';
+import { PCW_PROJECT } from '../../data/sisterProjects';
 
 interface SidebarProps {
   modules: ModuleDefinition[];
@@ -212,6 +215,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Navigation Groups */}
         <nav className="sidebar-nav" aria-label="Główne menu aplikacji">
           {renderNavGroup('Nawigacja', mainModules)}
+          <div className="nav-group">
+            {!isCollapsed && <div className="nav-group-title">Projekt siostrzany</div>}
+            <ul className="nav-list">
+              <li>
+                <a
+                  href={PCW_PROJECT.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="nav-item sidebar-external-link"
+                  title={`${PCW_PROJECT.name} — ${PCW_PROJECT.subtitle}`}
+                  aria-label="Pielęgniarskie Centrum Wiedzy (PCW) — otwórz w nowej karcie"
+                  onClick={() => {
+                    if (isOpenMobile) {
+                      skipFocusRestoreRef.current = true;
+                      onCloseMobile();
+                    }
+                  }}
+                >
+                  <span className="nav-item-icon-wrapper">
+                    <Stethoscope className="nav-icon" size={19} aria-hidden="true" />
+                  </span>
+                  {!isCollapsed && (
+                    <>
+                      <span className="nav-item-label">Pielęgniarki · PCW</span>
+                      <ExternalLink className="sidebar-external-icon" size={14} aria-hidden="true" />
+                    </>
+                  )}
+                </a>
+              </li>
+            </ul>
+          </div>
           {renderNavGroup('Moduły kliniczne', clinicalModules)}
           {renderNavGroup('Organizacja i bezpieczeństwo', logisticsModules)}
           {renderNavGroup('System', systemModules)}

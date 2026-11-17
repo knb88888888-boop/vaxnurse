@@ -3,6 +3,7 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import type { ModuleDefinition, ModuleId } from '../../types/navigation';
 import type { GlobalSearchResult } from '../../utils/globalSearch';
+import { PCW_PROJECT } from '../../data/sisterProjects';
 
 interface LayoutProps {
   modules: ModuleDefinition[];
@@ -78,6 +79,14 @@ export const Layout: React.FC<LayoutProps> = ({
               >
                 Ustawienia i prywatność
               </button>
+              <a
+                href={PCW_PROJECT.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="app-footer-link-btn"
+              >
+                Pielęgniarskie Centrum Wiedzy (PCW)
+              </a>
             </div>
           </div>
         </footer>

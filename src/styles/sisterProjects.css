@@ -1,0 +1,274 @@
+/* ============================================================================
+   PCW SISTER PROJECT REFERENCE CARD (VaxNurse <-> Pielęgniarskie Centrum Wiedzy)
+   ============================================================================ */
+
+.pcw-ref-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-left: 4px solid var(--brand-solid-bg);
+  border-radius: var(--radius-xl);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.pcw-ref-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.pcw-ref-title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+  flex: 1 1 320px;
+}
+
+.pcw-ref-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-lg);
+  background-color: var(--brand-tint-bg);
+  border: 1px solid var(--brand-tint-border);
+  color: var(--brand-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pcw-ref-heading-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pcw-ref-badge {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background-color: var(--brand-tint-bg);
+  border: 1px solid var(--brand-tint-border);
+  color: var(--brand-tint-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.pcw-ref-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+
+.pcw-ref-summary {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.pcw-ref-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  background-color: var(--brand-solid-bg);
+  color: var(--on-solid-text);
+  font-size: 0.875rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+  box-shadow: var(--shadow-xs);
+}
+
+.pcw-ref-cta:hover {
+  background-color: var(--brand-solid-hover);
+  transform: translateY(-1px);
+}
+
+.pcw-ref-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pcw-ref-box {
+  background-color: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pcw-ref-box-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.pcw-ref-box-title svg {
+  color: var(--brand-ink);
+  flex-shrink: 0;
+}
+
+.pcw-ref-box-text {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.pcw-ref-audience-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pcw-ref-audience-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.pcw-ref-audience-list svg {
+  color: var(--brand-ink);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.pcw-ref-modules {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.pcw-ref-modules-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.pcw-ref-module-pill {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface-subtle);
+  border: 1px solid var(--border-light);
+  color: var(--text-strong);
+}
+
+.pcw-ref-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.pcw-ref-disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  line-height: 1.45;
+}
+
+.pcw-ref-disclaimer svg {
+  color: var(--brand-ink);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.pcw-ref-domain-link {
+  font-weight: 700;
+  color: var(--brand-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  flex-shrink: 0;
+}
+
+.header-sister-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  min-height: 36px;
+  border-radius: var(--radius-md);
+  background-color: var(--brand-tint-bg);
+  border: 1px solid var(--brand-tint-border);
+  color: var(--brand-tint-text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.header-sister-link:hover {
+  background-color: var(--brand-tint-bg-hover);
+  border-color: var(--brand-ink);
+}
+
+.sidebar-external-link {
+  text-decoration: none;
+}
+
+.sidebar-external-icon {
+  color: var(--sidebar-text-muted);
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .pcw-ref-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .pcw-ref-card {
+    padding: 16px;
+  }
+
+  .pcw-ref-cta {
+    width: 100%;
+  }
+
+  .header-sister-link-text {
+    display: none;
+  }
+}
