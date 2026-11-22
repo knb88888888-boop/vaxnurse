@@ -128,9 +128,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </a>
       </div>
 
-      {/* Sister Portal Reference: Pielęgniarskie Centrum Wiedzy (PCW) */}
-      <PcwReferenceBanner variant="dashboard" />
-
       {/* Embedded Search on Dashboard if user focuses here */}
       <div className="dashboard-search-wrapper">
         <div className="dashboard-search-box">
@@ -227,6 +224,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           ))}
         </div>
       </section>
+
+      {/* Sister Portal Reference: Pielęgniarskie Centrum Wiedzy (PCW) */}
+      <PcwReferenceBanner variant="dashboard" />
     </div>
   );
 };

@@ -1,0 +1,86 @@
+/* ============================================================================
+   VAXNURSE PRINT STYLESHEET — Czytelny wydruk kliniczny z dowolnego motywu
+   ============================================================================ */
+
+@media print {
+  :root,
+  html,
+  html[data-theme] {
+    color-scheme: light !important;
+    --bg-app: #ffffff !important;
+    --bg-app-tint: #ffffff !important;
+    --bg-surface: #ffffff !important;
+    --bg-surface-elevated: #ffffff !important;
+    --bg-surface-subtle: #f8fafc !important;
+    --bg-surface-active: #e2e8f0 !important;
+    --text-main: #0f172a !important;
+    --text-strong: #1e293b !important;
+    --text-muted: #334155 !important;
+    --text-tertiary: #475569 !important;
+    --border-light: #cbd5e1 !important;
+    --border-medium: #94a3b8 !important;
+    --shadow-xs: none !important;
+    --shadow-sm: none !important;
+    --shadow-md: none !important;
+    --shadow-lg: none !important;
+  }
+
+  html,
+  body,
+  #root,
+  .app-container,
+  .app-main-wrapper,
+  .app-content-area {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    height: auto !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .app-content-area {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Ukrycie elementów interfejsu nienadających się do druku dokumentacji */
+  .app-sidebar,
+  .sidebar-backdrop,
+  .app-header,
+  .app-footer,
+  .skip-to-main-link,
+  .module-view-nav,
+  .header-theme-popover,
+  .pcw-ref-card,
+  .dashboard-search-wrapper,
+  .pso-reference-alert,
+  .search-reset-button {
+    display: none !important;
+  }
+
+  /* Zapobieganie rozrywaniu wierszy tabel i kart pomiędzy stronami */
+  thead {
+    display: table-header-group;
+  }
+
+  tr,
+  .content-panel,
+  .ops-panel,
+  .ops-card,
+  .chpl-main-card,
+  .vaccine-card,
+  .child-vaccine-card,
+  .pso-block-card,
+  .pso-separate-rule-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+  }
+
+  .hero-visual-orb {
+    display: none !important;
+  }
+}

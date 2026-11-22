@@ -777,6 +777,13 @@ button.recent-module-item {
   overflow-wrap: anywhere;
 }
 
+@media (max-width: 1480px) {
+  .header-top-row {
+    padding: 0 20px;
+    gap: 12px;
+  }
+}
+
 @media (max-width: 1200px) {
   .modules-grid,
   .quick-access-grid,

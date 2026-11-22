@@ -180,6 +180,7 @@ export const APP_MODULES: ModuleDefinition[] = [
     icon: Settings,
     purposeNote: 'Lokalne parametry ergonomii, tryb wyświetlania oraz status bezpieczeństwa danych.',
     keyFeatures: [
+      'Wygląd aplikacji: szata graficzna, tryb jasny / tryb ciemny / automatyczny i 4 motywy kliniczne',
       'Dostosowanie kontrastu i wielkości elementów',
       'Zasady prywatności (lokalna praca bez zapisu danych osobowych)',
       'Wersja systemu i status gotowości operacyjnej'

@@ -920,22 +920,26 @@ export const PsoPartIVSeparateLawsSection: React.FC<{
 
 export const PsoPartVIFootnotesBlock: React.FC<{
   footnotes: PsoPartVITableFootnote[];
-}> = ({ footnotes }) => (
-  <section className="pso-footnotes-panel" aria-labelledby="pso-vi-footnotes-heading">
-    <div className="pso-block-header">
-      <h4 id="pso-vi-footnotes-heading">Dosłowne przypisy pod tabelą Części VI PSO 2027</h4>
-      <PsoSourceLinkBadge subsection="Część VI" pages={45} verificationStatus="verified" />
-    </div>
-    <dl className="pso-footnotes-list">
-      {footnotes.map((fn) => (
-        <div key={fn.marker} className="pso-footnote-item">
-          <dt>{fn.marker}</dt>
-          <dd>{fn.text}</dd>
-        </div>
-      ))}
-    </dl>
-  </section>
-);
+  headingLevel?: 'h3' | 'h4';
+}> = ({ footnotes, headingLevel = 'h4' }) => {
+  const HeadingTag = headingLevel;
+  return (
+    <section className="pso-footnotes-panel" aria-labelledby="pso-vi-footnotes-heading">
+      <div className="pso-block-header">
+        <HeadingTag id="pso-vi-footnotes-heading">Dosłowne przypisy pod tabelą Części VI PSO 2027</HeadingTag>
+        <PsoSourceLinkBadge subsection="Część VI" pages={45} verificationStatus="verified" />
+      </div>
+      <dl className="pso-footnotes-list">
+        {footnotes.map((fn) => (
+          <div key={fn.marker} className="pso-footnote-item">
+            <dt>{fn.marker}</dt>
+            <dd>{fn.text}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+};
 
 // =============================================================================
 // CZĘŚĆ VII — SKRÓCONE KALENDARZE SZCZEPIEŃ (VII.A str. 46, VII.B str. 47, VII.C str. 48)

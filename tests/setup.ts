@@ -7,6 +7,10 @@ beforeEach(() => {
   sessionStorage.clear();
   document.documentElement.removeAttribute('data-density');
   document.documentElement.removeAttribute('data-font-size');
+  document.documentElement.removeAttribute('data-theme');
+  document.documentElement.removeAttribute('data-theme-preference');
+  document.documentElement.removeAttribute('data-color-scheme');
+  document.documentElement.style.colorScheme = '';
 
   Object.defineProperty(window, 'scrollTo', {
     value: vi.fn(),
@@ -44,6 +48,10 @@ afterEach(() => {
   sessionStorage.clear();
   document.documentElement.removeAttribute('data-density');
   document.documentElement.removeAttribute('data-font-size');
+  document.documentElement.removeAttribute('data-theme');
+  document.documentElement.removeAttribute('data-theme-preference');
+  document.documentElement.removeAttribute('data-color-scheme');
+  document.documentElement.style.colorScheme = '';
   vi.useRealTimers();
   vi.restoreAllMocks();
 });

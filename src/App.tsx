@@ -1,4 +1,4 @@
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Layout } from './components/layout/Layout';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { ModuleLoadingFallback } from './components/common/ModuleLoadingFallback';
@@ -124,6 +124,13 @@ export const App: React.FC = () => {
 
   const currentModule =
     APP_MODULES.find(m => m.id === activeModuleId) || APP_MODULES[0];
+
+  useEffect(() => {
+    document.title =
+      activeModuleId === 'dashboard'
+        ? 'VaxNurse — Asystent Punktu Szczepień'
+        : `${currentModule.label} — VaxNurse`;
+  }, [activeModuleId, currentModule.label]);
 
   return (
     <Layout

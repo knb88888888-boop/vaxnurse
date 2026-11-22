@@ -542,4 +542,34 @@ describe('operationalTools — Łańcuch chłodniczy, checklista i zestaw przeci
     }));
     expect(saveEmergencyKit(localStorage, tooManyKit).success).toBe(false);
   });
+
+  it('akceptuje jawny znak + w temperaturach łańcucha chłodniczego (+2, +4,5, +8) i odrzuca niepoprawne wartości (+51, ++4)', () => {
+    for (const validTemp of ['+2', '+4,5', '+8']) {
+      const res = validateColdChainDraft({
+        deviceLabel: 'Chłodziarka A1',
+        measuredAt: '2026-11-22T05:00',
+        currentC: validTemp,
+        minC: '+2',
+        maxC: '+8',
+        profileId: 'standard_2_8',
+        actionNote: '',
+        recordedBy: 'P.M.'
+      });
+      expect(res.ok, `Powinno zaakceptować ${validTemp}`).toBe(true);
+    }
+
+    for (const invalidTemp of ['+51', '++4']) {
+      const res = validateColdChainDraft({
+        deviceLabel: 'Chłodziarka A1',
+        measuredAt: '2026-11-22T05:00',
+        currentC: invalidTemp,
+        minC: '+2',
+        maxC: '+8',
+        profileId: 'standard_2_8',
+        actionNote: 'Sprawdzenie graniczne',
+        recordedBy: 'P.M.'
+      });
+      expect(res.ok, `Powinno odrzucić ${invalidTemp}`).toBe(false);
+    }
+  });
 });

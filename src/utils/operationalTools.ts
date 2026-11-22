@@ -422,7 +422,7 @@ function parseTemperature(value?: string | null): number | null | 'invalid' {
   if (value === undefined || value === null) return null;
   const v = value.trim().replace(',', '.');
   if (!v) return null;
-  if (!/^-?\d{1,2}(\.\d{1,2})?$/.test(v)) return 'invalid';
+  if (!/^[+-]?\d{1,2}(\.\d{1,2})?$/.test(v)) return 'invalid';
   const n = Number(v);
   if (n < -90 || n > 50) return 'invalid';
   return n;

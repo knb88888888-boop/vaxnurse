@@ -285,4 +285,30 @@ describe('Globalna nawigacja: Header, Sidebar, DashboardView i ModulePlaceholder
     );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
+
+  it('wyszukuje ustawienia motywów (motyw/ciemny/szata) oraz obsługuje skrót klawiszowy Ctrl+K w Header', async () => {
+    const user = userEvent.setup();
+    expect(searchVaxNurseNavigation('motyw').some((r) => r.targetModule === 'settings')).toBe(true);
+    expect(searchVaxNurseNavigation('ciemny').some((r) => r.targetModule === 'settings')).toBe(true);
+    expect(searchVaxNurseNavigation('szata').some((r) => r.targetModule === 'settings')).toBe(true);
+
+    render(
+      <Header
+        currentModule={getModule('dashboard')}
+        searchQuery=""
+        onSearchChange={vi.fn()}
+        onOpenMobileMenu={vi.fn()}
+        isOpenMobileMenu={false}
+        onNavigateToModule={vi.fn()}
+        onSelectSearchResult={vi.fn()}
+      />
+    );
+
+    const desktopInput = screen.getByRole('textbox', {
+      name: /Szukaj modułów i sekcji VaxNurse/i,
+    });
+    expect(document.activeElement).not.toBe(desktopInput);
+    await user.keyboard('{Control>}k{/Control}');
+    expect(document.activeElement).toBe(desktopInput);
+  });
 });

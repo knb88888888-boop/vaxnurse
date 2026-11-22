@@ -204,7 +204,7 @@ const PartViQualificationsTable: React.FC<{ caption: string }> = ({ caption }) =
         </tbody>
       </table>
     </div>
-    <PsoPartVIFootnotesBlock footnotes={PSO_PART_VI_OFFICIAL_FOOTNOTES} />
+    <PsoPartVIFootnotesBlock footnotes={PSO_PART_VI_OFFICIAL_FOOTNOTES} headingLevel="h3" />
   </>
 );
 

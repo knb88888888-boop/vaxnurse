@@ -77,6 +77,51 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   useEffect(() => {
+    const handleGlobalSearchShortcut = (event: KeyboardEvent) => {
+      const isCtrlOrMetaK =
+        (event.ctrlKey || event.metaKey) &&
+        !event.altKey &&
+        event.key.toLowerCase() === 'k';
+
+      const target = event.target as HTMLElement | null;
+      const isEditableTarget = Boolean(
+        target &&
+          (target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.tagName === 'SELECT' ||
+            target.isContentEditable)
+      );
+      const isSlashShortcut =
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        event.key === '/' &&
+        !isEditableTarget;
+
+      if (!isCtrlOrMetaK && !isSlashShortcut) return;
+
+      event.preventDefault();
+      const desktopEl = desktopInputRef.current;
+      const desktopContainer = desktopSearchRef.current;
+      const isDesktopVisible = Boolean(
+        desktopEl &&
+          desktopContainer &&
+          window.getComputedStyle(desktopContainer).display !== 'none'
+      );
+      if (isDesktopVisible && desktopEl) {
+        desktopEl.focus();
+        desktopEl.select();
+        setIsDesktopSearchOpen(true);
+      } else {
+        setIsMobileSearchOpen(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleGlobalSearchShortcut);
+    return () => document.removeEventListener('keydown', handleGlobalSearchShortcut);
+  }, []);
+
+  useEffect(() => {
     if (isMobileSearchOpen) {
       mobileInputRef.current?.focus();
     } else if (wasMobileSearchOpenRef.current) {
@@ -270,7 +315,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : undefined
               }
             />
-            {searchQuery && (
+            {searchQuery ? (
               <button
                 type="button"
                 className="search-clear-btn"
@@ -279,6 +324,10 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <X size={15} />
               </button>
+            ) : (
+              <kbd className="search-kbd-hint" aria-hidden="true">
+                Ctrl+K
+              </kbd>
             )}
           </div>
 
@@ -338,7 +387,7 @@ export const Header: React.FC<HeaderProps> = ({
             rel="noopener noreferrer"
             className="header-sister-link"
             title={`${PCW_PROJECT.name} — ${PCW_PROJECT.subtitle}`}
-            aria-label="Otwórz Pielęgniarskie Centrum Wiedzy (PCW) w nowej karcie"
+            aria-label="Pielęgniarki · PCW — Pielęgniarskie Centrum Wiedzy (nowa karta)"
           >
             <Stethoscope size={15} aria-hidden="true" />
             <span className="header-sister-link-text">Pielęgniarki · PCW</span>

@@ -47,8 +47,35 @@ test.describe('VaxNurse Multi-Theme UI, Contrast & Visual Integrity QA', () => {
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'aether-obsidian');
 
-    // Przejdź do Ustawień i przetestuj Studio Szaty Graficznej + Quantum Indigo
+    // 1. Sprawdź dynamiczny tytuł strony, skip-link i skrót Ctrl+K
+    await expect(page).toHaveTitle('VaxNurse — Asystent Punktu Szczepień');
+    const skipLink = page.locator('.skip-to-main-link');
+    await expect(skipLink).toHaveAttribute('href', '#main-content');
+
+    await page.locator('body').click({ position: { x: 10, y: 10 } });
+    await page.keyboard.press('Control+k');
+    const desktopInput = page.locator('.header-center .search-input');
+    await expect(desktopInput).toBeFocused();
+    await page.keyboard.press('Escape');
+
+    // Przejdź do Ustawień i przetestuj Studio Szaty Graficznej + Quantum Indigo + tytuł dokumentu
     await navigateViaSidebarOrHeader(page, /Ustawienia/i);
+    await expect(page).toHaveTitle('Ustawienia — VaxNurse');
+
+    const headerGeometry = await page.evaluate(() => {
+      const breadcrumb = document.querySelector('.breadcrumb-root')?.getBoundingClientRect();
+      const searchInput = document.querySelector('.header-center .search-input')?.getBoundingClientRect();
+      const headerRight = document.querySelector('.header-right')?.getBoundingClientRect();
+      return {
+        breadcrumbWidth: breadcrumb?.width ?? 0,
+        searchWidth: searchInput?.width ?? 0,
+        headerRightRight: headerRight?.right ?? 99999,
+        innerWidth: window.innerWidth
+      };
+    });
+    expect(headerGeometry.breadcrumbWidth).toBeGreaterThan(40);
+    expect(headerGeometry.searchWidth).toBeGreaterThan(120);
+    expect(headerGeometry.headerRightRight).toBeLessThanOrEqual(headerGeometry.innerWidth + 1);
     await page
       .getByRole('group', { name: /Wybór motywu kolorystycznego aplikacji/i })
       .getByRole('button', { name: /Quantum Indigo/i })
@@ -134,18 +161,21 @@ test.describe('VaxNurse Multi-Theme UI, Contrast & Visual Integrity QA', () => {
       const hero = document.querySelector('.dashboard-hero')?.getBoundingClientRect();
       const header = document.querySelector('.app-header')?.getBoundingClientRect();
       const headerRight = document.querySelector('.header-right')?.getBoundingClientRect();
+      const sisterLink = document.querySelector('.header-sister-link')?.getBoundingClientRect();
       return {
         scrollWidth: document.documentElement.scrollWidth,
         clientWidth: vw,
         heroRight: hero ? Math.round(hero.right) : 0,
         headerRightEdge: header ? Math.round(header.right) : 0,
-        headerButtonsRight: headerRight ? Math.round(headerRight.right) : 0
+        headerButtonsRight: headerRight ? Math.round(headerRight.right) : 0,
+        sisterLinkRight: sisterLink ? Math.round(sisterLink.right) : 0
       };
     });
     expect(overflowDashboard.scrollWidth).toBeLessThanOrEqual(overflowDashboard.clientWidth);
     expect(overflowDashboard.heroRight).toBeLessThanOrEqual(overflowDashboard.clientWidth + 1);
     expect(overflowDashboard.headerRightEdge).toBeLessThanOrEqual(overflowDashboard.clientWidth + 1);
     expect(overflowDashboard.headerButtonsRight).toBeLessThanOrEqual(overflowDashboard.clientWidth + 1);
+    expect(overflowDashboard.sisterLinkRight).toBeLessThanOrEqual(overflowDashboard.clientWidth + 1);
 
     // Otwórz popover Wygląd na wąskim ekranie 360px
     await page.getByRole('button', { name: /Wygląd aplikacji/i }).click();
@@ -155,6 +185,25 @@ test.describe('VaxNurse Multi-Theme UI, Contrast & Visual Integrity QA', () => {
       clientWidth: document.documentElement.clientWidth
     }));
     expect(overflowPopover.scrollWidth).toBeLessThanOrEqual(overflowPopover.clientWidth);
+
+    monitor.assertClean();
+  });
+
+  test('Procedury i checklisty spełniają WCAG 2.2 AA i best-practice bez heading-order', async ({
+    page
+  }) => {
+    const monitor = attachRuntimeMonitor(page);
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto('/');
+
+    await navigateViaSidebarOrHeader(page, /Procedury i checklisty/i);
+    await expect(page.getByRole('heading', { level: 1, name: /Procedury i checklisty/i })).toBeVisible();
+    await expect(page).toHaveTitle('Procedury i checklisty — VaxNurse');
+
+    const audit = await runAxeAudit(page, 'Procedury i checklisty (clean heading-order)');
+    expect(audit.wcagViolationsCount).toBe(0);
+    expect(audit.wcagIncompleteCount).toBe(0);
+    expect(audit.bestPracticeIds).not.toContain('heading-order');
 
     monitor.assertClean();
   });

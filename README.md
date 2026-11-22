@@ -31,7 +31,7 @@ VaxNurse powstał, aby uporządkować w jednym, spokojnym wizualnie i czytelnym 
 
 ## Najważniejsze funkcjonalności i moduły
 
-1. **Pulpit operacyjny i globalna wyszukiwarka** — szybki dostęp do modułów, ostatnio odwiedzanych sekcji oraz wyszukiwania po katalogu funkcji i Bibliotece Wiedzy.
+1. **Pulpit operacyjny i globalna wyszukiwarka (`Ctrl+K` / `/`)** — szybki dostęp do modułów, ostatnio odwiedzanych sekcji, wyszukiwania po katalogu funkcji (w tym preferencjach motywów) i Bibliotece Wiedzy oraz bezpośrednie przejście do projektu siostrzanego **Pielęgniarskie Centrum Wiedzy (PCW)** (`pielegniarki.vercel.app`).
 2. **Szczepienia dzieci (PSO 2027)** — ustrukturyzowana prezentacja wszystkich siedmiu części Programu Szczepień Ochronnych na 2027 rok (Dziennik Urzędowy MZ z 30.10.2026 r., poz. 77), w tym rozbicie na procedury i jawne oznaczenie statusów weryfikacji z dokumentacją ChPL (m.in. 12 pozycji o statusie `requires_source_clarification` oraz 31 pozycji `pending_chpl_verification` przy `verified_full = 0`; w tabeli VII.C zachowane jest jawne oznaczenie konfliktu dla meningokoków).
 3. **Baza preparatów i Stanowisko audytu ChPL** — katalog produktów leczniczych w strukturze druku ChPL (punkty 1–10 EMA QRD), mechanizm wykrywania rozbieżności źródłowych (np. `vac-infanrix-hexa` z zarejestrowaną rozbieżnością fenyloalaniny `0,0289 µg` vs `0,0298 µg` i blokadą automatycznego zatwierdzenia), skorygowany kod ATC dla `VaxigripTetra` (`J07BB02`), lokalny podgląd PDF (`pdfjs-dist`) z weryfikacją SHA-256 oraz rejestr dowodów.
 4. **Kalendarz szczepień i Szczepienia dorosłych** — uporządkowany przegląd etapów wiekowych oraz szczepień zalecanych dla dorosłych i wybranych grup ryzyka.
@@ -39,7 +39,7 @@ VaxNurse powstał, aby uporządkować w jednym, spokojnym wizualnie i czytelnym 
 6. **Procedury i checklisty / Sytuacje szczególne** — lokalnie zapisywane checklisty organizacyjne stanowiska oraz inwentarz zestawu przeciwwstrząsowego.
 7. **Łańcuch chłodniczy** — lokalny dziennik odczytów temperatury oraz profile przechowywania preparatów.
 8. **Baza wiedzy** — uporządkowane odnośniki do oficjalnych portali i dokumentów źródłowych.
-9. **Ustawienia i Kopia zapasowa JSON** — dostosowanie gęstości widoku i wielkości tekstu oraz bezpieczny eksport/import lokalnego stanu katalogu (`localStorage`) z automatyczną kopią zabezpieczającą i ochroną przed sfałszowaniem statusów weryfikacji.
+9. **Ustawienia, Studio Szaty Graficznej i Kopia zapasowa JSON** — 4 kliniczne motywy kolorystyczne (*Surgical Daylight*, *Nordic Alabaster*, *Aether Obsidian*, *Quantum Indigo*) + tryb *Auto (Dzień / Noc)* dostępny z przycisku `Wygląd` w nagłówku oraz w Ustawieniach, regulacja gęstości i wielkości tekstu, a także bezpieczny eksport/import lokalnego stanu katalogu (`localStorage`) z automatyczną kopią zabezpieczającą i ochroną przed sfałszowaniem statusów weryfikacji.
 10. **O projekcie i autorach** — prezentacja misji, wartości, architektury modułów oraz zasad działania lokalnego.
 
 ---
@@ -71,7 +71,7 @@ VaxNurse jest udostępniany całkowicie bezpłatnie. Aplikacja nie zawiera rekla
 
 ## Technologie
 
-- **Interfejs:** React 19 (`19.3.x`), Lucide React (`^1.71.0`), natywny CSS (zmienne CSS, systemowy stos fontów, wsparcie trybu zwięzłego i powiększonego tekstu)
+- **Interfejs:** React 19 (`19.3.x`), Lucide React (`^1.71.0`), natywny CSS (4-motywowy system zmiennych CSS, zoptymalizowany arkusz wydruku `@media print`, systemowy stos fontów, wsparcie trybu zwięzłego i powiększonego tekstu oraz nagłówki bezpieczeństwa HTTP w `vercel.json`)
 - **Język:** TypeScript (`~7.0.2`, tryb ścisły `"strict": true`)
 - **Bundler / Serwer dev:** Vite 8 (`^8.3.6`) + `@vitejs/plugin-react`
 - **Obsługa lokalnych plików PDF:** `pdfjs-dist` (`6.5.438`)

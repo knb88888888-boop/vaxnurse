@@ -12,8 +12,10 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 
 .pcw-ref-header {
@@ -268,7 +270,23 @@
     width: 100%;
   }
 
+  .header-sister-link {
+    padding: 0 7px;
+    min-height: 34px;
+    gap: 4px;
+  }
+
   .header-sister-link-text {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .header-sister-link .lucide-external-link {
+    display: none;
+  }
+
+  .header-status-badge {
     display: none;
   }
 }

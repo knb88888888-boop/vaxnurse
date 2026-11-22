@@ -225,7 +225,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   rel="noopener noreferrer"
                   className="nav-item sidebar-external-link"
                   title={`${PCW_PROJECT.name} — ${PCW_PROJECT.subtitle}`}
-                  aria-label="Pielęgniarskie Centrum Wiedzy (PCW) — otwórz w nowej karcie"
+                  aria-label="Pielęgniarki · PCW — Pielęgniarskie Centrum Wiedzy (nowa karta)"
                   onClick={() => {
                     if (isOpenMobile) {
                       skipFocusRestoreRef.current = true;

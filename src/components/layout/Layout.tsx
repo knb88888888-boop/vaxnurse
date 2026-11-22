@@ -32,6 +32,9 @@ export const Layout: React.FC<LayoutProps> = ({
 
   return (
     <div className={`app-container ${isCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <a href="#main-content" className="skip-to-main-link">
+        Przejdź do treści głównej
+      </a>
       <Sidebar
         modules={modules}
         activeModule={activeModuleId}
@@ -53,7 +56,7 @@ export const Layout: React.FC<LayoutProps> = ({
           onSelectSearchResult={onSelectSearchResult}
         />
 
-        <main className="app-content-area" id="main-content">
+        <main className="app-content-area" id="main-content" tabIndex={-1}>
           {children}
         </main>
 
