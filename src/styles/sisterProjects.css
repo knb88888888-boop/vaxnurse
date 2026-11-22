@@ -15,7 +15,7 @@
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .pcw-ref-header {
@@ -264,6 +264,11 @@
 @media (max-width: 640px) {
   .pcw-ref-card {
     padding: 16px;
+  }
+
+  .pcw-ref-title-group {
+    flex-direction: column;
+    gap: 10px;
   }
 
   .pcw-ref-cta {

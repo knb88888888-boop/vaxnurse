@@ -777,10 +777,23 @@ button.recent-module-item {
   overflow-wrap: anywhere;
 }
 
+@media (max-width: 1560px) {
+  .quick-access-grid,
+  .recent-modules-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1480px) {
   .header-top-row {
     padding: 0 20px;
     gap: 12px;
+  }
+}
+
+@media (max-width: 1320px) {
+  .modules-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -933,6 +946,33 @@ button.recent-module-item {
   .v-current-indicator {
     white-space: normal;
     text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-top-row {
+    padding: 0 8px;
+    gap: 6px;
+  }
+
+  .header-left {
+    gap: 6px;
+  }
+
+  .header-right {
+    gap: 4px;
+  }
+
+  .mobile-menu-trigger,
+  .mobile-search-trigger {
+    width: 32px;
+    height: 32px;
+  }
+
+  .breadcrumb-current {
+    font-size: 0.8125rem;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
   }
 }
 

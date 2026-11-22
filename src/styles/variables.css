@@ -13,7 +13,7 @@
   --radius-full: 9999px;
 
   /* Spacing & Sizing */
-  --sidebar-width: 315px;
+  --sidebar-width: 296px;
   --sidebar-width-collapsed: 76px;
   --header-height: 70px;
 
@@ -33,36 +33,36 @@
      ========================================================================== */
 
   /* Core Canvas & Surface Hierarchy */
-  --bg-app: #f1f5f9;
-  --bg-app-tint: #e8f0f8;
+  --bg-app: #eff4f9;
+  --bg-app-tint: #e4eef7;
   --bg-surface: #ffffff;
   --bg-surface-elevated: #ffffff;
-  --bg-surface-subtle: #f7f9fc;
+  --bg-surface-subtle: #f6f9fc;
   --bg-surface-active: #e2e8f0;
   --bg-surface-hover: #f1f5f9;
   --bg-inset: #f4f7fb;
 
   /* Header & Footer */
   --bg-header: #ffffff;
-  --header-border: #dce5ef;
+  --header-border: #d8e4f0;
   --bg-footer: #f8fafc;
   --footer-border: #e2e8f0;
 
-  /* Sidebar Architectural Chrome (Deep Obsidian Clinical Navigation in Daylight) */
-  --sidebar-bg: #0b1120;
-  --sidebar-bg-elevated: #131c31;
-  --sidebar-border: #1e293b;
-  --sidebar-text: #e2e8f0;
-  --sidebar-text-strong: #ffffff;
-  --sidebar-text-muted: #94a3b8;
-  --sidebar-item-hover: #17233b;
+  /* Sidebar Architectural Chrome (Cohesive Clinical Porcelain in Daylight) */
+  --sidebar-bg: #f6f9fd;
+  --sidebar-bg-elevated: #ffffff;
+  --sidebar-border: #d8e4f0;
+  --sidebar-text: #1e293b;
+  --sidebar-text-strong: #0f172a;
+  --sidebar-text-muted: #475569;
+  --sidebar-item-hover: #e7f0fa;
   --sidebar-item-active-bg: #0369a1;
   --sidebar-item-active-text: #ffffff;
   --sidebar-item-active-border: #38bdf8;
-  --sidebar-badge-bg: #1e293b;
-  --sidebar-badge-text: #7dd3fc;
-  --sidebar-footer-bg: #0f172a;
-  --sidebar-footer-border: #1e293b;
+  --sidebar-badge-bg: #e0f2fe;
+  --sidebar-badge-text: #075985;
+  --sidebar-footer-bg: #eef4fa;
+  --sidebar-footer-border: #d8e4f0;
 
   /* Primary Brand & Interactive Actions (High WCAG 2.2 AA Contrast) */
   --brand-solid-bg: #0369a1;

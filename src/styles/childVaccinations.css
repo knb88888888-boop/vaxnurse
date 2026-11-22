@@ -553,8 +553,10 @@
 
 .bracket-section-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 0.65rem;
   padding: 0.85rem 1.25rem;
   background-color: var(--bg-surface-subtle);
   border-radius: 10px;
@@ -994,13 +996,17 @@
 .linked-product-chip {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.4rem;
   padding: 0.35rem 0.65rem;
+  max-width: 100%;
+  min-width: 0;
   border-radius: 6px;
   background-color: var(--st-info-bg);
   border: 1px solid var(--st-info-border-soft);
   color: var(--navy-900);
   font-size: 0.775rem;
+  line-height: 1.4;
   cursor: pointer;
   transition: all 0.15s ease;
   text-align: left;
@@ -1018,8 +1024,10 @@
 }
 
 .prod-substance {
-  font-size: 0.725rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 .prod-status-blocked {
@@ -1027,7 +1035,7 @@
   border-radius: 4px;
   background-color: var(--st-danger-bg-strong);
   color: var(--st-danger-text);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
   border: 1px solid var(--st-danger-border-soft);
 }
@@ -1035,7 +1043,7 @@
 .prod-status-tag {
   padding: 0.1rem 0.4rem;
   border-radius: 4px;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
@@ -2070,7 +2078,7 @@
 .prod-variant-tag {
   background-color: var(--st-violet-bg-strong);
   color: var(--st-violet-text);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 700;
   padding: 0.12rem 0.45rem;
   border-radius: 4px;
@@ -2127,7 +2135,7 @@
 .prod-conditional-tag {
   background-color: var(--st-warn-bg-strong);
   color: var(--st-warn-text-mid);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 700;
   padding: 0.12rem 0.45rem;
   border-radius: 4px;
@@ -2481,4 +2489,16 @@
   margin: 0;
   color: var(--st-orange-text);
   line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .linked-product-chip {
+    width: 100%;
+    align-items: flex-start;
+    padding: 0.5rem 0.7rem;
+  }
+
+  .prod-substance {
+    flex: 1 1 100%;
+  }
 }

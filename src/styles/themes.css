@@ -14,7 +14,7 @@ html[data-theme='surgical-daylight'] {
 html[data-theme='nordic-alabaster'] {
   color-scheme: light;
 
-  --bg-app: #edf2ef;
+  --bg-app: #eff4f1;
   --bg-app-tint: #e1ebe6;
   --bg-surface: #ffffff;
   --bg-surface-elevated: #fcfdfd;
@@ -23,26 +23,26 @@ html[data-theme='nordic-alabaster'] {
   --bg-surface-hover: #ebf2ee;
   --bg-inset: #f2f6f4;
 
-  --bg-header: #ffffff;
-  --header-border: #d2dfd9;
+  --bg-header: #fcfefd;
+  --header-border: #d3e0d9;
   --bg-footer: #f4f8f6;
-  --footer-border: #d2dfd9;
+  --footer-border: #d3e0d9;
 
-  /* Editorial light eucalyptus sidebar (distinct signature from Daylight) */
-  --sidebar-bg: #e4eeea;
-  --sidebar-bg-elevated: #d7e5df;
-  --sidebar-border: #c5d6cf;
-  --sidebar-text: #112a24;
-  --sidebar-text-strong: #091c17;
-  --sidebar-text-muted: #39554d;
-  --sidebar-item-hover: #d3e2dc;
+  /* Editorial light eucalyptus sidebar (cohesive with header & alabaster surface) */
+  --sidebar-bg: #eef5f1;
+  --sidebar-bg-elevated: #ffffff;
+  --sidebar-border: #d3e0d9;
+  --sidebar-text: #143028;
+  --sidebar-text-strong: #0a1f19;
+  --sidebar-text-muted: #3b5850;
+  --sidebar-item-hover: #dfece6;
   --sidebar-item-active-bg: #0f766e;
   --sidebar-item-active-text: #ffffff;
-  --sidebar-item-active-border: #14b8a6;
-  --sidebar-badge-bg: #cce0d9;
+  --sidebar-item-active-border: #2dd4bf;
+  --sidebar-badge-bg: #d4ebe3;
   --sidebar-badge-text: #0f524c;
-  --sidebar-footer-bg: #dbe7e2;
-  --sidebar-footer-border: #c5d6cf;
+  --sidebar-footer-bg: #e5efe9;
+  --sidebar-footer-border: #d3e0d9;
 
   /* Teal Clinical Brand */
   --brand-solid-bg: #0f766e;
@@ -94,34 +94,34 @@ html[data-theme='nordic-alabaster'] {
 html[data-theme='aether-obsidian'] {
   color-scheme: dark;
 
-  --bg-app: #060b16;
-  --bg-app-tint: #091224;
-  --bg-surface: #0d1526;
-  --bg-surface-elevated: #121d33;
-  --bg-surface-subtle: #111b30;
+  --bg-app: #070d19;
+  --bg-app-tint: #0a1426;
+  --bg-surface: #0f1829;
+  --bg-surface-elevated: #142138;
+  --bg-surface-subtle: #121d31;
   --bg-surface-active: #1a2845;
   --bg-surface-hover: #142038;
   --bg-inset: #09101e;
 
-  --bg-header: #080f1d;
-  --header-border: #1c2a44;
-  --bg-footer: #080e1c;
-  --footer-border: #1a2740;
+  --bg-header: #0b1322;
+  --header-border: #1e2e4a;
+  --bg-footer: #09101d;
+  --footer-border: #1e2e4a;
 
-  --sidebar-bg: #040811;
-  --sidebar-bg-elevated: #0a1222;
-  --sidebar-border: #18253e;
+  --sidebar-bg: #0b1322;
+  --sidebar-bg-elevated: #121e34;
+  --sidebar-border: #1e2e4a;
   --sidebar-text: #e2e8f0;
-  --sidebar-text-strong: #ffffff;
+  --sidebar-text-strong: #f8fafc;
   --sidebar-text-muted: #94a3b8;
-  --sidebar-item-hover: #101b32;
+  --sidebar-item-hover: #15233d;
   --sidebar-item-active-bg: #0369a1;
   --sidebar-item-active-text: #ffffff;
-  --sidebar-item-active-border: #10b981;
-  --sidebar-badge-bg: #13223b;
+  --sidebar-item-active-border: #38bdf8;
+  --sidebar-badge-bg: #142642;
   --sidebar-badge-text: #7dd3fc;
-  --sidebar-footer-bg: #08101f;
-  --sidebar-footer-border: #18253e;
+  --sidebar-footer-bg: #0e1729;
+  --sidebar-footer-border: #1e2e4a;
 
   --brand-solid-bg: #0369a1;
   --brand-solid-hover: #0284c7;
@@ -270,34 +270,34 @@ html[data-theme='aether-obsidian'] {
 html[data-theme='quantum-indigo'] {
   color-scheme: dark;
 
-  --bg-app: #070a1b;
+  --bg-app: #080b1f;
   --bg-app-tint: #0d1230;
-  --bg-surface: #101533;
-  --bg-surface-elevated: #161d45;
-  --bg-surface-subtle: #141a3d;
+  --bg-surface: #111738;
+  --bg-surface-elevated: #18204d;
+  --bg-surface-subtle: #151c42;
   --bg-surface-active: #202a5c;
   --bg-surface-hover: #19214d;
   --bg-inset: #0a0e24;
 
-  --bg-header: #0a0f26;
-  --header-border: #232d61;
-  --bg-footer: #090d22;
-  --footer-border: #212a59;
+  --bg-header: #0d122e;
+  --header-border: #263169;
+  --bg-footer: #0b0f26;
+  --footer-border: #263169;
 
-  --sidebar-bg: #050714;
-  --sidebar-bg-elevated: #0d1230;
-  --sidebar-border: #202957;
+  --sidebar-bg: #0d122e;
+  --sidebar-bg-elevated: #151c45;
+  --sidebar-border: #263169;
   --sidebar-text: #e2e8f0;
-  --sidebar-text-strong: #ffffff;
-  --sidebar-text-muted: #9da8d4;
-  --sidebar-item-hover: #131b42;
-  --sidebar-item-active-bg: #4338ca;
+  --sidebar-text-strong: #f8fafc;
+  --sidebar-text-muted: #a2aedb;
+  --sidebar-item-hover: #182154;
+  --sidebar-item-active-bg: #4f46e5;
   --sidebar-item-active-text: #ffffff;
-  --sidebar-item-active-border: #a78bfa;
-  --sidebar-badge-bg: #1c2454;
+  --sidebar-item-active-border: #a5b4fc;
+  --sidebar-badge-bg: #1e265c;
   --sidebar-badge-text: #c7d2fe;
-  --sidebar-footer-bg: #090d24;
-  --sidebar-footer-border: #202957;
+  --sidebar-footer-bg: #101638;
+  --sidebar-footer-border: #263169;
 
   --brand-solid-bg: #4f46e5;
   --brand-solid-hover: #4338ca;

@@ -38,14 +38,14 @@ export const THEME_DEFINITIONS: readonly ThemeDefinition[] = [
     shortName: 'Daylight',
     badge: 'Jasny • Domyślny',
     description:
-      'Sterylna powierzchnia kliniczna o wysokim kontraście z nocnym panelem nawigacji i szafirowym akcentem.',
+      'Sterylna powierzchnia kliniczna o wysokim kontraście ze spójnym, jasnym panelem nawigacji i szafirowym akcentem.',
     clinicalContext: 'Praktyka dzienna i stanowisko gabinetowe',
     colorScheme: 'light',
-    metaThemeColor: '#0b1120',
+    metaThemeColor: '#f6f9fd',
     swatches: {
-      bg: '#f1f5f9',
+      bg: '#eff4f9',
       surface: '#ffffff',
-      sidebar: '#0b1120',
+      sidebar: '#eaf2fa',
       accent: '#0369a1',
       norm: '#059669',
       text: '#0f172a'
@@ -62,12 +62,12 @@ export const THEME_DEFINITIONS: readonly ThemeDefinition[] = [
     colorScheme: 'light',
     metaThemeColor: '#0f766e',
     swatches: {
-      bg: '#eef3f1',
+      bg: '#eff4f1',
       surface: '#ffffff',
-      sidebar: '#e6efec',
+      sidebar: '#e5efe9',
       accent: '#0f766e',
       norm: '#047857',
-      text: '#11221e'
+      text: '#0a1f19'
     }
   },
   {
@@ -79,14 +79,14 @@ export const THEME_DEFINITIONS: readonly ThemeDefinition[] = [
       'Głęboki tryb ciemny inspirowany konsolami OIT — matowy obsydian, kliniczny szmaragd i chłodny cyjan.',
     clinicalContext: 'Oświetlenie wieczorne i redukcja olśnienia',
     colorScheme: 'dark',
-    metaThemeColor: '#060b16',
+    metaThemeColor: '#070d19',
     swatches: {
-      bg: '#060b16',
-      surface: '#0d1526',
-      sidebar: '#040811',
+      bg: '#070d19',
+      surface: '#0f1829',
+      sidebar: '#0b1322',
       accent: '#38bdf8',
       norm: '#10b981',
-      text: '#f1f5f9'
+      text: '#f8fafc'
     }
   },
   {
@@ -98,14 +98,14 @@ export const THEME_DEFINITIONS: readonly ThemeDefinition[] = [
       'Kosmiczny granat dyżurowy z elektrycznym indygo, miękkim kontrastem i wyraźną hierarchią danych.',
     clinicalContext: 'Praca wieczorna i nowoczesne stanowisko MedTech',
     colorScheme: 'dark',
-    metaThemeColor: '#070a1b',
+    metaThemeColor: '#080b1f',
     swatches: {
-      bg: '#070a1b',
-      surface: '#101533',
-      sidebar: '#050714',
+      bg: '#080b1f',
+      surface: '#111738',
+      sidebar: '#0d122e',
       accent: '#818cf8',
       norm: '#34d399',
-      text: '#f1f5f9'
+      text: '#f8fafc'
     }
   }
 ];

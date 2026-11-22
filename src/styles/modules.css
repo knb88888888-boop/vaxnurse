@@ -130,12 +130,13 @@
 }
 
 .module-view-title {
-  font-size: 1.75rem;
+  font-size: clamp(1.3rem, 3.2vw, 1.75rem);
   font-weight: 700;
   color: var(--navy-900);
   letter-spacing: -0.02em;
+  line-height: 1.24;
   margin-bottom: 6px;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .module-view-lead {
@@ -143,7 +144,7 @@
   color: var(--text-muted);
   max-width: 780px;
   line-height: 1.5;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 /* Special Informational Banners (PSO GIS Link & Cold Chain Warning) */
@@ -455,5 +456,20 @@
     flex-direction: column;
     gap: 12px;
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .module-view-header {
+    padding: 18px 16px;
+  }
+
+  .module-view-icon-box {
+    width: 46px;
+    height: 46px;
+  }
+
+  .module-view-header-left {
+    gap: 12px;
   }
 }

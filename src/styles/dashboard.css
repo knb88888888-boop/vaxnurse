@@ -71,7 +71,7 @@
   line-height: 1.2;
   margin-bottom: 12px;
   max-width: 100%;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .highlight-text {
@@ -86,7 +86,7 @@
   width: 100%;
   line-height: 1.62;
   margin-bottom: 22px;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .hero-indicators {
@@ -119,7 +119,7 @@
 
 .indicator-chip span {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .indicator-chip:hover {
@@ -500,6 +500,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  gap: 3px;
   min-width: 0;
 }
 
@@ -507,17 +508,19 @@
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--text-main);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: break-word;
+  line-height: 1.32;
 }
 
 .qa-subtitle {
   font-size: 0.75rem;
   color: var(--text-tertiary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: break-word;
+  line-height: 1.32;
 }
 
 .qa-arrow {
@@ -544,7 +547,7 @@
 }
 
 .section-meta-tag {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--text-tertiary);
   background-color: var(--bg-surface-subtle);
@@ -598,6 +601,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  gap: 3px;
   min-width: 0;
 }
 
@@ -605,13 +609,14 @@
   font-size: 0.8125rem;
   font-weight: 700;
   color: var(--text-main);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: break-word;
+  line-height: 1.32;
 }
 
 .recent-time {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   color: var(--text-tertiary);
   display: flex;
   align-items: center;
@@ -769,7 +774,7 @@
 }
 
 .module-badge {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 700;
   padding: 3px 9px;
   border-radius: var(--radius-full);
@@ -780,7 +785,7 @@
 }
 
 .category-badge {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-tertiary);
 }
@@ -841,6 +846,22 @@
 }
 
 /* RESPONSIVE DASHBOARD */
+@media (max-width: 1560px) {
+  .quick-access-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .recent-modules-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1320px) {
+  .modules-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1200px) {
   .modules-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

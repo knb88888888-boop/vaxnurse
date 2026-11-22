@@ -220,6 +220,7 @@
   flex-direction: column;
   gap: 4px;
   padding: 6px 4px;
+  border-right: 1px solid rgb(100 116 139 / 0.22);
 }
 
 .theme-mini-preview-rail-dot {
@@ -511,6 +512,7 @@
   flex-direction: column;
   gap: 5px;
   padding: 8px 6px;
+  border-right: 1px solid rgb(100 116 139 / 0.22);
 }
 
 .theme-studio-mock-pill {
@@ -711,5 +713,18 @@
     right: 12px;
     width: auto;
     max-width: calc(100vw - 24px);
+  }
+}
+
+@media (max-width: 480px) {
+  .header-theme-swatch-ring {
+    display: none;
+  }
+
+  .header-theme-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    justify-content: center;
   }
 }

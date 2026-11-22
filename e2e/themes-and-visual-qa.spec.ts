@@ -107,6 +107,24 @@ test.describe('VaxNurse Multi-Theme UI, Contrast & Visual Integrity QA', () => {
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme.id);
       await expect(page.locator('html')).toHaveAttribute('data-color-scheme', theme.colorScheme);
 
+      // Sprawdź spójność jasności lewego paska bocznego z całą szatą graficzną motywu
+      const sidebarLuminance = await page.evaluate(() => {
+        const bg = getComputedStyle(document.querySelector('.app-sidebar') as Element).backgroundColor;
+        const m = bg.match(/\d+(\.\d+)?/g);
+        if (!m || m.length < 3) return -1;
+        const chans = [Number(m[0]), Number(m[1]), Number(m[2])].map(v => {
+          const s = v / 255;
+          return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * chans[0] + 0.7152 * chans[1] + 0.0722 * chans[2];
+      });
+      if (theme.colorScheme === 'light') {
+        expect(sidebarLuminance, `Light sidebar luminance (${theme.id})`).toBeGreaterThan(0.7);
+      } else {
+        expect(sidebarLuminance, `Dark sidebar luminance (${theme.id})`).toBeGreaterThanOrEqual(0);
+        expect(sidebarLuminance, `Dark sidebar luminance (${theme.id})`).toBeLessThan(0.05);
+      }
+
       // 1. Dashboard
       let audit = await runAxeAudit(page, `Dashboard (${theme.id})`);
       expect(audit.wcagViolationsCount, `Axe violations on Dashboard (${theme.id})`).toBe(0);
@@ -207,6 +225,90 @@ test.describe('VaxNurse Multi-Theme UI, Contrast & Visual Integrity QA', () => {
     expect(audit.wcagViolationsCount).toBe(0);
     expect(audit.wcagIncompleteCount).toBe(0);
     expect(audit.bestPracticeIds).not.toContain('heading-order');
+
+    monitor.assertClean();
+  });
+
+  test('Poprawność wyświetlania tekstów na laptopach (1280x720) i smartfonach (360x800) bez ucinania i zgniatania kolumn', async ({
+    page
+  }) => {
+    const monitor = attachRuntimeMonitor(page);
+
+    // 1. Laptop 1280x720: kafelki szybkiego dostępu oraz ostatnie moduły bez ucinania tekstu
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto('/');
+
+    const qaCheck = await page.evaluate(() => {
+      const items = Array.from(document.querySelectorAll('.qa-title, .qa-subtitle'));
+      return items.map(el => ({
+        text: (el.textContent || '').trim(),
+        scrollW: el.scrollWidth,
+        clientW: el.clientWidth
+      }));
+    });
+    expect(qaCheck.length).toBeGreaterThanOrEqual(8);
+    for (const item of qaCheck) {
+      expect(
+        item.scrollW,
+        `Ucięty tekst kafelka na laptopie 1280x720: "${item.text}"`
+      ).toBeLessThanOrEqual(item.clientW + 2);
+    }
+
+    // 1280x720: długi tytuł okruszków w nagłówku ("Procedury i checklisty") bez ucinania
+    await navigateViaSidebarOrHeader(page, /Procedury i checklisty/i);
+    await expect(page.getByRole('heading', { level: 1, name: /Procedury i checklisty/i })).toBeVisible();
+    const laptopBreadcrumb = await page.evaluate(() => {
+      const cur = document.querySelector('.breadcrumb-current');
+      return cur ? { sw: cur.scrollWidth, cw: cur.clientWidth, text: cur.textContent } : null;
+    });
+    expect(laptopBreadcrumb).not.toBeNull();
+    expect(laptopBreadcrumb!.sw).toBeLessThanOrEqual(laptopBreadcrumb!.cw + 2);
+
+    // 2. Smartfon 360x800: brak ucinania tytułu nagłówka na "Procedury i checklisty"
+    await page.setViewportSize({ width: 360, height: 800 });
+    await page.goto('/');
+    await navigateViaSidebarOrHeader(page, /Procedury i checklisty/i);
+    await expect(page.getByRole('heading', { level: 1, name: /Procedury i checklisty/i })).toBeVisible();
+    const mobileBreadcrumb = await page.evaluate(() => {
+      const cur = document.querySelector('.breadcrumb-current');
+      return {
+        sw: cur ? cur.scrollWidth : 999,
+        cw: cur ? cur.clientWidth : 0,
+        docSw: document.documentElement.scrollWidth,
+        iw: window.innerWidth
+      };
+    });
+    expect(mobileBreadcrumb.sw).toBeLessThanOrEqual(mobileBreadcrumb.cw + 2);
+    expect(mobileBreadcrumb.docSw).toBeLessThanOrEqual(mobileBreadcrumb.iw + 1);
+
+    // 360x800: Szczepienia dzieci — brak zgniatania nazwy substancji czynnej (.prod-substance) do wąskiego paska
+    await navigateViaSidebarOrHeader(page, /Szczepienia dzieci/i);
+    await expect(page.getByText(/Gruźlica/i).first()).toBeVisible();
+    const substanceWidths = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('.prod-substance')).map(el =>
+        Math.round(el.getBoundingClientRect().width)
+      )
+    );
+    expect(substanceWidths.length).toBeGreaterThan(0);
+    for (const width of substanceWidths) {
+      expect(width, 'Szerokość .prod-substance na 360x800 powinna przekraczać 160 px').toBeGreaterThan(160);
+    }
+
+    // 360x800: Kalendarz szczepień — nagłówki tabeli bez łamania w wąskie słupki i brak overflow dokumentu
+    await navigateViaSidebarOrHeader(page, /Kalendarz szczepień/i);
+    await expect(page.getByRole('heading', { level: 1, name: /Kalendarz szczepień/i })).toBeVisible();
+    const opsTableMetrics = await page.evaluate(() => ({
+      headerHeights: Array.from(document.querySelectorAll('.ops-table thead th')).map(th =>
+        Math.round(th.getBoundingClientRect().height)
+      ),
+      docSw: document.documentElement.scrollWidth,
+      iw: window.innerWidth
+    }));
+    expect(opsTableMetrics.headerHeights.length).toBeGreaterThan(0);
+    for (const h of opsTableMetrics.headerHeights) {
+      expect(h, 'Wysokość nagłówka .ops-table thead th na 360px powinna być < 60 px').toBeLessThan(60);
+    }
+    expect(opsTableMetrics.docSw).toBeLessThanOrEqual(opsTableMetrics.iw + 1);
 
     monitor.assertClean();
   });

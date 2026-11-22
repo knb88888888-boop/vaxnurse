@@ -35,7 +35,7 @@
   margin: 0;
   font-size: 1.05rem;
   color: var(--text-main);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .ops-tag {
@@ -49,14 +49,14 @@
   font-size: 0.88rem;
   color: var(--text-strong);
   line-height: 1.45;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .ops-small {
   margin: 0;
   font-size: 0.8rem;
   color: var(--text-muted);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .ops-note {
@@ -75,7 +75,7 @@
 .ops-note p {
   margin: 0;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .ops-note--danger {
@@ -228,6 +228,7 @@
 
 .ops-table-scroll {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   max-width: 100%;
   border: 1px solid var(--border-medium);
   border-radius: 8px;
@@ -245,7 +246,7 @@
   border-bottom: 1px solid var(--border-light);
   text-align: left;
   vertical-align: top;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .ops-table thead th {
@@ -505,4 +506,14 @@
 .ops-inline-date:focus-visible {
   outline: 2px solid var(--st-cobalt-solid);
   outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .ops-table {
+    min-width: 600px;
+  }
+
+  .ops-table thead th {
+    white-space: nowrap;
+  }
 }

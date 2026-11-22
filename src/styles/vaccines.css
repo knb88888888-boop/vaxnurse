@@ -42,7 +42,7 @@
 .v-banner-badge {
   display: inline-block;
   align-self: flex-start;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -327,7 +327,7 @@
 }
 
 .v-type-badge {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   padding: 3px 8px;
   border-radius: var(--radius-full);
@@ -337,7 +337,7 @@
 }
 
 .v-target-badge {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   padding: 3px 8px;
   border-radius: var(--radius-full);
@@ -347,7 +347,7 @@
 }
 
 .v-atc-pill {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--text-tertiary);
   background-color: var(--bg-surface-subtle);
