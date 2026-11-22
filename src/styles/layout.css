@@ -242,6 +242,16 @@ html[data-density="compact"] .nav-item {
   line-height: 1.25;
 }
 
+html[data-density="compact"][data-font-size="large"] .sidebar-nav {
+  padding: 6px 10px;
+  gap: 4px;
+}
+
+html[data-density="compact"][data-font-size="large"] .nav-group-title {
+  font-size: 0.625rem;
+  padding: 0 10px 1px 10px;
+}
+
 html[data-density="compact"][data-font-size="large"] .nav-item {
   font-size: 0.9rem;
   line-height: 1.2;
@@ -478,6 +488,27 @@ html[data-density="compact"][data-font-size="large"] .nav-item {
   color: var(--text-main);
 }
 
+.search-kbd-hint {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  margin-left: 6px;
+  border-radius: 5px;
+  border: 1px solid var(--border-medium);
+  background-color: var(--bg-surface);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+html[data-font-size="large"] .search-kbd-hint {
+  display: none;
+}
+
 /* Header Right */
 .header-right {
   display: flex;
@@ -569,18 +600,16 @@ html[data-density="compact"][data-font-size="large"] .nav-item {
 }
 
 @media (max-width: 1420px) {
+  .search-kbd-hint {
+    display: none;
+  }
+
   .header-status-badge .status-text {
     display: none;
   }
 
   .header-status-badge {
     padding: 6px;
-  }
-}
-
-@media (max-width: 1280px) {
-  .search-kbd-hint {
-    display: none;
   }
 }
 
@@ -601,10 +630,20 @@ html[data-density="compact"][data-font-size="large"] .nav-item {
     padding: 7px;
   }
 
+  .header-sister-link-text {
+    display: none;
+  }
+
   .header-center {
     min-width: 120px;
     max-width: 280px;
     margin: 0;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1180px) {
+  .app-header .header-sister-link {
+    padding: 0 9px;
   }
 }
 
@@ -727,21 +766,4 @@ html[data-density="compact"][data-font-size="large"] .nav-item {
 #main-content:focus-visible {
   outline: 2px solid var(--brand-focus-ring);
   outline-offset: -2px;
-}
-
-.search-kbd-hint {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 6px;
-  margin-left: 6px;
-  border-radius: 5px;
-  border: 1px solid var(--border-medium);
-  background-color: var(--bg-surface);
-  color: var(--text-tertiary);
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  font-weight: 600;
-  line-height: 1.2;
-  white-space: nowrap;
-  flex-shrink: 0;
 }

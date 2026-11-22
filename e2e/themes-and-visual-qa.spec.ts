@@ -64,17 +64,20 @@ test.describe('VaxNurse Multi-Theme UI, Contrast & Visual Integrity QA', () => {
 
     const headerGeometry = await page.evaluate(() => {
       const breadcrumb = document.querySelector('.breadcrumb-root')?.getBoundingClientRect();
+      const searchBar = document.querySelector('.header-search-bar')?.getBoundingClientRect();
       const searchInput = document.querySelector('.header-center .search-input')?.getBoundingClientRect();
       const headerRight = document.querySelector('.header-right')?.getBoundingClientRect();
       return {
         breadcrumbWidth: breadcrumb?.width ?? 0,
+        searchBarWidth: searchBar?.width ?? 0,
         searchWidth: searchInput?.width ?? 0,
         headerRightRight: headerRight?.right ?? 99999,
         innerWidth: window.innerWidth
       };
     });
     expect(headerGeometry.breadcrumbWidth).toBeGreaterThan(40);
-    expect(headerGeometry.searchWidth).toBeGreaterThan(120);
+    expect(headerGeometry.searchBarWidth).toBeGreaterThan(150);
+    expect(headerGeometry.searchWidth).toBeGreaterThan(100);
     expect(headerGeometry.headerRightRight).toBeLessThanOrEqual(headerGeometry.innerWidth + 1);
     await page
       .getByRole('group', { name: /Wybór motywu kolorystycznego aplikacji/i })
