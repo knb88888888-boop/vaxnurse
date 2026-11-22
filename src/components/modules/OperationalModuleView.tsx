@@ -173,7 +173,7 @@ const PartViQualificationsTable: React.FC<{ caption: string }> = ({ caption }) =
       Pierwsze 7 kolumn odwzorowuje literalnie tabelę Części VI PSO 2027 (Dz. Urz. MZ 2026 poz. 77, str. 45: „Tak” lub „–”);
       ostatnia kolumna zawiera komentarz wynikający z odrębnych aktów prawnych wskazanych w przypisach * i **.
     </p>
-    <div className="ops-table-scroll">
+    <div className="ops-table-scroll" tabIndex={0} role="region" aria-label={caption}>
       <table className="ops-table">
         <caption className="ops-sr-only">{caption}</caption>
         <thead>
@@ -485,7 +485,7 @@ const CalendarView: React.FC = () => {
                 {bracket.label} <span className="ops-tag">{bracket.shortLabel}</span>
               </h2>
               <p className="ops-muted">{bracket.timingDescription}</p>
-              <div className="ops-table-scroll">
+              <div className="ops-table-scroll" tabIndex={0} role="region" aria-label={`Szczepienia PSO 2027 — ${bracket.label}`}>
                 <table className="ops-table">
                   <caption className="ops-sr-only">Szczepienia PSO 2027 — {bracket.label}</caption>
                   <thead>
@@ -604,7 +604,7 @@ const CalendarView: React.FC = () => {
           <p className="ops-muted">
             Zasady wymiany preparatów monowalentnych na wieloskładnikowe i koordynacja dawek WZW B w 1. dobie życia.
           </p>
-          <div className="ops-table-scroll">
+          <div className="ops-table-scroll" tabIndex={0} role="region" aria-label="Warianty szczepionek skojarzonych Części III.M PSO 2027">
             <table className="ops-table">
               <caption className="ops-sr-only">Warianty szczepionek skojarzonych Części III.M PSO 2027</caption>
               <thead>
@@ -1567,7 +1567,7 @@ const ColdChainView: React.FC = () => {
         {readings.length === 0 ? (
           <p className="ops-muted">Brak zapisanych odczytów.</p>
         ) : (
-          <div className="ops-table-scroll">
+          <div className="ops-table-scroll" tabIndex={0} role="region" aria-label="Rejestr manualnych odczytów temperatury">
             <table className="ops-table" data-testid="ops-cold-table">
               <caption className="ops-sr-only">Rejestr manualnych odczytów temperatury</caption>
               <thead>
@@ -1631,7 +1631,7 @@ const ColdChainView: React.FC = () => {
         <p className="ops-muted">
           Zestawienie warunków przechowywania z oficjalnych Charakterystyk Produktu Leczniczego (ChPL) zarejestrowanych preparatów.
         </p>
-        <div className="ops-table-scroll">
+        <div className="ops-table-scroll" tabIndex={0} role="region" aria-label="Wymagania przechowywania preparatów według ChPL">
           <table className="ops-table" data-testid="ops-storage-matrix-table">
             <caption className="ops-sr-only">Wymagania przechowywania preparatów według ChPL</caption>
             <thead>
@@ -1880,7 +1880,7 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
         {items.length === 0 ? (
           <p className="ops-muted">Inwentarz jest pusty.</p>
         ) : (
-          <div className="ops-table-scroll">
+          <div className="ops-table-scroll" tabIndex={0} role="region" aria-label="Inwentarz zestawu przeciwwstrząsowego">
             <table className="ops-table" data-testid="ops-kit-table">
               <caption className="ops-sr-only">Inwentarz zestawu przeciwwstrząsowego</caption>
               <thead>
@@ -1972,7 +1972,7 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
           zestawów przeciwwstrząsowych. Poniższa tabela wskazuje wymagania dla kategorii:{' '}
           <strong>{categoryLabel}</strong>.
         </p>
-        <div className="ops-table-scroll">
+        <div className="ops-table-scroll" tabIndex={0} role="region" aria-label="Wykaz 26 pozycji zestawu przeciwwstrząsowego wg Dz.U. 2026 poz. 429">
           <table className="ops-table" data-testid="ops-emergency-annex-table">
             <caption className="ops-sr-only">Wykaz 26 pozycji zestawu przeciwwstrząsowego wg Dz.U. 2026 poz. 429</caption>
             <thead>

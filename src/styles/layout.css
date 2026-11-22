@@ -165,10 +165,10 @@
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 12px;
+  padding: 10px 10px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .nav-group {
@@ -197,8 +197,8 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
+  gap: 7px;
+  padding: 6px 8px;
   border-radius: var(--radius-md);
   color: var(--sidebar-text);
   font-size: 0.845rem;
@@ -253,9 +253,15 @@ html[data-density="compact"][data-font-size="large"] .nav-group-title {
 }
 
 html[data-density="compact"][data-font-size="large"] .nav-item {
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   line-height: 1.2;
-  padding: 4px 10px;
+  padding: 4px 8px;
+  gap: 6px;
+}
+
+html[data-density="compact"][data-font-size="large"] .nav-item-badge {
+  font-size: 0.62rem;
+  padding: 2px 5px;
 }
 
 .nav-item .nav-icon {
@@ -294,14 +300,15 @@ html[data-density="compact"][data-font-size="large"] .nav-item {
 
 .nav-item-label {
   flex: 1;
-  white-space: nowrap;
+  line-height: 1.25;
+  overflow-wrap: break-word;
   min-width: 0;
 }
 
 .nav-item-badge {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  padding: 2px 7px;
+  padding: 2px 6px;
   border-radius: var(--radius-full);
   background-color: var(--sidebar-badge-bg);
   color: var(--sidebar-badge-text);
@@ -320,9 +327,13 @@ html[data-density="compact"][data-font-size="large"] .nav-item {
   flex-shrink: 0;
 }
 
+.nav-item-badge + .nav-active-arrow {
+  display: none;
+}
+
 /* Sidebar Footer */
 .sidebar-footer {
-  padding: 14px;
+  padding: 10px 12px;
   border-top: 1px solid var(--sidebar-footer-border);
   background-color: var(--sidebar-footer-bg);
 }

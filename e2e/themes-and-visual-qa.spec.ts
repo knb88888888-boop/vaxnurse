@@ -234,9 +234,22 @@ test.describe('VaxNurse Multi-Theme UI, Contrast & Visual Integrity QA', () => {
   }) => {
     const monitor = attachRuntimeMonitor(page);
 
-    // 1. Laptop 1280x720: kafelki szybkiego dostępu oraz ostatnie moduły bez ucinania tekstu
+    // 1. Laptop 1280x720: kafelki szybkiego dostępu, ostatnie moduły oraz etykiety menu bez ucinania tekstu
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/');
+
+    const sidebarLabelsCheck = await page.evaluate(() => {
+      const labels = Array.from(document.querySelectorAll('.app-sidebar .nav-item-label'));
+      return labels.map(el => ({
+        text: (el.textContent || '').trim(),
+        scrollW: el.scrollWidth,
+        clientW: el.clientWidth
+      }));
+    });
+    expect(sidebarLabelsCheck.length).toBeGreaterThan(0);
+    for (const item of sidebarLabelsCheck) {
+      expect(item.scrollW, `Etykieta menu ucięta: "${item.text}"`).toBeLessThanOrEqual(item.clientW + 1);
+    }
 
     const qaCheck = await page.evaluate(() => {
       const items = Array.from(document.querySelectorAll('.qa-title, .qa-subtitle'));
@@ -263,6 +276,34 @@ test.describe('VaxNurse Multi-Theme UI, Contrast & Visual Integrity QA', () => {
     });
     expect(laptopBreadcrumb).not.toBeNull();
     expect(laptopBreadcrumb!.sw).toBeLessThanOrEqual(laptopBreadcrumb!.cw + 2);
+
+    // 1b. Laptop 1366x768: wszystkie pozycje menu mieszczą się bez przewijania pionowego i bez ucinania po kliknięciu "Sytuacje szczególne"
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto('/');
+    const sidebarScrollFit = await page.evaluate(() => {
+      const nav = document.querySelector('.sidebar-nav');
+      return nav ? { sh: nav.scrollHeight, ch: nav.clientHeight } : null;
+    });
+    expect(sidebarScrollFit).not.toBeNull();
+    expect(sidebarScrollFit!.sh).toBeLessThanOrEqual(sidebarScrollFit!.ch + 1);
+
+    await navigateViaSidebarOrHeader(page, /Sytuacje szczególne/i);
+    await expect(
+      page.getByRole('heading', { level: 1, name: /Sytuacje szczególne/i })
+    ).toBeVisible();
+    const activeSidebarLabelsCheck = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('.app-sidebar .nav-item-label')).map(el => ({
+        text: (el.textContent || '').trim(),
+        scrollW: el.scrollWidth,
+        clientW: el.clientWidth,
+        height: Math.round(el.getBoundingClientRect().height)
+      }))
+    );
+    expect(activeSidebarLabelsCheck.length).toBeGreaterThan(0);
+    for (const item of activeSidebarLabelsCheck) {
+      expect(item.scrollW, `Aktywna etykieta menu ucięta: "${item.text}"`).toBeLessThanOrEqual(item.clientW + 1);
+      expect(item.height, `Etykieta menu nie powinna zawijać się na 1366x768: "${item.text}"`).toBeLessThanOrEqual(26);
+    }
 
     // 2. Smartfon 360x800: brak ucinania tytułu nagłówka na "Procedury i checklisty"
     await page.setViewportSize({ width: 360, height: 800 });

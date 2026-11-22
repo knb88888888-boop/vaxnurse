@@ -135,7 +135,7 @@ export const APP_MODULES: ModuleDefinition[] = [
     description: 'Kontrola gotowości zestawu przeciwwstrząsowego (Dz.U. 2026 poz. 429) i odnośniki do źródeł oficjalnych.',
     category: 'logistics',
     icon: AlertTriangle,
-    badge: 'Bezpieczeństwo',
+    badge: 'Zestaw 26',
     purposeNote: 'Kontrola wyposażenia i ważności pozycji zestawu oraz dostęp do oficjalnych źródeł (bez algorytmów leczenia).',
     keyFeatures: [
       'Wykaz 26 pozycji zestawu wg Rozporządzenia MZ (Dz.U. 2026 poz. 429)',

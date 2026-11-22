@@ -234,6 +234,11 @@
   border-radius: 8px;
 }
 
+.ops-table-scroll:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -1px;
+}
+
 .ops-table {
   width: 100%;
   border-collapse: collapse;
