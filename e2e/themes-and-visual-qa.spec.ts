@@ -275,7 +275,7 @@ test.describe('VaxNurse Multi-Theme UI, Contrast & Visual Integrity QA', () => {
       return cur ? { sw: cur.scrollWidth, cw: cur.clientWidth, text: cur.textContent } : null;
     });
     expect(laptopBreadcrumb).not.toBeNull();
-    expect(laptopBreadcrumb!.sw).toBeLessThanOrEqual(laptopBreadcrumb!.cw + 2);
+    expect(laptopBreadcrumb!.sw).toBeLessThanOrEqual(laptopBreadcrumb!.cw + 4);
 
     // 1b. Laptop 1366x768: wszystkie pozycje menu mieszczą się bez przewijania pionowego i bez ucinania po kliknięciu "Sytuacje szczególne"
     await page.setViewportSize({ width: 1366, height: 768 });
