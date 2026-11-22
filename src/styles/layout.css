@@ -634,6 +634,15 @@ html[data-font-size="large"] .search-kbd-hint {
 }
 
 @media (max-width: 1320px) {
+  .app-header {
+    padding: 10px 20px;
+    gap: 10px;
+  }
+
+  .header-center {
+    max-width: 340px;
+  }
+
   .header-quick-btn .quick-btn-text {
     position: absolute;
     width: 1px;
