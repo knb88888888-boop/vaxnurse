@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -9,7 +9,8 @@ import {
   Plus,
   RotateCcw,
   ShieldCheck,
-  BookOpen
+  BookOpen,
+  Printer
 } from 'lucide-react';
 import type { ModuleDefinition, ModuleId } from '../../types/navigation';
 import type { ChildVaccineItem, AgeStageGroup } from '../../types/childVaccines';
@@ -66,6 +67,8 @@ import {
   KIT_EXPIRY_WARNING_DAYS,
   LOCAL_CHECKLIST_STORAGE_KEY,
   PRODUCT_STORAGE_REFERENCE_MATRIX,
+  PSO_INTERVAL_RULES_DATABASE,
+  type PsoIntervalRule,
   buildColdChainCsv,
   calculateAgeAt,
   calculateNextDoseDate,
@@ -1005,6 +1008,8 @@ const CalculatorView: React.FC = () => {
   const [unit, setUnit] = useState<IntervalUnit>('days');
   const [planned, setPlanned] = useState('');
   const [refProcId, setRefProcId] = useState('');
+  const [selectedRuleId, setSelectedRuleId] = useState<string>('');
+  const [ruleCategoryFilter, setRuleCategoryFilter] = useState<string>('all');
   const [birth, setBirth] = useState('');
   const [ageRef, setAgeRef] = useState(todayIsoDate());
   const [submitted, setSubmitted] = useState(false);
@@ -1014,6 +1019,24 @@ const CalculatorView: React.FC = () => {
     []
   );
   const refProc = procsWithInterval.find((v) => v.id === refProcId) ?? null;
+  const selectedRule = useMemo(
+    () => PSO_INTERVAL_RULES_DATABASE.find((r) => r.id === selectedRuleId) ?? null,
+    [selectedRuleId]
+  );
+
+  const filteredRules = useMemo(() => {
+    if (ruleCategoryFilter === 'all') return PSO_INTERVAL_RULES_DATABASE;
+    return PSO_INTERVAL_RULES_DATABASE.filter((r) => r.category === ruleCategoryFilter);
+  }, [ruleCategoryFilter]);
+
+  const handleApplyRule = (rule: PsoIntervalRule) => {
+    setSelectedRuleId(rule.id);
+    setUnit(rule.defaultUnit);
+    setInterval(String(rule.defaultInterval));
+    setRefProcId('');
+    setSubmitted(false);
+  };
+
   const result = submitted
     ? calculateNextDoseDate({
         lastDoseDate: lastDose,
@@ -1027,9 +1050,9 @@ const CalculatorView: React.FC = () => {
   return (
     <>
       <SafetyNote>
-        Kalkulator wykonuje wyłącznie arytmetykę dat. Minimalny odstęp wprowadza operator na podstawie aktualnej ChPL
-        preparatu lub PSO — narzędzie nie zawiera wbudowanych reguł klinicznych i nie zastępuje kwalifikacji. Żadne
-        dane wejściowe nie są utrwalane w pamięci trwałej (localStorage).
+        Kalkulator wykonuje arytmetykę dat wspieraną urzędową bazą reguł minimalnych odstępów PSO 2027 (Część IV) oraz ChPL.
+        Wszelkie decyzje o podaniu preparatu podejmuje kwalifikujący personel medyczny. Żadne dane wejściowe nie są
+        utrwalane w pamięci trwałej przeglądarki.
       </SafetyNote>
 
       <section className="ops-panel" aria-labelledby="ops-calc-next">
@@ -1075,6 +1098,28 @@ const CalculatorView: React.FC = () => {
             <input type="date" value={planned} onChange={(e) => setPlanned(e.target.value)} />
           </label>
           <label className="ops-field">
+            <span>Reguła odstępu PSO 2027 (opcjonalnie)</span>
+            <select
+              value={selectedRuleId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelectedRuleId(id);
+                const found = PSO_INTERVAL_RULES_DATABASE.find((r) => r.id === id);
+                if (found) {
+                  setUnit(found.defaultUnit);
+                  setInterval(String(found.defaultInterval));
+                }
+              }}
+            >
+              <option value="">— wybierz regułę z bazy PSO —</option>
+              {PSO_INTERVAL_RULES_DATABASE.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.categoryLabel}: {r.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="ops-field">
             <span>Podgląd odstępu z rekordu PSO (opcjonalnie)</span>
             <select value={refProcId} onChange={(e) => setRefProcId(e.target.value)}>
               <option value="">— nie wybrano —</option>
@@ -1098,6 +1143,7 @@ const CalculatorView: React.FC = () => {
                 setUnit('days');
                 setPlanned('');
                 setRefProcId('');
+                setSelectedRuleId('');
                 setSubmitted(false);
               }}
             >
@@ -1105,7 +1151,21 @@ const CalculatorView: React.FC = () => {
             </button>
           </div>
         </form>
-        {refProc && (
+
+        {selectedRule && (
+          <div className="ops-note" style={{ marginTop: '12px' }}>
+            <p>
+              <strong>Zastosowana reguła kliniczna:</strong> {selectedRule.title} (
+              <em>{selectedRule.minIntervalText}</em>).
+              <br />
+              <span className="ops-small">{selectedRule.clinicalRationale}</span>
+              <br />
+              <strong>Źródło:</strong> {selectedRule.sourceReference}.
+            </p>
+          </div>
+        )}
+
+        {refProc && !selectedRule && (
           <p className="ops-muted" data-testid="ops-calc-pso-reference">
             Odstęp w PSO ({refProc.sourcePart}, s. {refProc.sourcePrintedPage}):{' '}
             <strong>{refProc.minIntervalFromPrevious}</strong>. Wprowadź wartość z odpowiednią jednostką (dni, miesiące lub lata) i potwierdź w aktualnej ChPL.
@@ -1123,7 +1183,7 @@ const CalculatorView: React.FC = () => {
             </p>
             {result.plannedStatus === 'too_early' && (
               <p className="ops-text-danger">
-                Planowana data jest o {result.plannedShortfallDays} dni za wczesna względem wprowadzonego odstępu.
+                Planowana data jest o {result.plannedShortfallDays} dni za wczesna względem minimalnego odstępu.
               </p>
             )}
             {result.plannedStatus === 'allowed' && (
@@ -1131,6 +1191,92 @@ const CalculatorView: React.FC = () => {
             )}
           </div>
         )}
+      </section>
+
+      <section className="ops-panel" aria-labelledby="ops-calc-rules">
+        <div className="ops-panel-head">
+          <div>
+            <h2 id="ops-calc-rules" className="ops-panel-title">
+              Asystent reguł minimalnych odstępów PSO 2027 (Część IV, ChPL)
+            </h2>
+            <p className="ops-small">
+              Wystandaryzowane zasady łączenia szczepionek, odstępów żywe–żywe oraz odraczania po preparatach krwi
+            </p>
+          </div>
+        </div>
+
+        <div className="ops-filter-bar" role="group" aria-label="Filtruj reguły odstępów według kategorii">
+          <button
+            type="button"
+            className={`ops-filter-chip ${ruleCategoryFilter === 'all' ? 'is-active' : ''}`}
+            onClick={() => setRuleCategoryFilter('all')}
+          >
+            Wszystkie ({PSO_INTERVAL_RULES_DATABASE.length})
+          </button>
+          <button
+            type="button"
+            className={`ops-filter-chip ${ruleCategoryFilter === 'live_vaccines' ? 'is-active' : ''}`}
+            onClick={() => setRuleCategoryFilter('live_vaccines')}
+          >
+            Szczepionki żywe
+          </button>
+          <button
+            type="button"
+            className={`ops-filter-chip ${ruleCategoryFilter === 'inactivated_vaccines' ? 'is-active' : ''}`}
+            onClick={() => setRuleCategoryFilter('inactivated_vaccines')}
+          >
+            Szczepionki inaktywowane
+          </button>
+          <button
+            type="button"
+            className={`ops-filter-chip ${ruleCategoryFilter === 'blood_products' ? 'is-active' : ''}`}
+            onClick={() => setRuleCategoryFilter('blood_products')}
+          >
+            Immunoglobuliny / Krew
+          </button>
+          <button
+            type="button"
+            className={`ops-filter-chip ${ruleCategoryFilter === 'same_antigen_primary' ? 'is-active' : ''}`}
+            onClick={() => setRuleCategoryFilter('same_antigen_primary')}
+          >
+            Schemat pierwotny i booster
+          </button>
+        </div>
+
+        <div className="ops-rules-grid">
+          {filteredRules.map((rule) => {
+            const isApplied = selectedRuleId === rule.id;
+            return (
+              <div key={rule.id} className={`ops-rule-card ${isApplied ? 'is-applied' : ''}`}>
+                <div className="ops-rule-head">
+                  <span className="ops-badge ops-badge--info">{rule.categoryLabel}</span>
+                  <span className="ops-rule-min-badge">{rule.minIntervalText}</span>
+                </div>
+                <h3 className="ops-rule-title">{rule.title}</h3>
+                <p className="ops-rule-summary">
+                  <strong>Zasada:</strong> {rule.ruleSummary}
+                </p>
+                <p className="ops-rule-rationale">
+                  <strong>Uzasadnienie immunologiczne:</strong> {rule.clinicalRationale}
+                </p>
+                <p className="ops-small" style={{ marginTop: '4px' }}>
+                  <strong>Wyjątki i uwagi:</strong> {rule.exceptionsAndNotes}
+                </p>
+                <div className="ops-rule-footer">
+                  <span className="ops-small ops-muted">{rule.sourceReference}</span>
+                  <button
+                    type="button"
+                    className="ops-btn-secondary"
+                    style={{ fontSize: '0.8125rem', padding: '4px 10px' }}
+                    onClick={() => handleApplyRule(rule)}
+                  >
+                    {isApplied ? 'Wybrana reguła' : 'Zastosuj regułę'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       <section className="ops-panel" aria-labelledby="ops-calc-age">
@@ -1349,6 +1495,324 @@ const emptyDraft = (): ColdChainReadingDraft => ({
   sensorUncertain: false
 });
 
+const TemperatureTrendChart: React.FC<{ readings: ColdChainReading[] }> = ({ readings }) => {
+  const [daysRange, setDaysRange] = useState<7 | 30>(7);
+  const [now] = useState(() => Date.now());
+  const rangeStart = useMemo(() => now - daysRange * 86400 * 1000, [now, daysRange]);
+
+  const windowReadings = useMemo(() => {
+    return readings
+      .filter((r) => {
+        const t = new Date(r.measuredAt).getTime();
+        return !isNaN(t) && t >= rangeStart && r.currentC !== null;
+      })
+      .sort((a, b) => new Date(a.measuredAt).getTime() - new Date(b.measuredAt).getTime());
+  }, [readings, rangeStart]);
+
+  const width = 680;
+  const height = 210;
+  const padLeft = 50;
+  const padRight = 30;
+  const padTop = 25;
+  const padBottom = 35;
+  const plotW = width - padLeft - padRight;
+  const plotH = height - padTop - padBottom;
+
+  const minTemp = -2;
+  const maxTemp = 14;
+  const spanTemp = maxTemp - minTemp;
+  const getY = useCallback(
+    (c: number) => padTop + plotH * ((maxTemp - Math.max(minTemp, Math.min(maxTemp, c))) / spanTemp),
+    [padTop, plotH, maxTemp, minTemp, spanTemp]
+  );
+  const y8 = getY(8);
+  const y2 = getY(2);
+  const safeH = y2 - y8;
+
+  const points = useMemo(() => {
+    if (windowReadings.length === 0) return '';
+    if (windowReadings.length === 1) {
+      return `${padLeft + plotW / 2},${getY(windowReadings[0].currentC!)}`;
+    }
+    return windowReadings
+      .map((r, i) => {
+        const x = padLeft + (plotW * i) / (windowReadings.length - 1);
+        const y = getY(r.currentC!);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(' ');
+  }, [windowReadings, plotW, padLeft, getY]);
+
+  return (
+    <div className="ops-chart-card">
+      <div className="ops-chart-head">
+        <div>
+          <h2 className="ops-chart-title">Wizualny trend temperatur w chłodziarce (+2°C do +8°C)</h2>
+          <p className="ops-small">Zaznaczona bezpieczna strefa referencyjna z punktami odczytów termometru</p>
+        </div>
+        <div className="ops-range-btns" role="group" aria-label="Wybór zakresu dni wykresu">
+          <button
+            type="button"
+            className={`ops-range-btn ${daysRange === 7 ? 'is-active' : ''}`}
+            onClick={() => setDaysRange(7)}
+          >
+            Ostatnie 7 dni
+          </button>
+          <button
+            type="button"
+            className={`ops-range-btn ${daysRange === 30 ? 'is-active' : ''}`}
+            onClick={() => setDaysRange(30)}
+          >
+            Ostatnie 30 dni
+          </button>
+        </div>
+      </div>
+
+      <div className="ops-chart-wrapper" tabIndex={0} role="region" aria-label={`Wykres trendu temperatur za ostatnie ${daysRange} dni`}>
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="ops-chart-svg"
+          role="img"
+          aria-label={`Wykres trendu temperatur: ${windowReadings.length} odczytów w okresie ${daysRange} dni. Bezpieczny przedział wynosi od +2 do +8 stopni Celsjusza.`}
+        >
+          <rect
+            x={padLeft}
+            y={y8}
+            width={plotW}
+            height={safeH}
+            fill="rgba(16, 185, 129, 0.12)"
+            rx="4"
+          />
+
+          <line x1={padLeft} y1={y8} x2={padLeft + plotW} y2={y8} stroke="#10b981" strokeWidth="1.5" strokeDasharray="4 4" />
+          <line x1={padLeft} y1={y2} x2={padLeft + plotW} y2={y2} stroke="#10b981" strokeWidth="1.5" strokeDasharray="4 4" />
+
+          <line x1={padLeft} y1={getY(10)} x2={padLeft + plotW} y2={getY(10)} stroke="var(--border-light, #e2e8f0)" strokeWidth="1" />
+          <line x1={padLeft} y1={getY(0)} x2={padLeft + plotW} y2={getY(0)} stroke="var(--border-light, #e2e8f0)" strokeWidth="1" />
+
+          <text x={padLeft - 8} y={y8 + 4} textAnchor="end" className="ops-chart-axis-text" fill="#059669" fontWeight="700">+8°C</text>
+          <text x={padLeft - 8} y={y2 + 4} textAnchor="end" className="ops-chart-axis-text" fill="#059669" fontWeight="700">+2°C</text>
+          <text x={padLeft - 8} y={getY(0) + 4} textAnchor="end" className="ops-chart-axis-text" fill="var(--text-muted, #64748b)">0°C</text>
+          <text x={padLeft - 8} y={getY(10) + 4} textAnchor="end" className="ops-chart-axis-text" fill="var(--text-muted, #64748b)">+10°C</text>
+
+          <text
+            x={padLeft + plotW / 2}
+            y={y8 + safeH / 2 + 4}
+            textAnchor="middle"
+            fill="rgba(16, 185, 129, 0.55)"
+            fontSize="10"
+            fontWeight="700"
+            letterSpacing="0.8"
+          >
+            BEZPIECZNA STREFA +2°C DO +8°C
+          </text>
+
+          {windowReadings.length > 1 && (
+            <polyline
+              points={points}
+              fill="none"
+              stroke="var(--st-cobalt-solid, #2563eb)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          )}
+
+          {windowReadings.map((r, i) => {
+            const cx = windowReadings.length === 1 ? padLeft + plotW / 2 : padLeft + (plotW * i) / (windowReadings.length - 1);
+            const cy = getY(r.currentC!);
+            const inRange = r.currentC! >= 2 && r.currentC! <= 8;
+            return (
+              <g key={r.id}>
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r="5"
+                  fill={inRange ? '#10b981' : '#e11d48'}
+                  stroke="#ffffff"
+                  strokeWidth="2"
+                >
+                  <title>{`${r.measuredAt.replace('T', ' ')}: ${r.currentC!.toFixed(1)}°C (${r.deviceLabel})`}</title>
+                </circle>
+                <text
+                  x={cx}
+                  y={cy - 9}
+                  textAnchor="middle"
+                  fontSize="9.5"
+                  fontWeight="700"
+                  fill={inRange ? 'var(--text-main, #1e293b)' : '#e11d48'}
+                >
+                  {r.currentC!.toFixed(1)}°
+                </text>
+                <text
+                  x={cx}
+                  y={height - padBottom + 16}
+                  textAnchor="middle"
+                  fontSize="8.5"
+                  fill="var(--text-muted, #64748b)"
+                >
+                  {r.measuredAt.slice(5, 10)}
+                </text>
+              </g>
+            );
+          })}
+
+          {windowReadings.length === 0 && (
+            <text
+              x={padLeft + plotW / 2}
+              y={padTop + plotH / 2 + 18}
+              textAnchor="middle"
+              fill="var(--text-muted, #64748b)"
+              fontSize="12"
+            >
+              Brak zarejestrowanych odczytów w okresie ostatnich {daysRange} dni
+            </text>
+          )}
+        </svg>
+      </div>
+    </div>
+  );
+};
+
+const EmergencyColdChainProcedure: React.FC<{ excursionsCount: number }> = ({ excursionsCount }) => {
+  const [isOpen, setIsOpen] = useState(excursionsCount > 0);
+
+  return (
+    <div className={`ops-procedure-box ${excursionsCount > 0 ? 'is-alert' : ''}`}>
+      <div className="ops-procedure-header">
+        <div className="ops-procedure-title-group">
+          <AlertTriangle size={18} className="ops-procedure-icon" aria-hidden="true" />
+          <h2 className="ops-procedure-title">
+            Procedura awaryjna: Przerwanie łańcucha chłodniczego (odchylenie poza +2°C do +8°C)
+          </h2>
+        </div>
+        <button
+          type="button"
+          className="ops-btn-secondary ops-procedure-toggle"
+          onClick={() => setIsOpen((prev) => !prev)}
+          aria-expanded={isOpen}
+        >
+          {isOpen ? 'Zwiń procedurę' : 'Rozwiń wytyczne GIS/GIF'}
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="ops-procedure-body">
+          <p className="ops-muted">
+            W przypadku stwierdzenia temperatury poniżej +2°C lub powyżej +8°C w chłodziarce ze szczepionkami, postępuj zgodnie z poniższym protokołem bezpieczeństwa GIS/GIF:
+          </p>
+          <ol className="ops-procedure-list">
+            <li>
+              <strong>1. Natychmiastowe wstrzymanie użycia:</strong> Nie podawaj pacjentom preparatów narażonych na odchylenie. Nie wyrzucaj szczepionek. Drzwi chłodziarki zamknij i oznacz: <em>„SZCZEPIONKI WSTRZYMANE — NIE WYDAWAĆ”</em>.
+            </li>
+            <li>
+              <strong>2. Kwarantanna w sprawnym urządzeniu:</strong> Przełóż produkty do sprawnej chłodziarki rezerwowej lub torby/kontenera izotermicznego z certyfikowanymi wkładami chłodzącymi (utrzymując zakres +2°C do +8°C).
+            </li>
+            <li>
+              <strong>3. Sporządzenie protokołu odchylenia:</strong> Zarejestruj dokładny czas zdarzenia, odczyt bieżący, odczyt minimalny i maksymalny z rejestratora oraz szacowany czas trwania ekspozycji.
+            </li>
+            <li>
+              <strong>4. Weryfikacja ChPL i zgłoszenie:</strong> Sprawdź punkt 6.4 ChPL poszczególnych preparatów (dopuszczalne krótkotrwałe wahania) oraz niezwłocznie zgłoś odchylenie do Powiatowej Stacji Sanitarno-Epidemiologicznej (PSSE) i podmiotu odpowiedzialnego (wytwórcy).
+            </li>
+            <li>
+              <strong>5. Decyzja o losie partii:</strong> O ewentualnym dopuszczeniu preparatów do dalszego stosowania lub ich formalnej utylizacji decyduje wyłącznie upoważniony personel na piśmie po uzyskaniu opinii PSSE lub wytwórcy.
+            </li>
+          </ol>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ColdChainSanepidPrintSheet: React.FC<{ readings: ColdChainReading[] }> = ({ readings }) => {
+  const [currentDate] = useState(() => new Date());
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const monthName = currentDate.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const daysData = useMemo(() => {
+    const list = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const dayReadings = readings.filter((r) => r.measuredAt.startsWith(dayStr));
+      const morning = dayReadings.find((r) => {
+        const h = parseInt(r.measuredAt.slice(11, 13), 10);
+        return h < 13;
+      });
+      const afternoon = dayReadings.find((r) => {
+        const h = parseInt(r.measuredAt.slice(11, 13), 10);
+        return h >= 13;
+      });
+      list.push({
+        day: d,
+        morning: morning ? `${morning.currentC?.toFixed(1)}°C (${morning.measuredAt.slice(11, 16)})` : '..........',
+        morningSign: morning?.recordedBy || '..........',
+        afternoon: afternoon ? `${afternoon.currentC?.toFixed(1)}°C (${afternoon.measuredAt.slice(11, 16)})` : '..........',
+        afternoonSign: afternoon?.recordedBy || '..........',
+        notes: dayReadings.map((r) => r.actionNote).filter(Boolean).join('; ') || '—'
+      });
+    }
+    return list;
+  }, [daysInMonth, month, year, readings]);
+
+  return (
+    <div className="ops-cold-print-sheet" aria-hidden="true">
+      <div className="ops-print-title">Miesięczna Karta Kontroli Temperatury w Chłodziarce do Szczepionek</div>
+      <div className="ops-print-subtitle">Zgodnie z wytycznymi Głównego Inspektora Sanitarnego i Głównego Inspektora Farmaceutycznego dla punktów szczepień</div>
+      <div className="ops-print-meta-grid">
+        <div><strong>Miesiąc / Rok:</strong> {monthName}</div>
+        <div><strong>Wymagany zakres temperatur:</strong> +2,0°C do +8,0°C</div>
+        <div><strong>Placówka lecznicza / Gabinet:</strong> ...........................................................................</div>
+        <div><strong>Identyfikator chłodziarki / termometru:</strong> ...........................................................................</div>
+      </div>
+
+      <table className="ops-print-sanepid-table">
+        <thead>
+          <tr>
+            <th rowSpan={2}>Dzień</th>
+            <th colSpan={2}>Pomiar poranny (godz. 7:00–9:00)</th>
+            <th colSpan={2}>Pomiar popołudniowy (godz. 14:00–16:00)</th>
+            <th rowSpan={2}>Uwagi / Podjęte działania</th>
+          </tr>
+          <tr>
+            <th>Temp. [°C] / Godz.</th>
+            <th>Podpis</th>
+            <th>Temp. [°C] / Godz.</th>
+            <th>Podpis</th>
+          </tr>
+        </thead>
+        <tbody>
+          {daysData.map((d) => (
+            <tr key={d.day}>
+              <td style={{ textAlign: 'center', fontWeight: '700' }}>{d.day}</td>
+              <td style={{ textAlign: 'center' }}>{d.morning}</td>
+              <td style={{ textAlign: 'center' }}>{d.morningSign}</td>
+              <td style={{ textAlign: 'center' }}>{d.afternoon}</td>
+              <td style={{ textAlign: 'center' }}>{d.afternoonSign}</td>
+              <td>{d.notes}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="ops-print-footer">
+        <div className="ops-print-statement">
+          Karta stanowi oficjalną dokumentację sanitarną punktu szczepień podlegającą kontroli Państwowej Inspekcji Sanitarnej (Sanepid).
+        </div>
+        <div className="ops-print-signature-row">
+          <div className="ops-print-sig-box">
+            <div className="ops-print-sig-line">Podpis i pieczęć pielęgniarki koordynującej</div>
+          </div>
+          <div className="ops-print-sig-box">
+            <div className="ops-print-sig-line">Podpis kierownika podmiotu leczniczego</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ColdChainView: React.FC = () => {
   const storage = getBrowserStorage();
   const [storageWarning] = useState(() =>
@@ -1425,6 +1889,10 @@ const ColdChainView: React.FC = () => {
           <span className="ops-metric-lbl">Ostatni odczyt</span>
         </div>
       </div>
+
+      <EmergencyColdChainProcedure excursionsCount={summary.excursions} />
+
+      <TemperatureTrendChart readings={readings} />
 
       <section className="ops-panel" aria-labelledby="ops-cold-form">
         <h2 id="ops-cold-form" className="ops-panel-title">
@@ -1560,9 +2028,19 @@ const ColdChainView: React.FC = () => {
           <h2 id="ops-cold-log" className="ops-panel-title">
             Rejestr odczytów
           </h2>
-          <button type="button" className="ops-btn-secondary" onClick={exportCsv} disabled={readings.length === 0}>
-            <Download size={16} aria-hidden="true" /> Eksport CSV
-          </button>
+          <div className="ops-actions">
+            <button
+              type="button"
+              className="ops-btn-secondary"
+              onClick={() => window.print()}
+              title="Drukuj oficjalną miesięczną kartę kontroli temperatury dla Sanepidu (A4)"
+            >
+              <Printer size={16} aria-hidden="true" /> Karta Sanepid (Drukuj A4)
+            </button>
+            <button type="button" className="ops-btn-secondary" onClick={exportCsv} disabled={readings.length === 0}>
+              <Download size={16} aria-hidden="true" /> Eksport CSV
+            </button>
+          </div>
         </div>
         {readings.length === 0 ? (
           <p className="ops-muted">Brak zapisanych odczytów.</p>
@@ -1665,6 +2143,8 @@ const ColdChainView: React.FC = () => {
           </table>
         </div>
       </section>
+
+      <ColdChainSanepidPrintSheet readings={readings} />
     </>
   );
 };
@@ -1692,12 +2172,65 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
   const [items, setItems] = useState<EmergencyKitItem[]>(() => loadEmergencyKit(storage));
   const [draft, setDraft] = useState({ name: '', quantity: '1', expiryDate: '' });
   const [selectedCategory, setSelectedCategory] = useState<FacilityCareCategory>('ambulatory_facility');
+  const [kitFilter, setKitFilter] = useState<'all' | 'attention' | 'expiring_soon' | 'valid'>('all');
   const [errors, setErrors] = useState<string[]>([]);
   const [success, setSuccess] = useState<string | null>(null);
   const today = todayIsoDate();
-  const problems = items.filter((i) => evaluateKitItemStatus(i, today) !== 'available').length;
+  const [printGeneratedAt] = useState(() =>
+    new Date().toLocaleDateString('pl-PL', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  );
+
+  const itemStatuses = useMemo(() => {
+    const map = new Map<string, KitItemStatus>();
+    for (const item of items) {
+      map.set(item.id, evaluateKitItemStatus(item, today));
+    }
+    return map;
+  }, [items, today]);
+
+  const countAll = items.length;
+  const countAttention = useMemo(() => {
+    return items.filter((i) => {
+      const s = itemStatuses.get(i.id);
+      return s === 'expired' || s === 'missing' || s === 'damaged' || s === 'not_assessed';
+    }).length;
+  }, [items, itemStatuses]);
+
+  const countExpiringSoon = useMemo(() => {
+    return items.filter((i) => itemStatuses.get(i.id) === 'requires_review').length;
+  }, [items, itemStatuses]);
+
+  const countValid = useMemo(() => {
+    return items.filter((i) => itemStatuses.get(i.id) === 'available').length;
+  }, [items, itemStatuses]);
+
+  const problems = countAttention + countExpiringSoon;
+
+  const filteredItems = useMemo(() => {
+    return items.filter((i) => {
+      const s = itemStatuses.get(i.id);
+      if (kitFilter === 'attention') {
+        return s === 'expired' || s === 'missing' || s === 'damaged' || s === 'not_assessed';
+      }
+      if (kitFilter === 'expiring_soon') {
+        return s === 'requires_review';
+      }
+      if (kitFilter === 'valid') {
+        return s === 'available';
+      }
+      return true;
+    });
+  }, [items, itemStatuses, kitFilter]);
+
+  // Kluczowy akt prawny regulujący apteczkę przeciwwstrząsową ratującą życie
   const sources = KNOWLEDGE_SOURCES.filter(
-    (s) => s.category === 'gis-gif' || s.category === 'pso' || s.category === 'law'
+    (s) => s.id === 'src-zestaw-przeciwwstrzasowy-429'
   );
 
   const persist = (next: EmergencyKitItem[], msg: string): boolean => {
@@ -1750,6 +2283,37 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
     );
   };
 
+  const handleBulkCheckValid = () => {
+    const validOrExpiring = items.filter((i) => {
+      const s = itemStatuses.get(i.id);
+      return s === 'available' || s === 'requires_review';
+    });
+
+    if (validOrExpiring.length === 0) {
+      setErrors(['Brak pozycji w normie do zbiorczego zatwierdzenia kontroli.']);
+      setSuccess(null);
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    const nextItems = items.map((i) => {
+      const s = itemStatuses.get(i.id);
+      if (s === 'available' || s === 'requires_review') {
+        return { ...i, lastCheckedAt: nowIso };
+      }
+      return i;
+    });
+
+    persist(
+      nextItems,
+      `Zatwierdzono datę kontroli dzisiejszej dla ${validOrExpiring.length} pozycji w normie.`
+    );
+  };
+
+  const handlePrintProtocol = () => {
+    window.print();
+  };
+
   return (
     <>
       <div className="ops-note ops-note--danger" role="note">
@@ -1763,7 +2327,7 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
 
       <section className="ops-panel" aria-labelledby="ops-sit-sources">
         <h2 id="ops-sit-sources" className="ops-panel-title">
-          Źródła oficjalne
+          Podstawa prawna i źródła urzędowe
         </h2>
         <ul className="ops-card-list">
           {sources.map((s) => (
@@ -1781,11 +2345,24 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
           ))}
         </ul>
         <button type="button" className="ops-btn-secondary" onClick={() => onNavigateToModule('knowledge-base')}>
-          <BookOpen size={16} aria-hidden="true" /> Pełna Baza wiedzy
+          <BookOpen size={16} aria-hidden="true" /> Pełna Baza wiedzy (PSO, GIS, URPL)
         </button>
       </section>
 
       <section className="ops-panel" aria-labelledby="ops-sit-kit">
+        <div className="ops-print-header" aria-hidden="true">
+          <div className="ops-print-title">Protokół Okresowej Kontroli Apteczki Przeciwwstrząsowej</div>
+          <div className="ops-print-subtitle">
+            Wymogi Rozporządzenia Ministra Zdrowia z dnia 24 marca 2026 r. (Dz.U. 2026 poz. 429)
+          </div>
+          <div className="ops-print-meta-grid">
+            <div><strong>Kategoria podmiotu:</strong> {categoryLabel}</div>
+            <div><strong>Data wygenerowania:</strong> {printGeneratedAt}</div>
+            <div><strong>Nazwa placówki / gabinetu:</strong> ...........................................................................</div>
+            <div><strong>Osoba kontrolująca (Imię i nazwisko / PWZ):</strong> ...........................................................................</div>
+          </div>
+        </div>
+
         <h2 id="ops-sit-kit" className="ops-panel-title">
           Inwentarz zestawu przeciwwstrząsowego ({items.length} poz., {problems} wymaga uwagi)
         </h2>
@@ -1877,89 +2454,177 @@ const SpecialSituationsView: React.FC<{ onNavigateToModule: (id: ModuleId) => vo
           </div>
         </form>
         <Feedback errors={errors} success={success} />
+
         {items.length === 0 ? (
-          <p className="ops-muted">Inwentarz jest pusty.</p>
-        ) : (
-          <div className="ops-table-scroll" tabIndex={0} role="region" aria-label="Inwentarz zestawu przeciwwstrząsowego">
-            <table className="ops-table" data-testid="ops-kit-table">
-              <caption className="ops-sr-only">Inwentarz zestawu przeciwwstrząsowego</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Pozycja</th>
-                  <th scope="col">Ilość</th>
-                  <th scope="col">Ważność</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Ostatnia kontrola</th>
-                  <th scope="col">
-                    <span className="ops-sr-only">Akcje</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((i) => {
-                  const meta = KIT_STATUS_META[evaluateKitItemStatus(i, today)];
-                  return (
-                    <tr key={i.id}>
-                      <th scope="row">{i.name}</th>
-                      <td>{i.quantity}</td>
-                      <td>
-                        {i.expiryDate ? fmtDate(i.expiryDate) : 'Brak daty — uzupełnij'}
-                        <input
-                          type="date"
-                          className="ops-inline-date"
-                          aria-label={`Weryfikowany termin przydatności: ${i.name}`}
-                          value={i.expiryDate}
-                          onChange={(e) => {
-                            const nextVal = e.target.value;
-                            if (nextVal !== '' && !parseIsoDate(nextVal)) {
-                              setErrors(['Podaj poprawny termin przydatności w formacie RRRR-MM-DD (lata 1900–2100).']);
-                              setSuccess(null);
-                              return;
-                            }
-                            persist(
-                              items.map((x) => (x.id === i.id ? { ...x, expiryDate: nextVal } : x)),
-                              `Zaktualizowano termin przydatności pozycji: ${i.name}.`
-                            );
-                          }}
-                        />
-                      </td>
-                      <td>
-                        <span className={`ops-badge ops-badge--${meta.tone}`}>{meta.label}</span>
-                      </td>
-                      <td>{i.lastCheckedAt ? new Date(i.lastCheckedAt).toLocaleString('pl-PL') : '—'}</td>
-                      <td className="ops-row-actions">
-                        <button
-                          type="button"
-                          className="ops-btn-secondary"
-                          aria-label={`Potwierdź kontrolę: ${i.name}`}
-                          onClick={() =>
-                            persist(
-                              items.map((x) => (x.id === i.id ? { ...x, lastCheckedAt: new Date().toISOString() } : x)),
-                              `Potwierdzono kontrolę pozycji: ${i.name}.`
-                            )
-                          }
-                        >
-                          <CheckCircle2 size={16} aria-hidden="true" /> Skontrolowano
-                        </button>
-                        <button
-                          type="button"
-                          className="ops-icon-btn"
-                          aria-label={`Usuń pozycję: ${i.name}`}
-                          onClick={() => {
-                            if (window.confirm(`Usunąć pozycję z inwentarza zestawu: „${i.name}”?`)) {
-                              persist(items.filter((x) => x.id !== i.id), 'Usunięto pozycję zestawu.');
-                            }
-                          }}
-                        >
-                          <Trash2 size={16} aria-hidden="true" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="ops-empty-state-card">
+            <p className="ops-muted">Inwentarz apteczki przeciwwstrząsowej jest pusty.</p>
+            <p className="ops-small">
+              Możesz dodać pierwszą pozycję ręcznie w formularzu powyżej lub zainicjalizować zestaw pozycji z Rozporządzenia MZ (Dz.U. 2026 poz. 429).
+            </p>
+            <div className="ops-actions" style={{ marginTop: '8px' }}>
+              <button
+                type="button"
+                className="ops-btn-primary"
+                onClick={handleLoadRequiredPositions}
+              >
+                <Plus size={16} aria-hidden="true" /> Zainicjalizuj pozycje wymagane dla kategorii ({EMERGENCY_KIT_REGULATION_ANNEX_26.filter((r) => r.requirements[selectedCategory]).length} z 26)
+              </button>
+            </div>
           </div>
+        ) : (
+          <>
+            <div className="ops-filter-bar" role="group" aria-label="Filtry statusu inwentarza apteczki">
+              <button
+                type="button"
+                className={`ops-filter-chip ${kitFilter === 'all' ? 'is-active' : ''}`}
+                onClick={() => setKitFilter('all')}
+              >
+                Wszystkie ({countAll})
+              </button>
+              <button
+                type="button"
+                className={`ops-filter-chip ${kitFilter === 'attention' ? 'is-active' : ''}`}
+                onClick={() => setKitFilter('attention')}
+              >
+                Wymagają uwagi ({countAttention})
+              </button>
+              <button
+                type="button"
+                className={`ops-filter-chip ${kitFilter === 'expiring_soon' ? 'is-active' : ''}`}
+                onClick={() => setKitFilter('expiring_soon')}
+              >
+                Kończące się ≤ 30 dni ({countExpiringSoon})
+              </button>
+              <button
+                type="button"
+                className={`ops-filter-chip ${kitFilter === 'valid' ? 'is-active' : ''}`}
+                onClick={() => setKitFilter('valid')}
+              >
+                W normie ({countValid})
+              </button>
+            </div>
+
+            <div className="ops-toolbar-actions">
+              <button
+                type="button"
+                className="ops-btn-secondary"
+                onClick={handleBulkCheckValid}
+                disabled={countValid + countExpiringSoon === 0}
+                title="Zatwierdź bieżącą kontrolę dla wszystkich pozycji bez zastrzeżeń"
+              >
+                <CheckCircle2 size={16} aria-hidden="true" />
+                Potwierdź kontrolę pozycji w normie dzisiaj ({countValid + countExpiringSoon})
+              </button>
+              <button
+                type="button"
+                className="ops-btn-secondary"
+                onClick={handlePrintProtocol}
+                title="Wydrukuj gotowy protokół kontroli apteczki w formacie A4"
+              >
+                <Printer size={16} aria-hidden="true" />
+                Drukuj protokół kontroli zestawu
+              </button>
+            </div>
+
+            {filteredItems.length === 0 ? (
+              <p className="ops-muted">Brak pozycji spełniających kryteria wybranego filtra.</p>
+            ) : (
+              <div className="ops-table-scroll" tabIndex={0} role="region" aria-label="Inwentarz zestawu przeciwwstrząsowego">
+                <table className="ops-table" data-testid="ops-kit-table">
+                  <caption className="ops-sr-only">Inwentarz zestawu przeciwwstrząsowego</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Pozycja</th>
+                      <th scope="col">Ilość</th>
+                      <th scope="col">Ważność</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Ostatnia kontrola</th>
+                      <th scope="col" className="ops-actions-col">
+                        <span className="ops-sr-only">Akcje</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredItems.map((i) => {
+                      const meta = KIT_STATUS_META[itemStatuses.get(i.id) ?? evaluateKitItemStatus(i, today)];
+                      return (
+                        <tr key={i.id}>
+                          <th scope="row">{i.name}</th>
+                          <td>{i.quantity}</td>
+                          <td>
+                            {i.expiryDate ? fmtDate(i.expiryDate) : 'Brak daty — uzupełnij'}
+                            <input
+                              type="date"
+                              className="ops-inline-date"
+                              aria-label={`Weryfikowany termin przydatności: ${i.name}`}
+                              value={i.expiryDate}
+                              onChange={(e) => {
+                                const nextVal = e.target.value;
+                                if (nextVal !== '' && !parseIsoDate(nextVal)) {
+                                  setErrors(['Podaj poprawny termin przydatności w formacie RRRR-MM-DD (lata 1900–2100).']);
+                                  setSuccess(null);
+                                  return;
+                                }
+                                persist(
+                                  items.map((x) => (x.id === i.id ? { ...x, expiryDate: nextVal } : x)),
+                                  `Zaktualizowano termin przydatności pozycji: ${i.name}.`
+                                );
+                              }}
+                            />
+                          </td>
+                          <td>
+                            <span className={`ops-badge ops-badge--${meta.tone}`}>{meta.label}</span>
+                          </td>
+                          <td>{i.lastCheckedAt ? new Date(i.lastCheckedAt).toLocaleString('pl-PL') : '—'}</td>
+                          <td className="ops-row-actions">
+                            <button
+                              type="button"
+                              className="ops-btn-secondary"
+                              aria-label={`Potwierdź kontrolę: ${i.name}`}
+                              onClick={() =>
+                                persist(
+                                  items.map((x) => (x.id === i.id ? { ...x, lastCheckedAt: new Date().toISOString() } : x)),
+                                  `Potwierdzono kontrolę pozycji: ${i.name}.`
+                                )
+                              }
+                            >
+                              <CheckCircle2 size={16} aria-hidden="true" /> Skontrolowano
+                            </button>
+                            <button
+                              type="button"
+                              className="ops-icon-btn"
+                              aria-label={`Usuń pozycję: ${i.name}`}
+                              onClick={() => {
+                                if (window.confirm(`Usunąć pozycję z inwentarza zestawu: „${i.name}”?`)) {
+                                  persist(items.filter((x) => x.id !== i.id), 'Usunięto pozycję zestawu.');
+                                }
+                              }}
+                            >
+                              <Trash2 size={16} aria-hidden="true" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="ops-print-footer" aria-hidden="true">
+              <div className="ops-print-statement">
+                Niniejszym potwierdzam przeprowadzenie kontroli stanu wyposażenia, terminów ważności oraz nienaruszalności opakowań produktów leczniczych wchodzących w skład apteczki przeciwwstrząsowej ratującej życie zgodnie z wymogami Rozporządzenia Ministra Zdrowia (Dz.U. 2026 poz. 429).
+              </div>
+              <div className="ops-print-signature-row">
+                <div className="ops-print-sig-box">
+                  <div className="ops-print-sig-line">Data i podpis osoby kontrolującej</div>
+                </div>
+                <div className="ops-print-sig-box">
+                  <div className="ops-print-sig-line">Pieczątka placówki / gabinetu</div>
+                </div>
+              </div>
+            </div>
+          </>
         )}
       </section>
 

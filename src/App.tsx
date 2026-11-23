@@ -99,6 +99,10 @@ export const App: React.FC = () => {
 
   const handleSelectSearchResult = (result: GlobalSearchResult) => {
     setSearchQuery('');
+    if (result.targetVaccineId) {
+      handleSelectVaccineProduct(result.targetVaccineId);
+      return;
+    }
     if (result.targetModule === 'knowledge-base') {
       setKnowledgePrefillQuery(result.knowledgePrefillQuery || null);
       setKnowledgePrefillSeq(prev => prev + 1);

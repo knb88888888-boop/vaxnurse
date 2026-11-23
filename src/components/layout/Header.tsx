@@ -46,6 +46,22 @@ export const Header: React.FC<HeaderProps> = ({
   );
   const [isDesktopSearchOpen, setIsDesktopSearchOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const desktopSearchRef = useRef<HTMLDivElement>(null);
   const desktopInputRef = useRef<HTMLInputElement>(null);
@@ -236,7 +252,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <span className="global-result-title-row">
                       <span className="global-result-title">{result.title}</span>
                       <span
-                        className={`global-result-badge ${result.isPlaceholder ? 'is-placeholder' : ''}`}
+                        className={`global-result-badge ${result.isPlaceholder ? 'is-placeholder' : ''} is-${result.kind}`}
                       >
                         {result.categoryLabel}
                       </span>
@@ -355,11 +371,18 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           <div
-            className="header-status-badge"
-            title="Narzędzie referencyjne działające lokalnie w przeglądarce"
+            className={`header-status-badge ${isOnline ? '' : 'is-offline'}`}
+            title={
+              isOnline
+                ? 'Narzędzie referencyjne działające lokalnie w przeglądarce (połączenie aktywne)'
+                : 'Aplikacja działa w trybie offline — pełna baza ChPL i PSO zachowana w pamięci lokalnej'
+            }
           >
-            <span className="status-indicator-dot" aria-hidden="true"></span>
-            <span className="status-text">Tryb lokalny</span>
+            <span
+              className={`status-indicator-dot ${isOnline ? '' : 'is-offline'}`}
+              aria-hidden="true"
+            ></span>
+            <span className="status-text">{isOnline ? 'Tryb lokalny' : 'Tryb offline'}</span>
           </div>
 
           <div className="header-date">

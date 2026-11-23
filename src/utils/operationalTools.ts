@@ -1093,3 +1093,89 @@ export const EMERGENCY_KIT_REGULATION_ANNEX_26: ReadonlyArray<EmergencyKitRegula
     'Płyny infuzyjne'
   )
 ];
+
+// ---------------------------------------------------------------------------
+// Asystent reguł minimalnych odstępów PSO 2027 (Część IV, ChPL)
+// ---------------------------------------------------------------------------
+
+export interface PsoIntervalRule {
+  id: string;
+  category: 'live_vaccines' | 'inactivated_vaccines' | 'blood_products' | 'same_antigen_primary';
+  categoryLabel: string;
+  title: string;
+  ruleSummary: string;
+  defaultUnit: IntervalUnit;
+  defaultInterval: number;
+  minIntervalText: string;
+  clinicalRationale: string;
+  exceptionsAndNotes: string;
+  sourceReference: string;
+}
+
+export const PSO_INTERVAL_RULES_DATABASE: PsoIntervalRule[] = [
+  {
+    id: 'rule-live-live-different',
+    category: 'live_vaccines',
+    categoryLabel: 'Szczepionki żywe',
+    title: 'Dwie różne szczepionki żywe parenteralne (np. MMR + Ospa wietrzna)',
+    ruleSummary: 'Podanie jednoczasowo na tej samej wizycie (w różne miejsca anatomiczne) ALBO z odstępem min. 4 tygodni (28 dni).',
+    defaultUnit: 'days',
+    defaultInterval: 28,
+    minIntervalText: 'Min. 4 tygodnie (28 dni) lub jednoczasowo',
+    clinicalRationale: 'Wcześniejsze podanie drugiej żywej szczepionki może wywołać zjawisko interferencji wirusowej przez indukowany interferon i zahamować replikację drugiego wirusa szczepionkowego, prowadząc do braku serokonwersji.',
+    exceptionsAndNotes: 'Wyjątek: doustna żywa szczepionka przeciw rotawirusom (RV) może być podana w dowolnym odstępie od żywych szczepionek parenteralnych.',
+    sourceReference: 'PSO 2027 Część IV (Zasady ogólne), pkt 2 i 3'
+  },
+  {
+    id: 'rule-inactivated-any',
+    category: 'inactivated_vaccines',
+    categoryLabel: 'Szczepionki inaktywowane',
+    title: 'Szczepionka inaktywowana (zabita) + dowolna inna szczepionka',
+    ruleSummary: 'Dowolny odstęp czasowy pomiędzy dawkami (brak wymogu odczekania 4 tygodni).',
+    defaultUnit: 'days',
+    defaultInterval: 1,
+    minIntervalText: 'Dowolny odstęp (lub jednoczasowo)',
+    clinicalRationale: 'Szczepionki inaktywowane nie replikują w organizmie biorcy i nie indukują długotrwałej ogólnoustrojowej blokady interferonowej dla innych antygenów.',
+    exceptionsAndNotes: 'Można podawać na jednej wizycie lub w dowolnym odstępie czasu, o ile ChPL poszczególnych preparatów nie zawiera specyficznych ograniczeń.',
+    sourceReference: 'PSO 2027 Część IV (Zasady ogólne), pkt 4'
+  },
+  {
+    id: 'rule-blood-products-live',
+    category: 'blood_products',
+    categoryLabel: 'Immunoglobuliny / Krew',
+    title: 'Immunoglobuliny lub preparaty krwiopochodne a szczepionki żywe (MMR, Varilrix)',
+    ruleSummary: 'Odroczenie szczepienia żywymi wirusami o co najmniej 3 do 11 miesięcy.',
+    defaultUnit: 'months',
+    defaultInterval: 3,
+    minIntervalText: 'Minimum 3 miesiące (zależnie od dawki do 11 mies.)',
+    clinicalRationale: 'Przeciwciała swoiste obecne w preparacie krwi lub immunoglobulinie neutralizują żywy atenuowany szczep wirusa szczepionkowego, uniemożliwiając wywołanie skutecznej odpowiedzi poszczepiennej.',
+    exceptionsAndNotes: 'Szczepionki inaktywowane można podawać bez odraczania (lub jednoczasowo z immunoglobuliną w profilaktyce poekspozycyjnej, np. tężec, WZW B, wścieklizna).',
+    sourceReference: 'PSO 2027 Część IV, pkt 6 oraz ChPL Priorix / MMR Vax Pro pkt 4.5'
+  },
+  {
+    id: 'rule-booster-primary-interval',
+    category: 'same_antigen_primary',
+    categoryLabel: 'Dawki przypominające (booster)',
+    title: 'Dawka uzupełniająca (booster w 2. r.ż.) po schemacie pierwotnym (DTP / Hexa / PCV)',
+    ruleSummary: 'Minimalny odstęp wynosi co najmniej 6 miesięcy od ostatniej dawki schematu pierwotnego.',
+    defaultUnit: 'months',
+    defaultInterval: 6,
+    minIntervalText: 'Minimum 6 miesięcy (pół roku)',
+    clinicalRationale: 'Podanie dawki uzupełniającej zbyt wcześnie (< 6 mies.) napotyka na wysokie miano przeciwciał krążących i nie indukuje optymalnej proliferacji komórek pamięci B i T.',
+    exceptionsAndNotes: 'W schemacie 5w1/6w1 dawka uzupełniająca podawana jest w 16.–18. m.ż., z zachowaniem ściśle min. 6 miesięcy od 3. dawki pierwotnej.',
+    sourceReference: 'PSO 2027 Część I.A.1 / I.A.2 oraz ChPL Infanrix hexa pkt 4.2'
+  },
+  {
+    id: 'rule-primary-doses-same',
+    category: 'same_antigen_primary',
+    categoryLabel: 'Schemat pierwotny',
+    title: 'Kolejne dawki w schemacie pierwotnym niemowląt (DTPa / Hexa / IPV / Hib / PCV)',
+    ruleSummary: 'Minimalny odstęp między dawkami pierwotnymi wynosi 4 tygodnie (28 dni).',
+    defaultUnit: 'days',
+    defaultInterval: 28,
+    minIntervalText: 'Minimum 4 tygodnie (28 dni)',
+    clinicalRationale: 'Podanie dawki przed upływem 28 dni może skutkować słabą odpowiedzią immunologiczną i wg wytycznych GIS/CDC dawka podana ze zbyt małym odstępem jest uznawana za nieważną.',
+    exceptionsAndNotes: 'Standardowy kalendarz szczepień PSO zakłada odstępy 6–8 tygodni (np. 2., 4., 6. m.ż.). Skrócenie do 4 tygodni jest dopuszczalne wyłącznie w uzasadnionych sytuacjach opóźnień lub wyjazdów.',
+    sourceReference: 'PSO 2027 Część I.A oraz zalecenia ACIP / ChPL'
+  }
+];

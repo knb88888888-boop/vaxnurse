@@ -339,6 +339,16 @@ textarea:focus-visible {
   color: var(--amber-700);
 }
 
+.global-result-badge.is-vaccine {
+  background: var(--st-emerald-bg, #ecfdf5);
+  color: var(--st-emerald-text, #047857);
+}
+
+.global-result-badge.is-pso-section {
+  background: var(--st-cobalt-bg, #eff6ff);
+  color: var(--st-cobalt-text, #1d4ed8);
+}
+
 .global-result-subtitle {
   font-size: 0.78rem;
   color: var(--text-muted);

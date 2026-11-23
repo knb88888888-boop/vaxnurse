@@ -522,3 +522,463 @@
     white-space: nowrap;
   }
 }
+
+/* Filtry i pasek narzędzi inwentarza apteczki */
+.ops-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+.ops-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: var(--radius-full, 9999px);
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface-subtle);
+  color: var(--text-main);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ops-filter-chip:hover {
+  background: var(--bg-surface-active);
+  border-color: var(--border-strong);
+}
+
+.ops-filter-chip.is-active {
+  background: var(--st-cobalt-solid);
+  border-color: var(--st-cobalt-solid);
+  color: var(--on-solid-text, #ffffff);
+}
+
+.ops-filter-chip:focus-visible {
+  outline: 2px solid var(--st-cobalt-solid);
+  outline-offset: 2px;
+}
+
+.ops-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ops-empty-state-card {
+  padding: 24px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  background: var(--bg-surface-subtle);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* Protokół okresowej kontroli apteczki przeciwwstrząsowej */
+.ops-print-header,
+.ops-print-footer,
+.ops-cold-print-sheet {
+  display: none;
+}
+
+/* Wykres trendu temperatur łańcucha chłodniczego */
+.ops-chart-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ops-chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.ops-chart-title {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.ops-range-btns {
+  display: inline-flex;
+  gap: 6px;
+  background: var(--bg-surface-subtle);
+  padding: 3px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-medium);
+}
+
+.ops-range-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ops-range-btn.is-active {
+  background: var(--bg-surface);
+  color: var(--text-main);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.ops-chart-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-surface-subtle);
+}
+
+.ops-chart-svg {
+  width: 100%;
+  min-width: 580px;
+  height: auto;
+  display: block;
+}
+
+.ops-chart-axis-text {
+  font-size: 9.5px;
+  font-family: inherit;
+}
+
+/* Boks procedury awaryjnej GIS/GIF */
+.ops-procedure-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-left: 4px solid var(--st-cobalt-solid);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.ops-procedure-box.is-alert {
+  border-color: var(--st-danger-solid);
+  border-left-width: 5px;
+  background: var(--st-danger-bg);
+}
+
+.ops-procedure-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.ops-procedure-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ops-procedure-icon {
+  color: var(--st-danger-solid);
+  flex-shrink: 0;
+}
+
+.ops-procedure-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.ops-procedure-toggle {
+  font-size: 0.8125rem;
+  padding: 4px 10px;
+}
+
+.ops-procedure-body {
+  border-top: 1px solid var(--border-light);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ops-procedure-list {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--text-main);
+}
+
+/* Asystent reguł minimalnych odstępów PSO */
+.ops-rules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.ops-rule-card {
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-medium);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.ops-rule-card:hover {
+  border-color: var(--st-cobalt-solid);
+}
+
+.ops-rule-card.is-applied {
+  border-color: var(--st-cobalt-solid);
+  background: var(--st-cobalt-bg);
+  box-shadow: 0 0 0 1px var(--st-cobalt-solid);
+}
+
+.ops-rule-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.ops-rule-min-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  color: var(--text-main);
+}
+
+.ops-rule-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.ops-rule-summary,
+.ops-rule-rationale {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--text-main);
+}
+
+.ops-rule-footer {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
+
+  body, html {
+    background: #ffffff !important;
+    color: #111111 !important;
+    font-size: 10pt !important;
+  }
+
+  .app-sidebar,
+  .app-header,
+  .mobile-menu-trigger,
+  .sidebar-backdrop,
+  .theme-switcher-popover,
+  .ops-form-grid,
+  .ops-actions,
+  .ops-toolbar-actions,
+  .ops-filter-bar,
+  .ops-field,
+  .ops-icon-btn,
+  .ops-inline-date,
+  .ops-row-actions,
+  .ops-actions-col,
+  .ops-btn-primary,
+  .ops-btn-secondary,
+  .ops-note,
+  .ops-tag,
+  .app-footer,
+  [role="alert"] {
+    display: none !important;
+  }
+
+  .ops-module,
+  .ops-panel {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .ops-panel-title {
+    font-size: 12pt !important;
+    color: #000000 !important;
+    margin-bottom: 8pt !important;
+  }
+
+  .ops-print-header {
+    display: block !important;
+    margin-bottom: 14pt;
+    padding-bottom: 10pt;
+    border-bottom: 2px solid #222222;
+  }
+
+  .ops-print-title {
+    font-size: 14pt;
+    font-weight: 800;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4pt;
+  }
+
+  .ops-print-subtitle {
+    font-size: 8.5pt;
+    text-align: center;
+    color: #444444;
+    margin-bottom: 10pt;
+  }
+
+  .ops-print-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6pt;
+    font-size: 9pt;
+    line-height: 1.4;
+  }
+
+  .ops-table-scroll {
+    overflow: visible !important;
+    border: none !important;
+  }
+
+  .ops-table {
+    width: 100% !important;
+    min-width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 8.5pt !important;
+  }
+
+  .ops-table th,
+  .ops-table td {
+    border: 1px solid #444444 !important;
+    padding: 4pt 6pt !important;
+    color: #000000 !important;
+    background: transparent !important;
+  }
+
+  .ops-table thead th {
+    background: #eeeeee !important;
+    font-weight: 700 !important;
+  }
+
+  .ops-table tr {
+    page-break-inside: avoid;
+  }
+
+  .ops-badge {
+    border: 1px solid #666666 !important;
+    background: transparent !important;
+    color: #000000 !important;
+    font-size: 8pt !important;
+    padding: 1pt 4pt !important;
+  }
+
+  .ops-print-footer {
+    display: block !important;
+    margin-top: 18pt;
+    padding-top: 10pt;
+    page-break-inside: avoid;
+  }
+
+  .ops-print-statement {
+    font-size: 8.5pt;
+    font-style: italic;
+    color: #333333;
+    line-height: 1.35;
+    margin-bottom: 16pt;
+  }
+
+  .ops-print-signature-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 40pt;
+    margin-top: 24pt;
+  }
+
+  .ops-print-sig-box {
+    flex: 1;
+    text-align: center;
+  }
+
+  .ops-print-sig-line {
+    border-top: 1px dashed #444444;
+    padding-top: 4pt;
+    font-size: 8.5pt;
+    font-weight: 600;
+  }
+
+  .ops-cold-print-sheet {
+    display: block !important;
+    page-break-before: always;
+    margin-top: 14pt;
+  }
+
+  .ops-print-sanepid-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 10pt;
+    font-size: 7.5pt !important;
+  }
+
+  .ops-print-sanepid-table th,
+  .ops-print-sanepid-table td {
+    border: 1px solid #333333 !important;
+    padding: 3pt 4pt !important;
+    color: #000000 !important;
+    background: transparent !important;
+  }
+
+  .ops-print-sanepid-table thead th {
+    background: #eeeeee !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+  }
+}

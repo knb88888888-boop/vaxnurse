@@ -1,6 +1,8 @@
 import type { ModuleId } from '../types/navigation.ts';
 import { APP_MODULES, QUICK_ACCESS_ITEMS } from '../data/navigationData.ts';
 import { KNOWLEDGE_SOURCES } from '../data/knowledgeSources.ts';
+import { VACCINES_CATALOG } from '../data/vaccinesCatalog.ts';
+import { PSO_2027_STRUCTURED_RECORDS } from '../data/pso2027CompleteData.ts';
 
 export const PLACEHOLDER_MODULE_IDS = new Set<ModuleId>();
 
@@ -11,11 +13,13 @@ export interface GlobalSearchResult {
   id: string;
   title: string;
   subtitle: string;
-  kind: 'module' | 'quick-access' | 'knowledge';
+  kind: 'module' | 'quick-access' | 'knowledge' | 'vaccine' | 'pso-section';
   targetModule: ModuleId;
   isPlaceholder: boolean;
   categoryLabel: string;
   knowledgePrefillQuery?: string;
+  targetVaccineId?: string;
+  targetPsoSectionId?: string;
 }
 
 const getCategoryPolishLabel = (category: string): string => {
@@ -174,6 +178,82 @@ export const searchVaxNurseNavigation = (query: string): GlobalSearchResult[] =>
             isPlaceholder: false,
             categoryLabel: 'Biblioteka wiedzy',
             knowledgePrefillQuery: src.title
+          },
+          score,
+          kindPriority: 2,
+          order: orderCounter++
+        });
+      }
+    }
+  }
+
+  // 4. Preparaty szczepionkowe z bazy ChPL (VACCINES_CATALOG)
+  for (const vac of VACCINES_CATALOG) {
+    const subtitle = `${vac.activeSubstance} • ${vac.manufacturer}`;
+    const extra = [
+      vac.tradeName,
+      vac.activeSubstance,
+      vac.manufacturer,
+      vac.atcCode || '',
+      vac.pharmaceuticalForm || '',
+      'szczepionka preparat medyczny'
+    ].join(' ');
+
+    const score = computeMatchScore(vac.tradeName, subtitle, extra);
+    if (score !== null) {
+      const key = `vac:${vac.id}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        candidates.push({
+          result: {
+            id: key,
+            title: vac.tradeName,
+            subtitle: `${vac.activeSubstance.slice(0, 95)}${vac.activeSubstance.length > 95 ? '…' : ''} • ${vac.manufacturer}`,
+            kind: 'vaccine',
+            targetModule: 'vaccines-database',
+            targetVaccineId: vac.id,
+            isPlaceholder: false,
+            categoryLabel: 'Karta ChPL'
+          },
+          score,
+          kindPriority: 2,
+          order: orderCounter++
+        });
+      }
+    }
+  }
+
+  // 5. Sekcje i harmonogramy Programu Szczepień Ochronnych (PSO 2027)
+  for (const pso of PSO_2027_STRUCTURED_RECORDS) {
+    const subtitle = `Część ${pso.sourceSubsection} PSO 2027 • ${pso.description}`;
+    const extra = [
+      pso.title,
+      pso.description,
+      pso.sourceSubsection,
+      pso.sourcePart,
+      pso.vaccinationType,
+      pso.populationScope,
+      pso.schedule || '',
+      'pso 2027 kalendarz szczepień schemat'
+    ].join(' ');
+
+    const score = computeMatchScore(pso.title, subtitle, extra);
+    if (score !== null) {
+      const key = `pso:${pso.id}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        const targetMod: ModuleId =
+          pso.populationScope === 'adults' ? 'adult-vaccinations' : 'child-vaccinations';
+        candidates.push({
+          result: {
+            id: key,
+            title: pso.title,
+            subtitle: `Część ${pso.sourceSubsection} • ${pso.description.slice(0, 90)}${pso.description.length > 90 ? '…' : ''}`,
+            kind: 'pso-section',
+            targetModule: targetMod,
+            targetPsoSectionId: pso.id,
+            isPlaceholder: false,
+            categoryLabel: `PSO Cz. ${pso.sourceSubsection}`
           },
           score,
           kindPriority: 2,

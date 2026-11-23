@@ -1,0 +1,24 @@
+{
+  "name": "VaxNurse — Asystent Punktu Szczepień",
+  "short_name": "VaxNurse",
+  "description": "Narzędzie referencyjne dla personelu medycznego punktu szczepień, działające w pełni lokalnie i w trybie offline.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0369a1",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

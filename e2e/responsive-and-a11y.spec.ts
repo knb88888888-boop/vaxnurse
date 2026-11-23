@@ -120,16 +120,19 @@ test.describe('E2E — Responsywność 6 viewportów i rzeczywisty audyt WCAG / 
       headerSearchResults.violations,
       `Header + Global Search Open (standard) violations: ${JSON.stringify(headerSearchResults.violations)}`
     ).toEqual([]);
-    // Filtrujemy wyłącznie heurystyczny stan niejednoznaczności obliczania kontrastu (elmPartiallyObscuring),
-    // występujący w silniku axe przy częściowo nakładających się absolutnych panelach potomnych nagłówka na Linuxie
+    // Filtrujemy wyłącznie heurystyczny stan niejednoznaczności obliczania kontrastu (elmPartiallyObscuring / elmPartiallyObscured),
+    // występujący w silniku axe przy częściowo nakładających się lub przewijanych listach potomnych nagłówka
     const relevantIncomplete = headerSearchResults.incomplete.filter(
       (inc) =>
         !inc.nodes.every((n) =>
           n.any.some(
             (a) =>
               a.message?.includes('partially overlaps other elements') ||
+              a.message?.includes('partially obscured') ||
               ((a.data as Record<string, unknown> | undefined)?.messageKey ===
-                'elmPartiallyObscuring')
+                'elmPartiallyObscuring') ||
+              ((a.data as Record<string, unknown> | undefined)?.messageKey ===
+                'elmPartiallyObscured')
           )
         )
     );
