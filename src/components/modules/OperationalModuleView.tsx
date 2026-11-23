@@ -10,7 +10,8 @@ import {
   RotateCcw,
   ShieldCheck,
   BookOpen,
-  Printer
+  Printer,
+  FileText
 } from 'lucide-react';
 import type { ModuleDefinition, ModuleId } from '../../types/navigation';
 import type { ChildVaccineItem, AgeStageGroup } from '../../types/childVaccines';
@@ -68,6 +69,9 @@ import {
   LOCAL_CHECKLIST_STORAGE_KEY,
   PRODUCT_STORAGE_REFERENCE_MATRIX,
   PSO_INTERVAL_RULES_DATABASE,
+  WHO_SHAKE_TEST_PROTOCOL,
+  VACCINE_TEMPERATURE_SENSITIVITY_MATRIX,
+  ICE_PACK_CONDITIONING_STEPS,
   type PsoIntervalRule,
   buildColdChainCsv,
   calculateAgeAt,
@@ -1813,6 +1817,501 @@ const ColdChainSanepidPrintSheet: React.FC<{ readings: ColdChainReading[] }> = (
   );
 };
 
+// ---------------------------------------------------------------------------
+// Moduły rozszerzone: Test wstrząsania WHO, Matryca wrażliwości, Wkłady i Incydenty
+// ---------------------------------------------------------------------------
+
+const WhoShakeTestSection: React.FC = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedVaccine, setSelectedVaccine] = useState('Engerix B (WZW B)');
+  const [testObservation, setTestObservation] = useState<'slower' | 'faster_or_equal' | null>(null);
+  const [lotNumber, setLotNumber] = useState('');
+
+  return (
+    <section className="ops-panel ops-shake-test-panel" aria-labelledby="ops-shake-test-heading">
+      <div className="ops-panel-head">
+        <div className="ops-procedure-title-group">
+          <ShieldCheck size={20} className="ops-procedure-icon" aria-hidden="true" />
+          <div>
+            <h2 id="ops-shake-test-heading" className="ops-panel-title">
+              Test wstrząsania WHO (Shake Test) — Ocena narażenia na zamrożenie
+            </h2>
+            <p className="ops-muted">
+              Oficjalna metoda Światowej Organizacji Zdrowia (WHO) weryfikująca uszkodzenie szczepionek adsorbowanych na glinie po podejrzeniu zamrożenia poniżej 0°C.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          className="ops-btn-secondary ops-procedure-toggle"
+          onClick={() => setIsOpen((prev) => !prev)}
+          aria-expanded={isOpen}
+        >
+          {isOpen ? 'Zwiń procedurę' : 'Rozwiń test wstrząsania'}
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="ops-shake-test-body">
+          <div className="ops-note ops-note--info">
+            <p>
+              <strong>Zasada działania:</strong> Zamrożenie szczepionki z adiuwantem glinowym (np. WZW B, DTP, PCV, HPV) powoduje zniszczenie struktury żelu i powstawanie ciężkich, ziarnistych agregatów. W teście wstrząsania fiolka, która była zamrożona, ulega <em>szybkiej sedymentacji</em> (osad natychmiast opada na dno), podczas gdy fiolka niezamrożona pozostaje <em>jednolicie mętna</em> przez długi czas.
+            </p>
+          </div>
+
+          <div className="ops-shake-steps-grid">
+            {WHO_SHAKE_TEST_PROTOCOL.map((st) => (
+              <div key={st.stepNumber} className="ops-shake-step-card">
+                <div className="ops-shake-step-num">Krok {st.stepNumber}</div>
+                <h3 className="ops-shake-step-title">{st.title}</h3>
+                <p className="ops-shake-step-desc">{st.instruction}</p>
+                <div className="ops-shake-step-obs">
+                  <strong>Obserwacja:</strong> {st.observation}
+                </div>
+                {st.criticalAlert && (
+                  <div className="ops-shake-step-alert">
+                    <AlertTriangle size={14} aria-hidden="true" />
+                    <span>{st.criticalAlert}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="ops-shake-simulator">
+            <h3 className="ops-card-title">Kalkulator wyniku testu wstrząsania w punkcie szczepień</h3>
+            <p className="ops-muted">
+              Wprowadź dane badanej fiolki i zaznacz wynik porównania z celowo zamrożoną fiolką kontrolną po 15 minutach obserwacji:
+            </p>
+
+            <div className="ops-shake-form-row">
+              <label className="ops-field">
+                <span>Badany preparat</span>
+                <select
+                  value={selectedVaccine}
+                  onChange={(e) => setSelectedVaccine(e.target.value)}
+                >
+                  <option value="Engerix B (WZW B)">Engerix B (WZW B, wodorotlenek glinu)</option>
+                  <option value="Euvax B (WZW B)">Euvax B (WZW B, wodorotlenek glinu)</option>
+                  <option value="Infanrix hexa (6w1)">Infanrix hexa (6w1, glin)</option>
+                  <option value="Boostrix / Boostrix Polio">Boostrix / Boostrix Polio (Tdap, glin)</option>
+                  <option value="Prevenar 13 / 20 (PCV)">Prevenar 13 / 20 (Pneumokoki, fosforan glinu)</option>
+                  <option value="Vaxneuvance (PCV15)">Vaxneuvance (Pneumokoki, fosforan glinu)</option>
+                  <option value="Gardasil 9 (HPV)">Gardasil 9 (HPV, siarczanohydroksyfosforan glinu)</option>
+                  <option value="Bexsero (MenB)">Bexsero (Meningokoki B, wodorotlenek glinu)</option>
+                </select>
+              </label>
+
+              <label className="ops-field">
+                <span>Numer serii badanej fiolki</span>
+                <input
+                  type="text"
+                  placeholder="np. AB123456"
+                  value={lotNumber}
+                  maxLength={30}
+                  onChange={(e) => setLotNumber(e.target.value)}
+                />
+              </label>
+            </div>
+
+            <fieldset className="ops-shake-radio-group">
+              <legend className="ops-shake-legend">Wynik porównania sedymentacji po 15 min:</legend>
+              <label className="ops-shake-radio-label">
+                <input
+                  type="radio"
+                  name="shake-result"
+                  checked={testObservation === 'slower'}
+                  onChange={() => setTestObservation('slower')}
+                />
+                <span>
+                  <strong>Fiolka badana opada WOLNIEJ niż zamrożona kontrolka</strong> (płyn w fiolce badanej pozostaje wyraźnie bardziej mętny, sedymentacja opóźniona).
+                </span>
+              </label>
+              <label className="ops-shake-radio-label">
+                <input
+                  type="radio"
+                  name="shake-result"
+                  checked={testObservation === 'faster_or_equal'}
+                  onChange={() => setTestObservation('faster_or_equal')}
+                />
+                <span>
+                  <strong>Fiolka badana opada TAK SAMO SZYBKO lub SZYBCIEJ niż kontrolka</strong> (szybkie wyklarowanie płynu, gruby ziarnisty osad na dnie w obu fiolkach).
+                </span>
+              </label>
+            </fieldset>
+
+            {testObservation === 'slower' && (
+              <div className="ops-shake-verdict is-pass" role="alert">
+                <CheckCircle2 size={20} aria-hidden="true" />
+                <div>
+                  <h4>WYNIK NEGATYWNY — PREPARAT DOPUSZCZONY DO UŻYCIA</h4>
+                  <p>
+                    Badana partia <strong>{selectedVaccine}</strong> {lotNumber ? `(seria: ${lotNumber})` : ''} nie wykazuje cech uszkodzenia przez mróz. Koloid wodorotlenku glinu zachował prawidłową strukturę fizykochemiczną. Preparat może być bezpiecznie podany pacjentom przy zachowaniu pozostałych warunków ChPL.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {testObservation === 'faster_or_equal' && (
+              <div className="ops-shake-verdict is-fail" role="alert">
+                <AlertTriangle size={20} aria-hidden="true" />
+                <div>
+                  <h4>WYNIK POZYTYWNY — PREPARAT ZDYSKWALIFIKOWANY (ZAMROŻONY)</h4>
+                  <p>
+                    Badana partia <strong>{selectedVaccine}</strong> {lotNumber ? `(seria: ${lotNumber})` : ''} uległa nieodwracalnemu zniszczeniu pod wpływem ujemnej temperatury. Wytrącony adiuwant glinowy stwarza wysokie ryzyko jałowych ropni, a antygeny utraciły immunogenność.
+                  </p>
+                  <p className="ops-shake-action-must">
+                    <strong>Wymagane działanie:</strong> Zabezpiecz fiolki w kwarantannie z napisem <em>„ODPAD MEDYCZNY — DO UTYLIZACJI”</em>. Zgłoś incydent do kierownika placówki i sporządź protokół strat.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+};
+
+const VaccineSensitivityMatrixSection: React.FC = () => {
+  const [filter, setFilter] = useState<'all' | 'freezing_critical' | 'heat_critical'>('all');
+
+  const filtered = useMemo(() => {
+    if (filter === 'freezing_critical') {
+      return VACCINE_TEMPERATURE_SENSITIVITY_MATRIX.filter((v) => v.freezingSensitivity === 'critical');
+    }
+    if (filter === 'heat_critical') {
+      return VACCINE_TEMPERATURE_SENSITIVITY_MATRIX.filter((v) => v.heatSensitivity === 'critical');
+    }
+    return VACCINE_TEMPERATURE_SENSITIVITY_MATRIX;
+  }, [filter]);
+
+  return (
+    <section className="ops-panel" aria-labelledby="ops-sensitivity-matrix-title">
+      <div className="ops-panel-head">
+        <div>
+          <h2 id="ops-sensitivity-matrix-title" className="ops-panel-title">
+            Matryca wrażliwości szczepionek na mróz i ciepło (WHO / PZH)
+          </h2>
+          <p className="ops-muted">
+            Podatność preparatów na uszkodzenie przy przerwaniu łańcucha chłodniczego poniżej 0°C lub powyżej +8°C.
+          </p>
+        </div>
+      </div>
+
+      <div className="ops-filter-bar" role="toolbar" aria-label="Filtruj matrycę wrażliwości">
+        <span className="ops-filter-label">Filtruj profil:</span>
+        <div className="ops-filter-chips">
+          <button
+            type="button"
+            className={`ops-filter-chip ${filter === 'all' ? 'is-active' : ''}`}
+            onClick={() => setFilter('all')}
+            aria-pressed={filter === 'all'}
+          >
+            Wszystkie preparaty ({VACCINE_TEMPERATURE_SENSITIVITY_MATRIX.length})
+          </button>
+          <button
+            type="button"
+            className={`ops-filter-chip ${filter === 'freezing_critical' ? 'is-active' : ''}`}
+            onClick={() => setFilter('freezing_critical')}
+            aria-pressed={filter === 'freezing_critical'}
+          >
+            Krytycznie wrażliwe na mróz &lt; 0°C ({VACCINE_TEMPERATURE_SENSITIVITY_MATRIX.filter((v) => v.freezingSensitivity === 'critical').length})
+          </button>
+          <button
+            type="button"
+            className={`ops-filter-chip ${filter === 'heat_critical' ? 'is-active' : ''}`}
+            onClick={() => setFilter('heat_critical')}
+            aria-pressed={filter === 'heat_critical'}
+          >
+            Krytycznie wrażliwe na ciepło &gt; 8°C ({VACCINE_TEMPERATURE_SENSITIVITY_MATRIX.filter((v) => v.heatSensitivity === 'critical').length})
+          </button>
+        </div>
+      </div>
+
+      <div className="ops-table-scroll" tabIndex={0} role="region" aria-label="Tabela wrażliwości szczepionek na temperaturę">
+        <table className="ops-table">
+          <caption className="ops-sr-only">Tabela wrażliwości szczepionek na temperaturę</caption>
+          <thead>
+            <tr>
+              <th scope="col">Antygen i preparaty</th>
+              <th scope="col">Adiuwant</th>
+              <th scope="col">Mróz (&lt; 0°C)</th>
+              <th scope="col">Ciepło (&gt; 8°C)</th>
+              <th scope="col">Test wstrząsania</th>
+              <th scope="col">Skutki naruszenia</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((item) => (
+              <tr key={item.id}>
+                <td>
+                  <strong>{item.antigenName}</strong>
+                  <div className="ops-small ops-muted">{item.exampleBrands}</div>
+                </td>
+                <td>{item.adjuvantType}</td>
+                <td>
+                  <span className={`ops-badge ${item.freezingSensitivity === 'critical' ? 'ops-badge--danger' : 'ops-badge--ok'}`}>
+                    {item.freezingSensitivity === 'critical' ? 'NIGDY NIE ZAMRAŻAĆ' : 'Toleruje mróz'}
+                  </span>
+                </td>
+                <td>
+                  <span className={`ops-badge ${item.heatSensitivity === 'critical' ? 'ops-badge--danger' : 'ops-badge--warn'}`}>
+                    {item.heatSensitivity === 'critical' ? 'Termolabilna' : 'Umiarkowana'}
+                  </span>
+                </td>
+                <td>
+                  {item.shakeTestApplicable ? (
+                    <span className="ops-badge ops-badge--info">Dotyczy (WHO)</span>
+                  ) : (
+                    <span className="ops-small ops-muted">Nie dotyczy</span>
+                  )}
+                </td>
+                <td>
+                  <div className="ops-small">
+                    <strong>Mróz:</strong> {item.consequencesOfFreezing}
+                  </div>
+                  <div className="ops-small ops-muted" style={{ marginTop: '3px' }}>
+                    <strong>Ciepło:</strong> {item.consequencesOfHeat}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+};
+
+const IcePackConditioningSection: React.FC = () => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <section className="ops-panel" aria-labelledby="ops-icepack-title">
+      <div className="ops-panel-head">
+        <div className="ops-procedure-title-group">
+          <ShieldCheck size={20} className="ops-procedure-icon" aria-hidden="true" />
+          <div>
+            <h2 id="ops-icepack-title" className="ops-panel-title">
+              Kondycjonowanie wkładów chłodzących (Procedura WHO PQS / „Sweating”)
+            </h2>
+            <p className="ops-muted">
+              Instrukcja zapobiegania zamrożeniu szczepionek podczas transportu w torbach izotermicznych i lodówkach turystycznych.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          className="ops-btn-secondary ops-procedure-toggle"
+          onClick={() => setIsOpen((prev) => !prev)}
+          aria-expanded={isOpen}
+        >
+          {isOpen ? 'Zwiń wytyczne' : 'Rozwiń procedurę wkładów'}
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="ops-icepack-body">
+          <div className="ops-note ops-note--danger">
+            <AlertTriangle size={18} aria-hidden="true" />
+            <p>
+              <strong>Błąd krytyczny personelu:</strong> Włożenie do torby transportowej wkładów chłodzących wyjętych prosto z zamrażarki (-18°C) doprowadzi do natychmiastowego zamrożenia i bezpowrotnego zniszczenia szczepionek (WZW B, DTP, Hexa, PCV, HPV)! Wkłady wolno użyć dopiero po kondycjonowaniu do temperatury 0°C.
+            </p>
+          </div>
+
+          <div className="ops-icepack-steps-grid">
+            {ICE_PACK_CONDITIONING_STEPS.map((step) => (
+              <div key={step.step} className="ops-icepack-step-card">
+                <div className="ops-icepack-step-num">Krok {step.step}</div>
+                <h3 className="ops-icepack-step-title">{step.title}</h3>
+                <p className="ops-icepack-step-desc">{step.description}</p>
+                <div className="ops-icepack-sanepid-box">
+                  <strong>Wymóg Sanepidu:</strong> {step.sanepidRule}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+};
+
+const ColdChainIncidentReportSection: React.FC = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [facilityName, setFacilityName] = useState('');
+  const [fridgeId, setFridgeId] = useState('Chłodziarka główna nr 1');
+  const [incidentDate, setIncidentDate] = useState(() => todayIsoDate());
+  const [incidentDurationHours, setIncidentDurationHours] = useState('2');
+  const [tempMin, setTempMin] = useState('+1.2');
+  const [tempMax, setTempMax] = useState('+12.4');
+  const [affectedVaccines, setAffectedVaccines] = useState('');
+  const [actionsTaken, setActionsTaken] = useState(
+    'Wstrzymano wydawanie preparatów. Drzwi chłodziarki zabezpieczono tabliczką ostrzegawczą. Zawiadomiono kierownika placówki i zabezpieczono rejestrator danych.'
+  );
+
+  return (
+    <section className="ops-panel" aria-labelledby="ops-incident-report-title">
+      <div className="ops-panel-head">
+        <div className="ops-procedure-title-group">
+          <FileText size={20} className="ops-procedure-icon" aria-hidden="true" />
+          <div>
+            <h2 id="ops-incident-report-title" className="ops-panel-title">
+              Generator protokołu incydentu temperaturowego (PSSE / Sanepid)
+            </h2>
+            <p className="ops-muted">
+              Wypełnij formularz, aby przygotować i wydrukować formalny protokół zgłoszenia przekroczenia temperatury do Powiatowej Stacji Sanitarno-Epidemiologicznej.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          className="ops-btn-secondary ops-procedure-toggle"
+          onClick={() => setIsOpen((prev) => !prev)}
+          aria-expanded={isOpen}
+        >
+          {isOpen ? 'Zwiń generator' : 'Otwórz formularz zgłoszenia'}
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="ops-incident-form-wrap">
+          <form className="ops-form-grid" onSubmit={(e) => { e.preventDefault(); window.print(); }}>
+            <label className="ops-field">
+              <span>Nazwa podmiotu leczniczego / punktu szczepień</span>
+              <input
+                type="text"
+                placeholder="np. NZOZ Praktyka Lekarza Rodzinnego"
+                value={facilityName}
+                onChange={(e) => setFacilityName(e.target.value)}
+              />
+            </label>
+            <label className="ops-field">
+              <span>Identyfikator chłodziarki</span>
+              <input
+                type="text"
+                value={fridgeId}
+                onChange={(e) => setFridgeId(e.target.value)}
+              />
+            </label>
+            <label className="ops-field">
+              <span>Data i godzina wykrycia zdarzenia</span>
+              <input
+                type="date"
+                value={incidentDate}
+                onChange={(e) => setIncidentDate(e.target.value)}
+              />
+            </label>
+            <label className="ops-field">
+              <span>Szacowany czas odchylenia [godziny]</span>
+              <input
+                type="number"
+                min="0.5"
+                step="0.5"
+                value={incidentDurationHours}
+                onChange={(e) => setIncidentDurationHours(e.target.value)}
+              />
+            </label>
+            <label className="ops-field">
+              <span>Zarejestrowana temperatura minimalna [°C]</span>
+              <input
+                type="text"
+                value={tempMin}
+                onChange={(e) => setTempMin(e.target.value)}
+              />
+            </label>
+            <label className="ops-field">
+              <span>Zarejestrowana temperatura maksymalna [°C]</span>
+              <input
+                type="text"
+                value={tempMax}
+                onChange={(e) => setTempMax(e.target.value)}
+              />
+            </label>
+            <label className="ops-field ops-span-2">
+              <span>Narażone preparaty szczepionkowe (nazwa, seria, liczba dawek)</span>
+              <textarea
+                className="ops-textarea"
+                rows={3}
+                placeholder="np. Infanrix hexa (seria: 24A01, 15 dawek), Prevenar 13 (seria: 24B02, 10 dawek), Priorix (seria: 24C03, 8 dawek)"
+                value={affectedVaccines}
+                onChange={(e) => setAffectedVaccines(e.target.value)}
+              />
+            </label>
+            <label className="ops-field ops-span-2">
+              <span>Podjęte natychmiastowe działania zabezpieczające</span>
+              <textarea
+                className="ops-textarea"
+                rows={3}
+                value={actionsTaken}
+                onChange={(e) => setActionsTaken(e.target.value)}
+              />
+            </label>
+
+            <div className="ops-actions ops-span-2">
+              <button type="submit" className="ops-btn-primary">
+                <Printer size={16} aria-hidden="true" /> Drukuj protokół zgłoszenia incydentu (A4)
+              </button>
+            </div>
+          </form>
+
+          {/* Szablon wydruku protokołu A4 */}
+          <div className="ops-incident-print-sheet ops-print-only">
+            <div className="ops-print-header">
+              <h1>PROTOKÓŁ ZGŁOSZENIA INCYDENTU W ŁAŃCUCHU CHŁODNICZYM</h1>
+              <p>Zdarzenie niepożądane – odchylenie parametrów temperaturowych przechowywania produktów leczniczych</p>
+              <div className="ops-print-meta">
+                <span>Placówka: {facilityName || 'Punkt Szczepień'}</span>
+                <span>Data sporządzenia: {incidentDate}</span>
+                <span>Identyfikator chłodziarki: {fridgeId}</span>
+              </div>
+            </div>
+
+            <table className="ops-print-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '15pt' }}>
+              <tbody>
+                <tr>
+                  <td style={{ border: '1px solid #000', padding: '6pt', width: '35%', fontWeight: 'bold' }}>Zakres referencyjny:</td>
+                  <td style={{ border: '1px solid #000', padding: '6pt' }}>+2.0°C do +8.0°C (standardowy łańcuch chłodniczy)</td>
+                </tr>
+                <tr>
+                  <td style={{ border: '1px solid #000', padding: '6pt', fontWeight: 'bold' }}>Odnotowane skrajne temperatury:</td>
+                  <td style={{ border: '1px solid #000', padding: '6pt' }}>Min: {tempMin}°C / Max: {tempMax}°C</td>
+                </tr>
+                <tr>
+                  <td style={{ border: '1px solid #000', padding: '6pt', fontWeight: 'bold' }}>Szacowany czas trwania odchylenia:</td>
+                  <td style={{ border: '1px solid #000', padding: '6pt' }}>ok. {incidentDurationHours} godz.</td>
+                </tr>
+                <tr>
+                  <td style={{ border: '1px solid #000', padding: '6pt', fontWeight: 'bold' }}>Wykaz narażonych produktów leczniczych:</td>
+                  <td style={{ border: '1px solid #000', padding: '6pt', whiteSpace: 'pre-wrap' }}>{affectedVaccines || 'Brak wpisanych serii preparatów'}</td>
+                </tr>
+                <tr>
+                  <td style={{ border: '1px solid #000', padding: '6pt', fontWeight: 'bold' }}>Zastosowane środki zaradcze:</td>
+                  <td style={{ border: '1px solid #000', padding: '6pt', whiteSpace: 'pre-wrap' }}>{actionsTaken}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div className="ops-print-signatures" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '50pt' }}>
+              <div className="ops-print-sig-box" style={{ textAlign: 'center', width: '45%' }}>
+                <div style={{ borderTop: '1px solid #000', paddingTop: '5pt' }}>
+                  Podpis pielęgniarki / osoby zgłaszającej
+                </div>
+              </div>
+              <div className="ops-print-sig-box" style={{ textAlign: 'center', width: '45%' }}>
+                <div style={{ borderTop: '1px solid #000', paddingTop: '5pt' }}>
+                  Podpis Kierownika Placówki / Lekarza
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+};
+
 const ColdChainView: React.FC = () => {
   const storage = getBrowserStorage();
   const [storageWarning] = useState(() =>
@@ -2101,6 +2600,14 @@ const ColdChainView: React.FC = () => {
           </div>
         )}
       </section>
+
+      <WhoShakeTestSection />
+
+      <VaccineSensitivityMatrixSection />
+
+      <IcePackConditioningSection />
+
+      <ColdChainIncidentReportSection />
 
       <section className="ops-panel" aria-labelledby="ops-storage-matrix">
         <h2 id="ops-storage-matrix" className="ops-panel-title">

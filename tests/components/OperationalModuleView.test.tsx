@@ -128,9 +128,16 @@ describe('OperationalModuleView — aktywne moduły operacyjne VaxNurse', () => 
     );
 
     // Matryca warunków przechowywania
-    expect(screen.getByTestId('ops-storage-matrix-table')).toBeInTheDocument();
-    expect(screen.getByText(/Infanrix hexa/i)).toBeInTheDocument();
-    expect(screen.getByText(/Spikevax XFG/i)).toBeInTheDocument();
+    const storageTable = screen.getByTestId('ops-storage-matrix-table');
+    expect(storageTable).toBeInTheDocument();
+    expect(within(storageTable).getByText(/Infanrix hexa/i)).toBeInTheDocument();
+    expect(within(storageTable).getByText(/Spikevax XFG/i)).toBeInTheDocument();
+
+    // Nowe sekcje łańcucha chłodniczego: Test wstrząsania WHO oraz Matryca wrażliwości
+    expect(screen.getByText(/Test wstrząsania WHO/i)).toBeInTheDocument();
+    expect(screen.getByText(/Matryca wrażliwości szczepionek na mróz i ciepło/i)).toBeInTheDocument();
+    expect(screen.getByText(/Kondycjonowanie wkładów chłodzących/i)).toBeInTheDocument();
+    expect(screen.getByText(/Generator protokołu incydentu temperaturowego/i)).toBeInTheDocument();
 
     // Wybór profilu z zakresem indywidualnym oraz weryfikacja poprawnego formatowania temperatur ujemnych (bez "+-")
     const profileSelect = screen.getByLabelText(/Profil temperaturowy/i);

@@ -1179,3 +1179,196 @@ export const PSO_INTERVAL_RULES_DATABASE: PsoIntervalRule[] = [
     sourceReference: 'PSO 2027 Część I.A oraz zalecenia ACIP / ChPL'
   }
 ];
+
+// ===========================================================================
+// PROTOKÓŁ TESTU WSTRZĄSANIA (WHO SHAKE TEST PROTOCOL) I MATRYCA WRAŻLIWOŚCI
+// ===========================================================================
+
+export interface ShakeTestStep {
+  stepNumber: number;
+  title: string;
+  instruction: string;
+  observation: string;
+  criticalAlert?: string;
+}
+
+export const WHO_SHAKE_TEST_PROTOCOL: ShakeTestStep[] = [
+  {
+    stepNumber: 1,
+    title: 'Wybór i przygotowanie próbki kontrolnej (zamrożonej)',
+    instruction: 'Wybierz z tej samej partii fiolkę kontrolną, którą celowo zamrożono w temperaturze -20°C przez co najmniej 12 godzin (aż do całkowitego zamarznięcia), a następnie powoli rozmrożono w temperaturze pokojowej. Fiolka badana to fiolka podejrzana o narażenie na mróz.',
+    observation: 'Próbka kontrolna po rozmrożeniu tworzy wyraźne kłaczki i ziarnisty osad z powodu nieodwracalnego zniszczenia struktury koloidalnej żelu wodorotlenku glinu.',
+    criticalAlert: 'Nigdy nie oceniaj testu wstrząsania bez rozmrożonej próbki kontrolnej tego samego preparatu i od tego samego producenta.'
+  },
+  {
+    stepNumber: 2,
+    title: 'Jednoczesne i energiczne wytrząsanie obu fiolek',
+    instruction: 'Chwyć jednocześnie w jedną dłoń fiolkę badaną oraz rozmrożoną fiolkę kontrolną. Energicznie wstrząsaj obiema fiolkami przez 10 do 15 sekund, tak aby zawartość obu fiolek została całkowicie zhomogenizowana.',
+    observation: 'Obie fiolki stają się równomiernie mętne bezpośrednio po zakończeniu wstrząsania.',
+  },
+  {
+    stepNumber: 3,
+    title: 'Ustawienie fiolek na jasnym, jednolitym tle',
+    instruction: 'Ustaw obie fiolki pionowo, obok siebie na płaskiej powierzchni przed białym arkuszem papieru lub jednolitym jasnym tłem przy dobrym oświetleniu. Nie poruszaj fiolkami po postawieniu.',
+    observation: 'Zacznij obserwować proces klarowania się cieczy w górnej części fiolki i powstawanie osadu na dnie.',
+  },
+  {
+    stepNumber: 4,
+    title: 'Obserwacja tempa sedymentacji w 1., 5. i 15. minucie',
+    instruction: 'Porównaj tempo opadania kłaczków w obu fiolkach w ustalonych odstępach czasowych: 1 minuta, 5 minut, 15 minut.',
+    observation: 'Fiolka, która uległa zamrożeniu, rozwarstwia się bardzo szybko – na dnie powstaje gruby, gęsty osad, a nad nim przejrzysta ciecz. Fiolka niezamrożona pozostaje mętna znacznie dłużej.',
+  },
+  {
+    stepNumber: 5,
+    title: 'Interpretacja wyniku testu wstrząsania',
+    instruction: 'Porównaj stan badanej fiolki z fiolką kontrolną po 15 minutach i odnotuj wynik w dokumentacji punktu szczepień.',
+    observation: 'WYNIK NEGATYWNY (Prawidłowy): Badana fiolka sedymentuje wolniej niż kontrola (pozostaje bardziej mętna) -> szczepionka NIE była zamrożona, zdatna do użycia. WYNIK POZYTYWNY (Niezgodny): Badana fiolka sedymentuje tak samo szybko lub szybciej niż kontrola -> preparat ZAMROŻONY, uszkodzony, bezwzględnie do utylizacji.',
+    criticalAlert: 'Szczepionki z pozytywnym wynikiem testu wstrząsania (lub potwierdzonym zamrożeniem) nie wolno podać pacjentowi ze względu na utratę skuteczności protekcyjnej i ryzyko silnych odczynów miejscowych!'
+  }
+];
+
+export interface VaccineSensitivityRecord {
+  id: string;
+  antigenName: string;
+  exampleBrands: string;
+  adjuvantType: string;
+  freezingSensitivity: 'critical' | 'moderate' | 'low';
+  heatSensitivity: 'critical' | 'moderate' | 'low';
+  storageRecommendation: string;
+  shakeTestApplicable: boolean;
+  consequencesOfFreezing: string;
+  consequencesOfHeat: string;
+}
+
+export const VACCINE_TEMPERATURE_SENSITIVITY_MATRIX: VaccineSensitivityRecord[] = [
+  {
+    id: 'sens-hepb',
+    antigenName: 'WZW typu B (HBV)',
+    exampleBrands: 'Engerix B, Euvax B, Hepavax-Gene',
+    adjuvantType: 'Wodorotlenek glinu',
+    freezingSensitivity: 'critical',
+    heatSensitivity: 'moderate',
+    storageRecommendation: '+2°C do +8°C. Chronić przed światłem. NIGDY NIE ZAMRAŻAĆ.',
+    shakeTestApplicable: true,
+    consequencesOfFreezing: 'Nieodwracalne zniszczenie cząstek HBsAg i denaturacja adiuwantu glinowego. Drastyczny spadek immunogenności, ryzyko jałowych ropni i odczynów miejscowych.',
+    consequencesOfHeat: 'Stosunkowo stabilna w temp. pokojowej przez krótki okres, lecz długotrwała ekspozycja > +8°C zmniejsza miano antygenowe.'
+  },
+  {
+    id: 'sens-dtp-comb',
+    antigenName: 'DTP, DTaP, 5w1, 6w1, Td, Tdap',
+    exampleBrands: 'Infanrix, Infanrix hexa, Boostrix, Hexacima, Pentaxim, Dultavax, Clodivac',
+    adjuvantType: 'Wodorotlenek glinu / fosforan glinu',
+    freezingSensitivity: 'critical',
+    heatSensitivity: 'moderate',
+    storageRecommendation: '+2°C do +8°C. NIGDY NIE ZAMRAŻAĆ.',
+    shakeTestApplicable: true,
+    consequencesOfFreezing: 'Gwałtowna precypitacja soli glinu. Utrata zdolności adiuwantowych, agregacja toksoidów, wysokie ryzyko NOP (duże obrzęki, bolesne nacieki, ropnie jałowe).',
+    consequencesOfHeat: 'Komponent krztuścowy (zarówno aP jak i wP) wykazuje stopniową degradację przy temperaturach > +25°C.'
+  },
+  {
+    id: 'sens-pcv',
+    antigenName: 'Pneumokoki skoniugowane (PCV)',
+    exampleBrands: 'Prevenar 13, Prevenar 20, Vaxneuvance, Synflorix',
+    adjuvantType: 'Fosforan glinu',
+    freezingSensitivity: 'critical',
+    heatSensitivity: 'moderate',
+    storageRecommendation: '+2°C do +8°C. NIGDY NIE ZAMRAŻAĆ.',
+    shakeTestApplicable: true,
+    consequencesOfFreezing: 'Dysocjacja polisacharydów od białka nośnikowego (CRM197) oraz rozpad adiuwantu. Brak indukcji pamięci immunologicznej u niemowląt.',
+    consequencesOfHeat: 'Stabilność zachowana w kontrolowanych temperaturach do 25°C przez ograniczony czas (zgodnie z ChPL).'
+  },
+  {
+    id: 'sens-hpv',
+    antigenName: 'Wirus brodawczaka ludzkiego (HPV)',
+    exampleBrands: 'Gardasil 9, Cervarix',
+    adjuvantType: 'Siarczanohydroksyfosforan glinu / AS04',
+    freezingSensitivity: 'critical',
+    heatSensitivity: 'moderate',
+    storageRecommendation: '+2°C do +8°C. Chronić przed światłem. NIGDY NIE ZAMRAŻAĆ.',
+    shakeTestApplicable: true,
+    consequencesOfFreezing: 'Rozpad cząstek wirusopodobnych (VLP) i agregacja adiuwantu glinowego. Utrata skuteczności protekcyjnej przed onkogennymi typami HPV.',
+    consequencesOfHeat: 'Wrażliwa na bezpośrednie nasłonecznienie i temperatury powyżej +25°C.'
+  },
+  {
+    id: 'sens-meningococci',
+    antigenName: 'Meningokoki skoniugowane i rekombinowane (MenACWY, MenB)',
+    exampleBrands: 'Bexsero, Nimenrix, Trumenba, MenQuadfi',
+    adjuvantType: 'Wodorotlenek glinu (MenB) / bez adiuwantu (niektóre MenACWY)',
+    freezingSensitivity: 'critical',
+    heatSensitivity: 'moderate',
+    storageRecommendation: '+2°C do +8°C. NIGDY NIE ZAMRAŻAĆ.',
+    shakeTestApplicable: true,
+    consequencesOfFreezing: 'MenB (Bexsero) zawiera adiuwant glinowy i ulega nieodwracalnemu zniszczeniu na mrozie. MenACWY skoniugowane tracą powiązanie z nośnikiem.',
+    consequencesOfHeat: 'Utrata konformacji epitopów antygenowych MenB przy ekspozycji na ciepło.'
+  },
+  {
+    id: 'sens-mmr',
+    antigenName: 'Odra, świnka, różyczka (MMR) — liofilizat',
+    exampleBrands: 'Priorix, M-M-RVAXPRO',
+    adjuvantType: 'Brak (żywe atenuowane wirusy)',
+    freezingSensitivity: 'low',
+    heatSensitivity: 'critical',
+    storageRecommendation: '+2°C do +8°C. Liofilizat toleruje ujemne temperatury, lecz ROZPUSZCZALNIK NIE MOŻE ZAMARZNĄĆ.',
+    shakeTestApplicable: false,
+    consequencesOfFreezing: 'Sam liofilizat nie ulega uszkodzeniu w temperaturze poniżej 0°C, ale rozpuszczalnik w ampułce może pęknąć lub utracić właściwości. Po rekonstytucji zużyć natychmiast (maks. 8h).',
+    consequencesOfHeat: 'Wysoka wrażliwość na ciepło: komponent odrowy i świnkowy ulega gwałtownej inaktywacji powyżej +8°C w postaci płynnej i po rekonstytucji.'
+  },
+  {
+    id: 'sens-varicella',
+    antigenName: 'Ospa wietrzna (VZV) — liofilizat',
+    exampleBrands: 'Varilrix',
+    adjuvantType: 'Brak (żywy atenuowany szczep Oka)',
+    freezingSensitivity: 'low',
+    heatSensitivity: 'critical',
+    storageRecommendation: '+2°C do +8°C. Chronić przed światłem. Wrażliwa na ciepło.',
+    shakeTestApplicable: false,
+    consequencesOfFreezing: 'Liofilizat może być przechowywany w zamrażarce, ale rozpuszczalnik wyłącznie w +2°C .. +25°C. Po rozpuszczeniu zużyć w ciągu 90 minut!',
+    consequencesOfHeat: 'Szczep wirusa ospy wietrznej jest wyjątkowo termolabilny. Nawet kilkugodzinna ekspozycja na temperaturę pokojową prowadzi do dramatycznego spadku miana PFU.'
+  },
+  {
+    id: 'sens-rotavirus',
+    antigenName: 'Rotawirusy (RV) — zawiesina doustna',
+    exampleBrands: 'Rotarix, RotaTeq',
+    adjuvantType: 'Brak',
+    freezingSensitivity: 'moderate',
+    heatSensitivity: 'critical',
+    storageRecommendation: '+2°C do +8°C. Chronić przed światłem. NIE ZAMRAŻAĆ gotowej zawiesiny.',
+    shakeTestApplicable: false,
+    consequencesOfFreezing: 'Płynna postać doustna może ulec denaturacji i wytrąceniu kryształów, uszkadzających cząstki wirusa.',
+    consequencesOfHeat: 'Inaktywacja kapsydu wirusowego w podwyższonej temperaturze.'
+  }
+];
+
+export interface IcePackConditioningStep {
+  step: number;
+  title: string;
+  description: string;
+  sanepidRule: string;
+}
+
+export const ICE_PACK_CONDITIONING_STEPS: IcePackConditioningStep[] = [
+  {
+    step: 1,
+    title: 'Wyjęcie wkładów z zamrażarki (-18°C .. -20°C)',
+    description: 'Wyjmij zamrożone wkłady chłodzące z zamrażarki. Pamiętaj: wkłady prosto z zamrażalnika mają temperaturę znacznie poniżej 0°C i przy bezpośrednim kontakcie ze szczepionkami spowodują ich natychmiastowe ZAMROŻENIE!',
+    sanepidRule: 'Bezwzględny zakaz umieszczania oszronionych wkładów bezpośrednio przy opakowaniach szczepionek.'
+  },
+  {
+    step: 2,
+    title: 'Kondycjonowanie w temperaturze pokojowej (ang. "sweating")',
+    description: 'Rozłóż wkłady w jednej warstwie na blacie w temperaturze pokojowej (+20°C). Odczekaj od 20 do 45 minut, aż na ich powierzchni pojawi się warstwa skroplonej wody (tzw. zjawisko "pocenia się" wkładów).',
+    sanepidRule: 'Proces kondycjonowania jest zakończony, gdy szron całkowicie zniknie z powierzchni plastiku.'
+  },
+  {
+    step: 3,
+    title: 'Próba wstrząsania wkładu (test grzechotania lodu)',
+    description: 'Chwyć wkład i potrząśnij nim przy uchu. Wewnątrz wkładu lód musi zacząć luźno pływać i grzechotać w otaczającej go wodzie. Oznacza to, że temperatura wkładu osiągnęła dokładnie 0°C (równowaga fazowa woda-lód).',
+    sanepidRule: 'Tylko wkład o temperaturze 0°C gwarantuje utrzymanie zakresu +2°C .. +8°C w torbie izotermicznej bez ryzyka zamrożenia szczepionek.'
+  },
+  {
+    step: 4,
+    title: 'Osuszenie i ułożenie z warstwą izolacyjną w torbie transportowej',
+    description: 'Osusz wkłady ręcznikiem papierowym. Umieść wkłady na dnie i ściankach lodówki przenośnej, oddzielając je od opakowań szczepionek tekturą falistą, pianką lub folią bąbelkową. Włóż skalibrowany termometr lub rejestrator danych.',
+    sanepidRule: 'Szczepionki nie mogą bezpośrednio dotykać powierzchni wkładów chłodzących.'
+  }
+];
