@@ -15,7 +15,11 @@ import {
   FileText,
   RotateCcw,
   X,
-  Palette
+  Palette,
+  Building2,
+  Activity,
+  Wifi,
+  RefreshCw
 } from 'lucide-react';
 import type { ModuleDefinition } from '../../types/navigation';
 import type { VaxNurseBackupPayload, BackupSummary } from '../../types/backup';
@@ -49,6 +53,17 @@ import {
   type UiThemeId,
   type UiThemePreference
 } from '../../utils/theme';
+import {
+  loadStationConfig,
+  saveStationConfig,
+  resetStationConfig,
+  type StationConfig,
+  type ExpiryWarningDays
+} from '../../utils/stationPreferences';
+import {
+  inspectStorageDiagnostics,
+  type StorageDiagnosticsReport
+} from '../../utils/storageDiagnostics';
 
 interface SettingsViewProps {
   module: ModuleDefinition;
@@ -100,8 +115,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [stagedSummary, setStagedSummary] = useState<BackupSummary | null>(null);
   const [stagedWarnings, setStagedWarnings] = useState<string[]>([]);
 
+  // Konfiguracja stanowiska i placówki
+  const [stationConfig, setStationConfig] = useState<StationConfig>(() => loadStationConfig());
+  const [stationFeedback, setStationFeedback] = useState<string | null>(null);
+
+  // Diagnostyka pamięci lokalnej
+  const [diagnosticsReport, setDiagnosticsReport] = useState<StorageDiagnosticsReport>(() =>
+    inspectStorageDiagnostics()
+  );
+  const [auditMessage, setAuditMessage] = useState<string | null>(null);
+
+  // PWA & stan łączności
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+  const [pwaFeedback, setPwaFeedback] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -210,6 +250,51 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       message:
         'Przywrócono domyślne preferencje widoku (Komfortowa, Standardowy rozmiar tekstu, motyw Surgical Daylight).'
     });
+  };
+
+  const handleSaveStationConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = saveStationConfig(stationConfig);
+    if (res.success) {
+      setStationFeedback('Zapisano konfigurację stanowiska. Dane będą automatycznie uzupełniane w protokołach A4.');
+      setTimeout(() => setStationFeedback(null), 4000);
+    } else {
+      setStationFeedback(res.error || 'Błąd zapisu konfiguracji.');
+    }
+  };
+
+  const handleResetStationConfig = () => {
+    const res = resetStationConfig();
+    if (res.success) {
+      setStationConfig(res.config);
+      setStationFeedback('Przywrócono domyślną konfigurację stanowiska.');
+      setTimeout(() => setStationFeedback(null), 4000);
+    }
+  };
+
+  const handleRunDiagnostics = () => {
+    const rep = inspectStorageDiagnostics();
+    setDiagnosticsReport(rep);
+    if (rep.isHealthy) {
+      setAuditMessage(`Audyt integralności zakończony pomyślnie. Sprawdzono ${rep.modules.length} tabel, 0 błędów spójności.`);
+    } else {
+      setAuditMessage(`Wykryto ${rep.issuesCount} problemów z integralnością danych w pamięci podręcznej.`);
+    }
+    setTimeout(() => setAuditMessage(null), 5000);
+  };
+
+  const handleRefreshPwaCache = async () => {
+    try {
+      if ('caches' in window) {
+        await caches.delete('vaxnurse-pwa-v1');
+        setPwaFeedback('Bufor pamięci podręcznej PWA został pomyślnie wyczyszczony i odświeżony.');
+      } else {
+        setPwaFeedback('Pamięć Cache Storage nie jest wspierana w tej przeglądarce.');
+      }
+    } catch {
+      setPwaFeedback('Błąd podczas odświeżania pamięci podręcznej PWA.');
+    }
+    setTimeout(() => setPwaFeedback(null), 4000);
   };
 
   // 1. EKSPORT DANYCH (Pobierz kopię bezpieczeństwa)
@@ -951,6 +1036,261 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Konfiguracja placówki i stanowiska */}
+        <div className="content-panel full-width">
+          <div className="panel-title-with-icon">
+            <Building2 size={22} className="panel-title-icon" aria-hidden="true" />
+            <div>
+              <h2 className="panel-heading">Konfiguracja placówki i stanowiska zabiegowego</h2>
+              <span className="panel-subheading">
+                Dane placówki, gabinetu oraz parametry alertów automatycznie dołączane do protokołów Sanepidu i wydruków A4
+              </span>
+            </div>
+          </div>
+
+          <form className="station-form-grid" onSubmit={handleSaveStationConfig}>
+            <label className="station-field">
+              <span className="station-field-label">Nazwa podmiotu leczniczego / punktu szczepień:</span>
+              <input
+                type="text"
+                className="station-field-input"
+                placeholder="np. NZOZ Praktyka Lekarza Rodzinnego"
+                value={stationConfig.facilityName}
+                maxLength={120}
+                onChange={(e) => setStationConfig((prev) => ({ ...prev, facilityName: e.target.value }))}
+              />
+            </label>
+
+            <label className="station-field">
+              <span className="station-field-label">Numer gabinetu / stanowiska zabiegowego:</span>
+              <input
+                type="text"
+                className="station-field-input"
+                placeholder="np. Gabinet szczepień nr 2"
+                value={stationConfig.facilityRoom}
+                maxLength={60}
+                onChange={(e) => setStationConfig((prev) => ({ ...prev, facilityRoom: e.target.value }))}
+              />
+            </label>
+
+            <label className="station-field">
+              <span className="station-field-label">Domyślny podpis / inicjały pielęgniarki koordynującej:</span>
+              <input
+                type="text"
+                className="station-field-input"
+                placeholder="np. P.M. / M.M."
+                value={stationConfig.nurseInitials}
+                maxLength={30}
+                onChange={(e) => setStationConfig((prev) => ({ ...prev, nurseInitials: e.target.value }))}
+              />
+            </label>
+
+            <label className="station-field">
+              <span className="station-field-label">Ostrzeżenie o dacie ważności apteczki (dni wyprzedzenia):</span>
+              <select
+                className="station-field-select"
+                value={stationConfig.expiryWarningDays}
+                onChange={(e) =>
+                  setStationConfig((prev) => ({
+                    ...prev,
+                    expiryWarningDays: Number(e.target.value) as ExpiryWarningDays
+                  }))
+                }
+              >
+                <option value={14}>14 dni (krótki termin)</option>
+                <option value={30}>30 dni (zalecany standard VaxNurse / Sanepid)</option>
+                <option value={60}>60 dni (przegląd kwartalny)</option>
+                <option value={90}>90 dni (długoterminowe planowanie zamówień)</option>
+              </select>
+            </label>
+
+            <div className="station-field span-2">
+              <label className="station-checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={stationConfig.reducedMotion}
+                  onChange={(e) =>
+                    setStationConfig((prev) => ({ ...prev, reducedMotion: e.target.checked }))
+                  }
+                />
+                <span className="station-checkbox-label">
+                  <strong>Zmniejsz ruch i animacje (prefers-reduced-motion):</strong> Optymalizacja dla personelu z nadwrażliwością wzrokową i starszych terminali medycznych.
+                </span>
+              </label>
+            </div>
+
+            <div className="station-field span-2">
+              <label className="station-checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={stationConfig.highContrast}
+                  onChange={(e) =>
+                    setStationConfig((prev) => ({ ...prev, highContrast: e.target.checked }))
+                  }
+                />
+                <span className="station-checkbox-label">
+                  <strong>Wzmocniony kontrast elementów medycznych:</strong> Silniejsze obramowania kart, statusów i wskaźników klinicznych.
+                </span>
+              </label>
+            </div>
+
+            <div className="station-actions-row span-2">
+              <button type="submit" className="btn-station-save">
+                <CheckCircle2 size={16} aria-hidden="true" />
+                <span>Zapisz konfigurację stanowiska</span>
+              </button>
+              <button
+                type="button"
+                className="btn-abort-restore"
+                onClick={handleResetStationConfig}
+              >
+                Przywróć domyślne
+              </button>
+            </div>
+          </form>
+
+          {stationFeedback && (
+            <div className="preferences-feedback preferences-feedback--success" role="status" style={{ marginTop: '12px' }}>
+              {stationFeedback}
+            </div>
+          )}
+        </div>
+
+        {/* Diagnostyka i stan pamięci podręcznej */}
+        <div className="content-panel full-width storage-diagnostics-panel">
+          <div className="panel-title-with-icon">
+            <Activity size={22} className="panel-title-icon" aria-hidden="true" />
+            <div>
+              <h2 className="panel-heading">Diagnostyka i audyt pamięci podręcznej przeglądarki</h2>
+              <span className="panel-subheading">
+                Monitor zajętości pamięci lokalnej (Local-First) oraz audyt spójności i integralności tabel klinicznych
+              </span>
+            </div>
+          </div>
+
+          <p className="panel-text">
+            Aplikacja przechowuje wszystkie dane operacyjne wyłącznie w bezpiecznej pamięci lokalnej Twojej przeglądarki (Local-First). Poniższy miernik prezentuje stan wykorzystania przydziału pamięci oraz spójność poszczególnych rejestrów.
+          </p>
+
+          <div className="storage-diagnostics-summary">
+            <div className="storage-usage-meter">
+              <div className="storage-meter-header">
+                <span>Wykorzystanie pamięci lokalnej:</span>
+                <strong>
+                  {diagnosticsReport.totalKb} kB z ~5.0 MB ({diagnosticsReport.quotaPercentage}%)
+                </strong>
+              </div>
+              <div className="storage-meter-bar">
+                <div
+                  className="storage-meter-fill"
+                  style={{ width: `${Math.max(diagnosticsReport.quotaPercentage, 2)}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="storage-modules-table-wrap">
+              <table className="storage-table">
+                <caption className="ops-sr-only">Tabela rejestrów pamięci lokalnej VaxNurse</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Rejestr kliniczny / Konfiguracja</th>
+                    <th scope="col">Klucz w pamięci</th>
+                    <th scope="col">Liczba pozycji</th>
+                    <th scope="col">Rozmiar</th>
+                    <th scope="col">Stan integralności</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {diagnosticsReport.modules.map((m) => (
+                    <tr key={m.key}>
+                      <td><strong>{m.name}</strong></td>
+                      <td><code>{m.key}</code></td>
+                      <td>{m.itemCount}</td>
+                      <td>{m.sizeBytes > 1024 ? `${(m.sizeBytes / 1024).toFixed(1)} kB` : `${m.sizeBytes} B`}</td>
+                      <td>
+                        <span className={`storage-status-pill ${m.status}`}>
+                          {m.status === 'ok' ? 'W normie' : m.status === 'empty' ? 'Pusty' : 'Błąd integralności'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="station-actions-row">
+              <button
+                type="button"
+                className="btn-backup-export"
+                onClick={handleRunDiagnostics}
+              >
+                <Activity size={16} aria-hidden="true" />
+                <span>Wykonaj natychmiastowy audyt integralności</span>
+              </button>
+            </div>
+
+            {auditMessage && (
+              <div className="preferences-feedback preferences-feedback--success" role="status">
+                {auditMessage}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* PWA & Tryb Offline */}
+        <div className="content-panel full-width">
+          <div className="panel-title-with-icon">
+            <Wifi size={22} className="panel-title-icon" aria-hidden="true" />
+            <div>
+              <h2 className="panel-heading">Aplikacja progresywna (PWA) i stan pamięci offline</h2>
+              <span className="panel-subheading">
+                Zarządzanie powłoką aplikacji (Service Worker), buforem cache oraz działaniem w gabinecie bez dostępu do Internetu
+              </span>
+            </div>
+          </div>
+
+          <div className="pwa-status-grid">
+            <div className="pwa-status-tile">
+              <span className="pwa-tile-label">Stan połączenia:</span>
+              <strong className={`pwa-tile-val ${isOnline ? 'text-green' : 'text-amber'}`}>
+                {isOnline ? 'ONLINE (Zasoby aktywne)' : 'OFFLINE (Tryb autonomiczny)'}
+              </strong>
+            </div>
+
+            <div className="pwa-status-tile">
+              <span className="pwa-tile-label">Bufor Service Workera:</span>
+              <strong className="pwa-tile-val">vaxnurse-pwa-v1</strong>
+            </div>
+
+            <div className="pwa-status-tile">
+              <span className="pwa-tile-label">Tryb pracy:</span>
+              <strong className="pwa-tile-val">Pełna niezależność sieciowa</strong>
+            </div>
+
+            <div className="pwa-status-tile">
+              <span className="pwa-tile-label">Zasoby w buforze:</span>
+              <strong className="pwa-tile-val">Powłoka, ChPL, PSO 2027</strong>
+            </div>
+          </div>
+
+          <div className="station-actions-row">
+            <button
+              type="button"
+              className="btn-backup-import"
+              onClick={handleRefreshPwaCache}
+            >
+              <RefreshCw size={16} aria-hidden="true" />
+              <span>Odśwież pamięć podręczną PWA</span>
+            </button>
+          </div>
+
+          {pwaFeedback && (
+            <div className="preferences-feedback preferences-feedback--info" role="status" style={{ marginTop: '12px' }}>
+              {pwaFeedback}
+            </div>
+          )}
         </div>
 
         {/* Technical information */}
